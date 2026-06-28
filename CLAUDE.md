@@ -104,6 +104,7 @@ Definido al completo en `prisma/schema.prisma`. Dominios:
 - **Identidad/Org:** `User` (auth, rol), `Employee` (ficha completa, auto-relación manager/reports), `Department` (con lead).
 - **Tiempo:** `Absence`, `LeaveBalance`, `Holiday`, `TimeEntry` (fichaje, Fase 7).
 - **Talento:** `OnboardingTemplate/TemplateTask`, `OnboardingProcess/Task`, `PerformanceCycle`, `Review`, `Objective`, `KeyResult`.
+- **Reclutamiento (VITAE, módulo interno):** `Job`, `Candidate`, `Stage`, `Application`, `Interview`, `Evaluation`, `AuditDecision`. El candidato contratado se enlaza a su ficha con `Employee.candidateId`. Al pasar una `Application` a CONTRATADO se crea el `Employee` y su onboarding (Fase 6).
 - **Empresa:** `PayrollRun`, `Payslip`, `PayrollItem`, `Document`, `DocumentSignature`, `DocumentTemplate`.
 - **Transversal:** `AuditLog`, `Notification`.
 
