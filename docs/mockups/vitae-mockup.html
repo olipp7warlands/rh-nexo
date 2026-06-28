@@ -1,0 +1,3169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VITAE · Recruitment infrastructure</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     SISTEMA "CLEAR" — VITAE
+     ═══════════════════════════════════════════════════════════ */
+  :root {
+    /* Superficies */
+    --bg-canvas:        #F5F6F8;
+    --bg-surface:       #FFFFFF;
+    --bg-subtle:        #FAFBFC;
+    --bg-sidebar:       #DCE2E8;
+    --bg-sidebar-hover: #CCD4DD;
+    --bg-hover:         #EDEFF2;
+
+    /* Tinta */
+    --ink-primary:      #0F1419;
+    --ink-secondary:    #4B5563;
+    --ink-tertiary:     #9CA3AF;
+    --ink-disabled:     #D1D5DB;
+    --ink-inverse:      #FFFFFF;
+
+    /* Línea */
+    --line:             #E5E7EB;
+    --line-strong:      #D1D5DB;
+    --line-subtle:      #F1F3F5;
+
+    /* Acento */
+    --accent:           #1FB6E8;
+    --accent-hover:     #19A3D0;
+    --accent-pressed:   #1390BA;
+    --accent-soft:      #E1F4FB;
+    --accent-ink:       #0C6B8A;
+
+    /* Estados */
+    --success:          #16A34A;
+    --success-soft:     #DCFCE7;
+    --warning:          #D97706;
+    --warning-soft:     #FEF3C7;
+    --danger:           #DC2626;
+    --danger-soft:      #FEE2E2;
+    --info:             #2563EB;
+    --info-soft:        #DBEAFE;
+
+    /* Sombras */
+    --shadow-sm: 0 1px 2px rgba(15, 20, 25, 0.04);
+    --shadow-md: 0 2px 4px rgba(15, 20, 25, 0.04), 0 4px 12px rgba(15, 20, 25, 0.04);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-primary);
+    background: var(--bg-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .mono-tabular { font-variant-numeric: tabular-nums; }
+
+  /* KPI cards · grid with reserved rows for aligned values */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 12px;
+    min-height: 140px;
+  }
+  .stat-card.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .stat-label {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    min-height: calc(13px * 1.35 * 2);
+    display: flex;
+    align-items: flex-start;
+  }
+  .stat-card:not(.primary) .stat-label { color: var(--ink-secondary); }
+  .stat-card.primary .stat-label { color: rgba(255,255,255,0.95); }
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    align-self: end;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-meta {
+    font-size: 12px;
+    color: var(--ink-tertiary);
+    line-height: 1.4;
+    min-height: 16px;
+    display: flex;
+    align-items: center;
+  }
+  .stat-card.primary .stat-meta { color: rgba(255,255,255,0.85); }
+  .stat-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .stat-delta.positive { background: var(--success-soft); color: var(--success); }
+  .stat-delta.negative { background: var(--danger-soft); color: var(--danger); }
+
+  /* Shimmer for AI generation loading */
+  @keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, var(--bg-subtle) 0%, var(--bg-hover) 50%, var(--bg-subtle) 100%);
+    background-size: 2000px 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Fade up */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp 0.4s ease-out forwards; }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 5px; border: 2px solid var(--bg-canvas); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-tertiary); }
+
+  /* Sidebar scrollbar — different track */
+  aside ::-webkit-scrollbar-thumb { border-color: var(--bg-sidebar); }
+
+  /* Suppress tailwind warning in console (cosmetic) */
+</style>
+
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   VITAE — Intelligent recruitment infrastructure
+   Sistema "Clear" · Slate sidebar
+   ═══════════════════════════════════════════════════════════════════ */
+
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useRef
+} = React;
+
+/* ─────────────────────────── ICONS ─────────────────────────── */
+const I = {
+  dashboard: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "3",
+    width: "7",
+    height: "7"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "14",
+    y: "3",
+    width: "7",
+    height: "7"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "14",
+    y: "14",
+    width: "7",
+    height: "7"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "14",
+    width: "7",
+    height: "7"
+  })),
+  briefcase: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "7",
+    width: "20",
+    height: "14",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"
+  })),
+  upload: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "17 8 12 3 7 8"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "3",
+    x2: "12",
+    y2: "15"
+  })),
+  users: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "9",
+    cy: "7",
+    r: "4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M23 21v-2a4 4 0 0 0-3-3.87"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M16 3.13a4 4 0 0 1 0 7.75"
+  })),
+  funnel: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polygon", {
+    points: "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+  })),
+  shield: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+  })),
+  plus: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "5",
+    x2: "12",
+    y2: "19"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "5",
+    y1: "12",
+    x2: "19",
+    y2: "12"
+  })),
+  search: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "11",
+    cy: "11",
+    r: "8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m21 21-4.35-4.35"
+  })),
+  arrowRight: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "5",
+    y1: "12",
+    x2: "19",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "12 5 19 12 12 19"
+  })),
+  arrowLeft: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "19",
+    y1: "12",
+    x2: "5",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "12 19 5 12 12 5"
+  })),
+  check: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: "20 6 9 17 4 12"
+  })),
+  x: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "6",
+    x2: "6",
+    y2: "18"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "6",
+    x2: "18",
+    y2: "18"
+  })),
+  sparkle: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19 16l.7 2.1L22 19l-2.3.9L19 22l-.7-2.1L16 19l2.3-.9z"
+  })),
+  clock: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "12 6 12 12 16 14"
+  })),
+  mapPin: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "10",
+    r: "3"
+  })),
+  file: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "14 2 14 8 20 8"
+  })),
+  trending: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: "23 6 13.5 15.5 8.5 10.5 1 18"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "17 6 23 6 23 12"
+  })),
+  dots: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "currentColor"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "5",
+    cy: "12",
+    r: "1.6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "1.6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "19",
+    cy: "12",
+    r: "1.6"
+  })),
+  filter: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polygon", {
+    points: "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+  })),
+  download: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "7 10 12 15 17 10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "15",
+    x2: "12",
+    y2: "3"
+  })),
+  externalLink: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "15 3 21 3 21 9"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "10",
+    y1: "14",
+    x2: "21",
+    y2: "3"
+  })),
+  alert: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "8",
+    x2: "12",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "16",
+    x2: "12.01",
+    y2: "16"
+  })),
+  bell: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M13.73 21a2 2 0 0 1-3.46 0"
+  })),
+  settings: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "3"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+  })),
+  zap: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polygon", {
+    points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+  })),
+  globe: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "2",
+    y1: "12",
+    x2: "22",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+  })),
+  bot: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "11",
+    width: "18",
+    height: "10",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "5",
+    r: "2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 7v4"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "8",
+    y1: "16",
+    x2: "8",
+    y2: "16"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "16",
+    y1: "16",
+    x2: "16",
+    y2: "16"
+  })),
+  message: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+  })),
+  star: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "currentColor"
+  }, /*#__PURE__*/React.createElement("polygon", {
+    points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"
+  }))
+};
+
+/* ─────────────────────────── DATA ─────────────────────────── */
+
+const PORTALS = {
+  linkedin: {
+    name: 'LinkedIn',
+    color: '#0A66C2',
+    short: 'LK'
+  },
+  infojobs: {
+    name: 'InfoJobs',
+    color: '#018ECC',
+    short: 'IJ'
+  },
+  tecnoempleo: {
+    name: 'Tecnoempleo',
+    color: '#E74C3C',
+    short: 'TE'
+  },
+  wellfound: {
+    name: 'Wellfound',
+    color: '#0D0D0D',
+    short: 'WF'
+  },
+  indeed: {
+    name: 'Indeed',
+    color: '#003A9B',
+    short: 'ID'
+  },
+  stackoverflow: {
+    name: 'Stack Overflow',
+    color: '#F48024',
+    short: 'SO'
+  },
+  referido: {
+    name: 'Referido',
+    color: '#0F1419',
+    short: 'RF'
+  }
+};
+const AVATAR_COLORS = ['#1FB6E8', '#6366F1', '#14B8A6', '#F59E0B', '#EC4899', '#0F1419', '#8B5CF6', '#10B981'];
+const avatarColor = name => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = h * 31 + name.charCodeAt(i) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+const initials = name => name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+const JOBS = [{
+  id: 'eng-024',
+  code: 'ENG-024',
+  title: 'Senior Backend Engineer',
+  dept: 'Engineering',
+  location: 'Madrid (Híbrido)',
+  contract: 'Indefinido',
+  salary: '55–75 k€',
+  status: 'active',
+  candidates: 47,
+  posted: '2026-06-10',
+  expires: '2026-07-15',
+  portals: ['linkedin', 'infojobs', 'tecnoempleo', 'wellfound'],
+  pipeline: {
+    applied: 47,
+    screening: 18,
+    interview: 8,
+    offer: 2,
+    hired: 0
+  }
+}, {
+  id: 'des-009',
+  code: 'DES-009',
+  title: 'Product Designer',
+  dept: 'Design',
+  location: 'Barcelona (Remoto)',
+  contract: 'Indefinido',
+  salary: '45–60 k€',
+  status: 'expiring',
+  candidates: 23,
+  posted: '2026-05-28',
+  expires: '2026-07-02',
+  portals: ['linkedin', 'infojobs'],
+  pipeline: {
+    applied: 23,
+    screening: 9,
+    interview: 4,
+    offer: 1,
+    hired: 0
+  }
+}, {
+  id: 'dat-012',
+  code: 'DAT-012',
+  title: 'Data Analyst',
+  dept: 'Data',
+  location: 'Madrid (Presencial)',
+  contract: 'Indefinido',
+  salary: '38–48 k€',
+  status: 'review',
+  candidates: 18,
+  posted: '2026-06-18',
+  expires: '2026-07-25',
+  portals: ['linkedin', 'infojobs', 'tecnoempleo'],
+  pipeline: {
+    applied: 18,
+    screening: 5,
+    interview: 0,
+    offer: 0,
+    hired: 0
+  }
+}, {
+  id: 'cs-007',
+  code: 'CS-007',
+  title: 'Customer Success Manager',
+  dept: 'Customer',
+  location: 'Valencia (Híbrido)',
+  contract: 'Indefinido',
+  salary: '35–45 k€',
+  status: 'active',
+  candidates: 31,
+  posted: '2026-06-05',
+  expires: '2026-07-10',
+  portals: ['linkedin', 'infojobs', 'indeed'],
+  pipeline: {
+    applied: 31,
+    screening: 12,
+    interview: 5,
+    offer: 0,
+    hired: 0
+  }
+}, {
+  id: 'mkt-003',
+  code: 'MKT-003',
+  title: 'Content Marketing Lead',
+  dept: 'Marketing',
+  location: 'Remoto',
+  contract: 'Indefinido',
+  salary: '42–55 k€',
+  status: 'active',
+  candidates: 14,
+  posted: '2026-06-20',
+  expires: '2026-07-28',
+  portals: ['linkedin', 'wellfound'],
+  pipeline: {
+    applied: 14,
+    screening: 3,
+    interview: 1,
+    offer: 0,
+    hired: 0
+  }
+}];
+const CANDIDATES = [{
+  id: 1,
+  name: 'Lucía Martín Vega',
+  email: 'lucia.martin@gmail.com',
+  phone: '+34 612 ...',
+  location: 'Madrid',
+  years: 8,
+  currentRole: 'Tech Lead',
+  currentCompany: 'Glovo',
+  skills: ['Python', 'PostgreSQL', 'AWS', 'Docker', 'Kubernetes', 'GraphQL'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1',
+    fr: 'B1'
+  },
+  source: 'linkedin',
+  matchScore: 92,
+  status: 'shortlist',
+  job: 'eng-024',
+  appliedDate: '2026-06-22'
+}, {
+  id: 2,
+  name: 'Pablo García Ruiz',
+  email: 'pablo.garcia@hotmail.es',
+  location: 'Barcelona',
+  years: 6,
+  currentRole: 'Senior Designer',
+  currentCompany: 'Cabify',
+  skills: ['Figma', 'Design Systems', 'User Research', 'Prototyping', 'Webflow'],
+  languages: {
+    es: 'Nativo',
+    ca: 'Nativo',
+    en: 'C2'
+  },
+  source: 'infojobs',
+  matchScore: 87,
+  status: 'interview',
+  job: 'des-009',
+  appliedDate: '2026-06-15'
+}, {
+  id: 3,
+  name: 'Javier Vidal Soto',
+  email: 'j.vidal@yahoo.com',
+  location: 'Sevilla',
+  years: 4,
+  currentRole: 'Junior Data Analyst',
+  currentCompany: 'BBVA',
+  skills: ['SQL', 'Excel', 'PowerBI', 'Python'],
+  languages: {
+    es: 'Nativo',
+    en: 'B2'
+  },
+  source: 'tecnoempleo',
+  matchScore: 54,
+  status: 'auto-rejected',
+  job: 'dat-012',
+  appliedDate: '2026-06-21',
+  rejectReason: 'Experiencia (4) por debajo del mínimo requerido (5+). Falta dominio de R o Looker.'
+}, {
+  id: 4,
+  name: 'Ana Romero Cano',
+  email: 'ana.romero@gmail.com',
+  location: 'Valencia',
+  years: 7,
+  currentRole: 'CS Lead',
+  currentCompany: 'TravelPerk',
+  skills: ['HubSpot', 'Salesforce', 'Account Management', 'Onboarding'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1',
+    pt: 'B2'
+  },
+  source: 'referido',
+  matchScore: 88,
+  status: 'shortlist',
+  job: 'cs-007',
+  appliedDate: '2026-06-19'
+}, {
+  id: 5,
+  name: 'Carlos Soto Vega',
+  email: 'csoto@protonmail.com',
+  location: 'Madrid',
+  years: 9,
+  currentRole: 'Engineering Manager',
+  currentCompany: 'Wallapop',
+  skills: ['Python', 'Go', 'PostgreSQL', 'AWS', 'Team Leadership'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1'
+  },
+  source: 'linkedin',
+  matchScore: 84,
+  status: 'interview',
+  job: 'eng-024',
+  appliedDate: '2026-06-18'
+}, {
+  id: 6,
+  name: 'María Fernández Lozano',
+  email: 'maria.fl@gmail.com',
+  location: 'Bilbao',
+  years: 5,
+  currentRole: 'Designer',
+  currentCompany: 'Idealista',
+  skills: ['Figma', 'UX Research', 'Design Systems'],
+  languages: {
+    es: 'Nativo',
+    en: 'B2'
+  },
+  source: 'linkedin',
+  matchScore: 76,
+  status: 'screening',
+  job: 'des-009',
+  appliedDate: '2026-06-23'
+}, {
+  id: 7,
+  name: 'Diego Ortega Marín',
+  email: 'diego.ortega@gmail.com',
+  location: 'Madrid',
+  years: 3,
+  currentRole: 'Backend Engineer',
+  currentCompany: 'Voicemod',
+  skills: ['Python', 'FastAPI', 'PostgreSQL', 'Redis'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1'
+  },
+  source: 'wellfound',
+  matchScore: 71,
+  status: 'screening',
+  job: 'eng-024',
+  appliedDate: '2026-06-20'
+}, {
+  id: 8,
+  name: 'Sofía Navarro Gil',
+  email: 'sofia.navarro@gmail.com',
+  location: 'Barcelona',
+  years: 11,
+  currentRole: 'Principal Engineer',
+  currentCompany: 'Typeform',
+  skills: ['Python', 'Rust', 'PostgreSQL', 'AWS', 'Kubernetes', 'Distributed Systems'],
+  languages: {
+    es: 'Nativo',
+    ca: 'Nativo',
+    en: 'C2',
+    de: 'B1'
+  },
+  source: 'linkedin',
+  matchScore: 96,
+  status: 'offer',
+  job: 'eng-024',
+  appliedDate: '2026-06-12'
+}, {
+  id: 9,
+  name: 'Andrés Pérez Salas',
+  email: 'a.perez.salas@gmail.com',
+  location: 'Madrid',
+  years: 2,
+  currentRole: 'Data Analyst Jr',
+  currentCompany: 'Cabify',
+  skills: ['SQL', 'Excel', 'Python'],
+  languages: {
+    es: 'Nativo',
+    en: 'B2'
+  },
+  source: 'infojobs',
+  matchScore: 48,
+  status: 'auto-rejected',
+  job: 'dat-012',
+  appliedDate: '2026-06-22',
+  rejectReason: 'Experiencia insuficiente, prompt indicaba 5+ años en BI/analytics avanzado.'
+}, {
+  id: 10,
+  name: 'Carmen Iglesias Reyes',
+  email: 'carmen.iglesias@gmail.com',
+  location: 'Madrid',
+  years: 6,
+  currentRole: 'CS Senior',
+  currentCompany: 'Holaluz',
+  skills: ['Zendesk', 'Salesforce', 'Customer Onboarding', 'Spanish/EN customer base'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1'
+  },
+  source: 'linkedin',
+  matchScore: 83,
+  status: 'interview',
+  job: 'cs-007',
+  appliedDate: '2026-06-16'
+}, {
+  id: 11,
+  name: 'Raúl Domínguez Cobo',
+  email: 'raul.dominguez@gmail.com',
+  location: 'Málaga',
+  years: 4,
+  currentRole: 'Content Manager',
+  currentCompany: 'Freelance',
+  skills: ['SEO', 'Content Strategy', 'HubSpot', 'Spanish/English copywriting'],
+  languages: {
+    es: 'Nativo',
+    en: 'C2'
+  },
+  source: 'wellfound',
+  matchScore: 79,
+  status: 'screening',
+  job: 'mkt-003',
+  appliedDate: '2026-06-21'
+}, {
+  id: 12,
+  name: 'Elena Castro Prat',
+  email: 'elena.castro@gmail.com',
+  location: 'Barcelona',
+  years: 8,
+  currentRole: 'Sr Product Designer',
+  currentCompany: 'Glovo',
+  skills: ['Figma', 'Design Systems', 'UX Research', 'Workshop facilitation', 'Design Tokens'],
+  languages: {
+    es: 'Nativo',
+    ca: 'Nativo',
+    en: 'C2'
+  },
+  source: 'linkedin',
+  matchScore: 91,
+  status: 'shortlist',
+  job: 'des-009',
+  appliedDate: '2026-06-14'
+}, {
+  id: 13,
+  name: 'Mikel Aguirre Saez',
+  email: 'mikel.aguirre@gmail.com',
+  location: 'Bilbao',
+  years: 7,
+  currentRole: 'Sr Backend Eng',
+  currentCompany: 'Tuenti',
+  skills: ['Java', 'Spring', 'PostgreSQL', 'AWS'],
+  languages: {
+    es: 'Nativo',
+    eu: 'Nativo',
+    en: 'B2'
+  },
+  source: 'tecnoempleo',
+  matchScore: 62,
+  status: 'auto-rejected',
+  job: 'eng-024',
+  appliedDate: '2026-06-19',
+  rejectReason: 'Stack principal Java/Spring no alinea con stack Python solicitado. Sin experiencia equivalente en Python en producción.'
+}, {
+  id: 14,
+  name: 'Patricia Gómez Aznar',
+  email: 'p.gomez@gmail.com',
+  location: 'Madrid',
+  years: 5,
+  currentRole: 'Data Analyst',
+  currentCompany: 'Cabify',
+  skills: ['SQL', 'Python', 'Looker', 'Tableau', 'DBT'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1'
+  },
+  source: 'linkedin',
+  matchScore: 89,
+  status: 'shortlist',
+  job: 'dat-012',
+  appliedDate: '2026-06-17'
+}, {
+  id: 15,
+  name: 'Iván Moreno Páez',
+  email: 'ivan.moreno@gmail.com',
+  location: 'Madrid',
+  years: 10,
+  currentRole: 'Sr Marketing Manager',
+  currentCompany: 'Cabify',
+  skills: ['B2B Marketing', 'Content Strategy', 'Demand Gen', 'HubSpot', 'Salesforce'],
+  languages: {
+    es: 'Nativo',
+    en: 'C1'
+  },
+  source: 'referido',
+  matchScore: 85,
+  status: 'interview',
+  job: 'mkt-003',
+  appliedDate: '2026-06-13'
+}];
+const ACTIVITY = [{
+  time: 'hace 4 min',
+  type: 'ai-process',
+  icon: 'bot',
+  text: /*#__PURE__*/React.createElement(React.Fragment, null, "IA analizó ", /*#__PURE__*/React.createElement("b", null, "14 CVs"), " nuevos para ", /*#__PURE__*/React.createElement("b", null, "ENG-024"), " · 3 propuestos para shortlist")
+}, {
+  time: 'hace 28 min',
+  type: 'rejection',
+  icon: 'x',
+  text: /*#__PURE__*/React.createElement(React.Fragment, null, "Blanca confirmó ", /*#__PURE__*/React.createElement("b", null, "6 descartes automáticos"), " en DAT-012")
+}, {
+  time: 'hace 1 h',
+  type: 'offer',
+  icon: 'star',
+  text: /*#__PURE__*/React.createElement(React.Fragment, null, "Oferta enviada a ", /*#__PURE__*/React.createElement("b", null, "Sofía Navarro"), " · ENG-024")
+}, {
+  time: 'hace 3 h',
+  type: 'publication',
+  icon: 'globe',
+  text: /*#__PURE__*/React.createElement(React.Fragment, null, "MKT-003 publicada en LinkedIn y Wellfound")
+}, {
+  time: 'hace 5 h',
+  type: 'ai-process',
+  icon: 'sparkle',
+  text: /*#__PURE__*/React.createElement(React.Fragment, null, "IA generó descripción para nueva oferta ", /*#__PURE__*/React.createElement("b", null, "MKT-003"))
+}, {
+  time: 'ayer · 17:42',
+  type: 'interview',
+  icon: 'message',
+  text: /*#__PURE__*/React.createElement(React.Fragment, null, "3 entrevistas agendadas para CS-007 esta semana")
+}];
+const AUDIT_LOG = [{
+  ts: '2026-06-25 14:32',
+  candidate: 'Javier Vidal Soto',
+  job: 'DAT-012',
+  decision: 'auto-reject',
+  confidence: 0.91,
+  reason: 'Experiencia (4 años) por debajo del mínimo (5+). Sin dominio de R/Looker.',
+  overridden: false,
+  by: 'IA + Blanca'
+}, {
+  ts: '2026-06-25 14:32',
+  candidate: 'Andrés Pérez Salas',
+  job: 'DAT-012',
+  decision: 'auto-reject',
+  confidence: 0.94,
+  reason: 'Experiencia insuficiente para BI/analytics avanzado.',
+  overridden: false,
+  by: 'IA + Blanca'
+}, {
+  ts: '2026-06-25 14:32',
+  candidate: 'Mikel Aguirre Saez',
+  job: 'ENG-024',
+  decision: 'auto-reject',
+  confidence: 0.78,
+  reason: 'Stack Java/Spring no alinea con Python.',
+  overridden: false,
+  by: 'IA + Blanca'
+}, {
+  ts: '2026-06-25 11:08',
+  candidate: 'Diego Ortega Marín',
+  job: 'ENG-024',
+  decision: 'auto-reject',
+  confidence: 0.62,
+  reason: 'Experiencia (3 años) por debajo de Senior.',
+  overridden: true,
+  overrideReason: 'Stack y proyectos relevantes; vale para screening',
+  by: 'Blanca · override IA'
+}, {
+  ts: '2026-06-24 17:21',
+  candidate: 'Sofía Navarro Gil',
+  job: 'ENG-024',
+  decision: 'pass-to-shortlist',
+  confidence: 0.96,
+  reason: 'Match excepcional. Lleva sistemas distribuidos en empresa similar.',
+  overridden: false,
+  by: 'IA + Blanca'
+}, {
+  ts: '2026-06-24 17:21',
+  candidate: 'Lucía Martín Vega',
+  job: 'ENG-024',
+  decision: 'pass-to-shortlist',
+  confidence: 0.92,
+  reason: 'Tech lead con stack idéntico al solicitado.',
+  overridden: false,
+  by: 'IA + Blanca'
+}, {
+  ts: '2026-06-23 10:54',
+  candidate: 'Pablo García Ruiz',
+  job: 'DES-009',
+  decision: 'pass-to-interview',
+  confidence: 0.87,
+  reason: 'Portafolio sólido en sistemas de diseño + research.',
+  overridden: false,
+  by: 'Blanca'
+}, {
+  ts: '2026-06-22 16:03',
+  candidate: 'Elena Castro Prat',
+  job: 'DES-009',
+  decision: 'pass-to-shortlist',
+  confidence: 0.91,
+  reason: 'Senior con experiencia en facilitación + design tokens.',
+  overridden: false,
+  by: 'IA + Blanca'
+}];
+
+/* ─────────────────────────── ATOMIC COMPONENTS ─────────────────────────── */
+
+const Button = ({
+  variant = 'primary',
+  size = 'md',
+  icon,
+  iconRight,
+  children,
+  onClick,
+  className = ''
+}) => {
+  const sizes = {
+    sm: 'h-7 px-3 text-xs',
+    md: 'h-9 px-4 text-[13px]',
+    lg: 'h-11 px-5 text-sm'
+  };
+  const variants = {
+    primary: 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)] border border-transparent',
+    secondary: 'bg-[var(--bg-surface)] text-[var(--ink-primary)] border border-[var(--line-strong)] hover:bg-[var(--bg-subtle)] hover:border-[var(--ink-tertiary)]',
+    ghost: 'bg-transparent text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)] border border-transparent',
+    danger: 'bg-[var(--danger)] text-white hover:bg-red-700 border border-transparent',
+    dark: 'bg-[var(--ink-primary)] text-white hover:bg-[#1A2027] border border-transparent'
+  };
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    className: `inline-flex items-center justify-center gap-2 font-medium rounded-md transition-all whitespace-nowrap ${sizes[size]} ${variants[variant]} ${className}`
+  }, icon && /*#__PURE__*/React.createElement("span", {
+    className: "-ml-0.5 [&_svg]:w-4 [&_svg]:h-4"
+  }, icon), children, iconRight && /*#__PURE__*/React.createElement("span", {
+    className: "-mr-0.5 [&_svg]:w-4 [&_svg]:h-4"
+  }, iconRight));
+};
+const Badge = ({
+  variant = 'neutral',
+  dot = false,
+  children,
+  className = ''
+}) => {
+  const variants = {
+    success: 'bg-[var(--success-soft)] text-[var(--success)]',
+    info: 'bg-[var(--info-soft)] text-[var(--info)]',
+    warning: 'bg-[var(--warning-soft)] text-[var(--warning)]',
+    danger: 'bg-[var(--danger-soft)] text-[var(--danger)]',
+    neutral: 'bg-gray-100 text-gray-600',
+    accent: 'bg-[var(--accent-soft)] text-[var(--accent-ink)]'
+  };
+  return /*#__PURE__*/React.createElement("span", {
+    className: `inline-flex items-center gap-1.5 h-[22px] px-2.5 text-[11px] font-medium rounded-full leading-none ${variants[variant]} ${className}`
+  }, dot && /*#__PURE__*/React.createElement("span", {
+    className: "w-1.5 h-1.5 rounded-full bg-current"
+  }), children);
+};
+const Avatar = ({
+  name,
+  size = 'md',
+  className = ''
+}) => {
+  const sizes = {
+    xs: 'w-6 h-6 text-[10px]',
+    sm: 'w-7 h-7 text-[11px]',
+    md: 'w-9 h-9 text-[13px]',
+    lg: 'w-12 h-12 text-base',
+    xl: 'w-16 h-16 text-xl'
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: `${sizes[size]} rounded-full flex items-center justify-center font-medium text-white flex-shrink-0 ${className}`,
+    style: {
+      background: avatarColor(name)
+    }
+  }, initials(name));
+};
+const Card = ({
+  children,
+  className = '',
+  padding = 'p-6'
+}) => /*#__PURE__*/React.createElement("div", {
+  className: `bg-[var(--bg-surface)] border border-[var(--line)] rounded-xl ${padding} ${className}`
+}, children);
+const Input = ({
+  icon,
+  type = 'text',
+  placeholder,
+  value,
+  onChange,
+  className = ''
+}) => {
+  if (icon) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: `relative ${className}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-tertiary)] [&_svg]:w-4 [&_svg]:h-4 pointer-events-none"
+    }, icon), /*#__PURE__*/React.createElement("input", {
+      type: type,
+      placeholder: placeholder,
+      value: value,
+      onChange: onChange,
+      className: "w-full h-9 pl-10 pr-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] placeholder:text-[var(--ink-tertiary)] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none transition-all"
+    }));
+  }
+  return /*#__PURE__*/React.createElement("input", {
+    type: type,
+    placeholder: placeholder,
+    value: value,
+    onChange: onChange,
+    className: `w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] placeholder:text-[var(--ink-tertiary)] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none transition-all ${className}`
+  });
+};
+const Field = ({
+  label,
+  hint,
+  children,
+  className = ''
+}) => /*#__PURE__*/React.createElement("div", {
+  className: `flex flex-col gap-1.5 ${className}`
+}, /*#__PURE__*/React.createElement("label", {
+  className: "text-xs font-medium text-[var(--ink-secondary)]"
+}, label), children, hint && /*#__PURE__*/React.createElement("span", {
+  className: "text-[11px] text-[var(--ink-tertiary)]"
+}, hint));
+const PortalChip = ({
+  portal,
+  className = ''
+}) => {
+  const p = PORTALS[portal];
+  if (!p) return null;
+  return /*#__PURE__*/React.createElement("span", {
+    className: `inline-flex items-center gap-1.5 h-6 px-2 rounded text-[11px] font-medium ${className}`,
+    style: {
+      background: `${p.color}15`,
+      color: p.color
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-1.5 h-1.5 rounded-sm",
+    style: {
+      background: p.color
+    }
+  }), p.name);
+};
+const StatusBadge = ({
+  status
+}) => {
+  const map = {
+    active: {
+      v: 'success',
+      t: 'Activa'
+    },
+    expiring: {
+      v: 'warning',
+      t: 'Caduca pronto'
+    },
+    review: {
+      v: 'info',
+      t: 'En revisión'
+    },
+    paused: {
+      v: 'neutral',
+      t: 'Pausada'
+    },
+    closed: {
+      v: 'neutral',
+      t: 'Cerrada'
+    },
+    'shortlist': {
+      v: 'accent',
+      t: 'Shortlist'
+    },
+    'interview': {
+      v: 'info',
+      t: 'Entrevista'
+    },
+    'screening': {
+      v: 'neutral',
+      t: 'Screening'
+    },
+    'offer': {
+      v: 'success',
+      t: 'Oferta'
+    },
+    'hired': {
+      v: 'success',
+      t: 'Contratado'
+    },
+    'auto-rejected': {
+      v: 'danger',
+      t: 'Descarte IA'
+    },
+    'rejected': {
+      v: 'danger',
+      t: 'Descartado'
+    }
+  };
+  const x = map[status];
+  if (!x) return null;
+  return /*#__PURE__*/React.createElement(Badge, {
+    variant: x.v,
+    dot: true
+  }, x.t);
+};
+
+/* ─────────────────────────── KPI CARD ─────────────────────────── */
+
+const KPICard = ({
+  label,
+  value,
+  meta,
+  primary = false,
+  delta
+}) => /*#__PURE__*/React.createElement("div", {
+  className: `stat-card ${primary ? 'primary' : ''}`
+}, /*#__PURE__*/React.createElement("div", {
+  className: "stat-label"
+}, label), /*#__PURE__*/React.createElement("div", {
+  className: "stat-value mono-tabular"
+}, value), /*#__PURE__*/React.createElement("div", {
+  className: "stat-meta"
+}, delta && /*#__PURE__*/React.createElement("span", {
+  className: `stat-delta ${delta.positive ? 'positive' : 'negative'}`
+}, delta.positive ? '↑' : '↓', " ", delta.text), meta && /*#__PURE__*/React.createElement("span", {
+  className: delta ? 'ml-2' : ''
+}, meta)));
+
+/* ─────────────────────────── PAGE HEADER ─────────────────────────── */
+
+const PageHeader = ({
+  eyebrow,
+  title,
+  subtitle,
+  actions
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "flex items-end justify-between gap-6 mb-8"
+}, /*#__PURE__*/React.createElement("div", null, eyebrow && /*#__PURE__*/React.createElement("div", {
+  className: "text-[11px] font-medium tracking-[0.08em] uppercase text-[var(--ink-tertiary)] mb-1.5"
+}, eyebrow), /*#__PURE__*/React.createElement("h1", {
+  className: "text-[28px] font-bold tracking-[-0.02em] leading-tight"
+}, title), subtitle && /*#__PURE__*/React.createElement("p", {
+  className: "text-[14px] text-[var(--ink-secondary)] mt-2 max-w-2xl"
+}, subtitle)), actions && /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center gap-2"
+}, actions));
+
+/* ─────────────────────────── SIDEBAR ─────────────────────────── */
+
+const NAV_ITEMS = [{
+  key: 'dashboard',
+  label: 'Panel',
+  icon: 'dashboard',
+  section: 'general'
+}, {
+  key: 'jobs',
+  label: 'Candidaturas',
+  icon: 'briefcase',
+  section: 'general'
+}, {
+  key: 'cvs',
+  label: 'Ingesta de CVs',
+  icon: 'upload',
+  section: 'general'
+}, {
+  key: 'candidates',
+  label: 'Candidatos',
+  icon: 'users',
+  section: 'general'
+}, {
+  key: 'selection',
+  label: 'Auto-selección',
+  icon: 'funnel',
+  section: 'decision',
+  badge: 'IA'
+}, {
+  key: 'audit',
+  label: 'Auditoría',
+  icon: 'shield',
+  section: 'decision'
+}];
+const Sidebar = ({
+  view,
+  setView
+}) => {
+  const renderSection = (sec, label) => {
+    const items = NAV_ITEMS.filter(i => i.section === sec);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "px-3 pt-4 pb-1.5 mono text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--ink-tertiary)]"
+    }, label), items.map(item => {
+      const active = view === item.key || item.key === 'jobs' && view === 'job-detail';
+      const Ic = I[item.icon];
+      return /*#__PURE__*/React.createElement("button", {
+        key: item.key,
+        onClick: () => setView(item.key),
+        className: `relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all w-full text-left ${active ? 'bg-[var(--bg-surface)] text-[var(--ink-primary)] font-semibold shadow-[0_1px_2px_rgba(15,20,25,0.05)]' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-sidebar-hover)] hover:text-[var(--ink-primary)]'}`
+      }, active && /*#__PURE__*/React.createElement("span", {
+        className: "absolute -left-3 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-[var(--accent)] rounded-r"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "[&_svg]:w-4 [&_svg]:h-4 flex-shrink-0"
+      }, /*#__PURE__*/React.createElement(Ic, null)), /*#__PURE__*/React.createElement("span", {
+        className: "flex-1"
+      }, item.label), item.badge && /*#__PURE__*/React.createElement(Badge, {
+        variant: "accent",
+        className: "!h-4 !px-1.5 !text-[9px]"
+      }, item.badge));
+    }));
+  };
+  return /*#__PURE__*/React.createElement("aside", {
+    className: "w-[240px] flex-shrink-0 h-full bg-[var(--bg-sidebar)] border-r border-[var(--line-strong)] flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pt-6 pb-2 flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-2 h-2 bg-[var(--accent)] rounded-sm"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-[17px] tracking-[-0.02em]"
+  }, "VITAE"), /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[10px] text-[var(--ink-tertiary)] ml-auto"
+  }, "v0.4.2")), /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pb-4 text-[11px] text-[var(--ink-tertiary)]"
+  }, "Recruitment infra"), /*#__PURE__*/React.createElement("nav", {
+    className: "flex-1 px-3 overflow-y-auto"
+  }, renderSection('general', 'General'), renderSection('decision', 'Decisión')), /*#__PURE__*/React.createElement("div", {
+    className: "border-t border-[var(--line-strong)] p-4 flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: "Blanca",
+    size: "sm"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] font-semibold leading-tight"
+  }, "Blanca"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[10px] text-[var(--ink-tertiary)]"
+  }, "RRHH · Admin")), /*#__PURE__*/React.createElement("button", {
+    className: "p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--bg-sidebar-hover)] hover:text-[var(--ink-primary)]"
+  }, /*#__PURE__*/React.createElement(I.settings, null))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · DASHBOARD
+   ═══════════════════════════════════════════════════════════════════ */
+
+const DashboardView = ({
+  onNavigate
+}) => {
+  const activityIcon = t => {
+    const map = {
+      'ai-process': 'sparkle',
+      'rejection': 'x',
+      'offer': 'star',
+      'publication': 'globe',
+      'interview': 'message'
+    };
+    return I[map[t] || 'dots'];
+  };
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Buenos días, Blanca",
+    title: "Panel",
+    subtitle: "Lo que ha pasado mientras no mirabas.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null),
+      onClick: () => onNavigate('job-create')
+    }, "Nueva oferta"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "stat-grid mb-8"
+  }, /*#__PURE__*/React.createElement(KPICard, {
+    primary: true,
+    label: "Candidatos en base",
+    value: "2.847",
+    meta: "total acumulado"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Procesos abiertos",
+    value: "12",
+    delta: {
+      positive: true,
+      text: '+2'
+    },
+    meta: "vs. mes anterior"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "CVs procesados",
+    value: "486",
+    delta: {
+      positive: true,
+      text: '+12%'
+    },
+    meta: "últimos 7 días"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Tiempo a oferta",
+    value: "18d",
+    delta: {
+      positive: true,
+      text: '−2d'
+    },
+    meta: "mediana"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between px-6 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Ofertas activas"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "5 procesos abiertos · 133 candidatos en pipeline")), /*#__PURE__*/React.createElement(Button, {
+    variant: "ghost",
+    size: "sm",
+    iconRight: /*#__PURE__*/React.createElement(I.arrowRight, null),
+    onClick: () => onNavigate('jobs')
+  }, "Ver todas")), /*#__PURE__*/React.createElement("div", null, JOBS.slice(0, 5).map(j => /*#__PURE__*/React.createElement("button", {
+    key: j.id,
+    onClick: () => onNavigate('job-detail', j.id),
+    className: "w-full px-6 py-4 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] flex items-center gap-4 text-left transition-colors"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline gap-2 mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold text-[14px]"
+  }, j.title), /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[11px] text-[var(--ink-tertiary)]"
+  }, j.code)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-tertiary)] flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("span", null, j.dept), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.mapPin, null), " ", j.location), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement("span", null, j.candidates, " candidatos"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 flex-shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex -space-x-1.5"
+  }, j.portals.slice(0, 4).map(p => /*#__PURE__*/React.createElement("span", {
+    key: p,
+    className: "w-7 h-7 rounded-full border-[2px] border-[var(--bg-surface)] flex items-center justify-center mono text-[10px] font-bold text-white shadow-[0_1px_2px_rgba(15,20,25,0.08)]",
+    style: {
+      background: PORTALS[p].color
+    }
+  }, PORTALS[p].short))), /*#__PURE__*/React.createElement(StatusBadge, {
+    status: j.status
+  })))))), /*#__PURE__*/React.createElement(Card, {
+    className: "flex-1 flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Distribución del pipeline"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Candidatos por etapa, todas las ofertas")), /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "Actualizado en directo")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col justify-center gap-5"
+  }, [{
+    stage: 'Aplicados',
+    count: 133,
+    pct: 100,
+    color: '#9CA3AF'
+  }, {
+    stage: 'Screening',
+    count: 47,
+    pct: 35,
+    color: '#1FB6E8'
+  }, {
+    stage: 'Entrevista',
+    count: 18,
+    pct: 14,
+    color: '#6366F1'
+  }, {
+    stage: 'Oferta',
+    count: 3,
+    pct: 2,
+    color: '#16A34A'
+  }, {
+    stage: 'Auto-descarte IA',
+    count: 23,
+    pct: 17,
+    color: '#DC2626'
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.stage,
+    className: "flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-32 text-[13px] font-medium"
+  }, s.stage), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 h-2 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full rounded-full transition-all duration-700",
+    style: {
+      width: `${s.pct}%`,
+      background: s.color
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[12px] font-medium w-16 text-right"
+  }, s.count)))))), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-1 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Actividad"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "IA y equipo · últimas 24 h")), /*#__PURE__*/React.createElement("div", {
+    className: "px-5 py-3 space-y-3"
+  }, ACTIVITY.map((a, i) => {
+    const Ic = activityIcon(a.type);
+    const isAI = a.type === 'ai-process';
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "flex items-start gap-3 py-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5 ${isAI ? 'bg-[var(--accent-soft)] text-[var(--accent-ink)]' : 'bg-[var(--bg-subtle)] text-[var(--ink-secondary)]'}`
+    }, /*#__PURE__*/React.createElement(Ic, null)), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[13px] leading-snug text-[var(--ink-primary)]"
+    }, a.text), /*#__PURE__*/React.createElement("div", {
+      className: "mono text-[10px] text-[var(--ink-tertiary)] mt-0.5"
+    }, a.time)));
+  }))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em] mb-1"
+  }, "Acciones rápidas"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mb-4"
+  }, "Lo más usado"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, [{
+    label: 'Crear nueva oferta',
+    icon: 'plus',
+    view: 'job-create',
+    accent: true
+  }, {
+    label: 'Subir CVs en lote',
+    icon: 'upload',
+    view: 'cvs'
+  }, {
+    label: 'Ejecutar auto-selección',
+    icon: 'sparkle',
+    view: 'selection'
+  }, {
+    label: 'Ver auditoría',
+    icon: 'shield',
+    view: 'audit'
+  }].map(a => {
+    const Ic = I[a.icon];
+    return /*#__PURE__*/React.createElement("button", {
+      key: a.label,
+      onClick: () => onNavigate(a.view),
+      className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-left transition-colors ${a.accent ? 'bg-[var(--accent-soft)] text-[var(--accent-ink)] hover:bg-[#CFEDF7]' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--ink-primary)]'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "[&_svg]:w-4 [&_svg]:h-4"
+    }, /*#__PURE__*/React.createElement(Ic, null)), a.label, /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto [&_svg]:w-3.5 [&_svg]:h-3.5 opacity-50"
+    }, /*#__PURE__*/React.createElement(I.arrowRight, null)));
+  }))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · JOBS (listing)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const JobsView = ({
+  onNavigate
+}) => {
+  const [filter, setFilter] = useState('all');
+  const filtered = JOBS.filter(j => filter === 'all' || j.status === filter);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    title: "Candidaturas",
+    subtitle: `${JOBS.length} ofertas · ${JOBS.reduce((a, b) => a + b.candidates, 0)} candidatos en activo`,
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.filter, null)
+    }, "Filtrar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null),
+      onClick: () => onNavigate('job-create')
+    }, "Nueva oferta"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 mb-6 border-b border-[var(--line)]"
+  }, [{
+    k: 'all',
+    l: 'Todas',
+    n: JOBS.length
+  }, {
+    k: 'active',
+    l: 'Activas',
+    n: JOBS.filter(j => j.status === 'active').length
+  }, {
+    k: 'expiring',
+    l: 'Caducan pronto',
+    n: JOBS.filter(j => j.status === 'expiring').length
+  }, {
+    k: 'review',
+    l: 'En revisión',
+    n: JOBS.filter(j => j.status === 'review').length
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.k,
+    onClick: () => setFilter(t.k),
+    className: `px-4 py-2.5 text-[13px] font-medium relative transition-colors ${filter === t.k ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'}`
+  }, t.l, /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 mono text-[11px] text-[var(--ink-tertiary)]"
+  }, t.n), filter === t.k && /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[-1px] left-2 right-2 h-[2px] bg-[var(--accent)]"
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-5"
+  }, filtered.map(j => /*#__PURE__*/React.createElement("button", {
+    key: j.id,
+    onClick: () => onNavigate('job-detail', j.id),
+    className: "text-left bg-[var(--bg-surface)] border border-[var(--line)] rounded-xl p-5 hover:border-[var(--ink-tertiary)] hover:shadow-[0_2px_4px_rgba(15,20,25,0.04),0_4px_12px_rgba(15,20,25,0.04)] transition-all"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between mb-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[11px] text-[var(--ink-tertiary)] mb-1"
+  }, j.code, " · ", j.dept), /*#__PURE__*/React.createElement("h3", {
+    className: "text-[18px] font-semibold tracking-[-0.01em]"
+  }, j.title)), /*#__PURE__*/React.createElement(StatusBadge, {
+    status: j.status
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 text-[12px] text-[var(--ink-secondary)] mb-4"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.mapPin, null), " ", j.location), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement("span", null, j.salary), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement("span", null, j.contract)), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-2 mb-4"
+  }, [{
+    l: 'Aplicados',
+    v: j.pipeline.applied
+  }, {
+    l: 'Screening',
+    v: j.pipeline.screening
+  }, {
+    l: 'Entrev.',
+    v: j.pipeline.interview
+  }, {
+    l: 'Oferta',
+    v: j.pipeline.offer
+  }, {
+    l: 'Contrat.',
+    v: j.pipeline.hired
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.l,
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[18px] font-semibold tracking-[-0.02em]"
+  }, s.v), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] mt-0.5"
+  }, s.l)))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, j.portals.map(p => /*#__PURE__*/React.createElement(PortalChip, {
+    key: p,
+    portal: p
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[10px] text-[var(--ink-tertiary)]"
+  }, "Caduca ", j.expires))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · JOB CREATE WIZARD (3 steps with AI streaming)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const JobCreateView = ({
+  onNavigate
+}) => {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    title: 'Senior Frontend Engineer',
+    dept: 'Engineering',
+    location: 'Madrid (Híbrido)',
+    contract: 'Indefinido',
+    salaryMin: '50',
+    salaryMax: '70',
+    seniority: 'Senior',
+    technologies: 'React, TypeScript, Next.js'
+  });
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(null);
+  const [portals, setPortals] = useState({
+    linkedin: true,
+    infojobs: true,
+    tecnoempleo: true,
+    wellfound: false,
+    indeed: false,
+    stackoverflow: false
+  });
+  const generate = () => {
+    setGenerating(true);
+    setGenerated(null);
+    setTimeout(() => {
+      setGenerated({
+        description: `Buscamos un/a Senior Frontend Engineer para liderar el desarrollo de nuestra interfaz de cliente. Trabajarás en estrecha colaboración con producto, diseño y backend para construir experiencias rápidas, accesibles y mantenibles a escala.\n\nNuestro stack actual es React 18 con TypeScript, Next.js 14, Tailwind y un sistema de diseño propio. Buscamos a alguien con criterio para tomar decisiones de arquitectura frontend, mentorizar al equipo y subir el listón técnico del producto.`,
+        must: ['5+ años de experiencia en frontend con React/TypeScript en producción', 'Experiencia con Next.js (App Router) y SSR/ISR', 'Dominio de CSS moderno (Grid, Flexbox, Container Queries)', 'Experiencia mentorizando a juniors y mids', 'Inglés profesional (C1 mínimo)'],
+        nice: ['Contribuciones a open source', 'Experiencia con Design Systems y Storybook', 'Conocimiento de testing E2E (Playwright/Cypress)', 'Experiencia previa en startups en fase de escalado'],
+        benefits: ['Trabajo híbrido (2 días oficina en Madrid)', '55–75 k€ + bonus por objetivos', '25 días de vacaciones + tu cumpleaños', 'Seguro médico premium', '1500€/año en formación', 'Macbook Pro M3 + setup completo']
+      });
+      setGenerating(false);
+    }, 2400);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "max-w-5xl"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onNavigate('jobs'),
+    className: "inline-flex items-center gap-2 text-[12px] text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] mb-4"
+  }, /*#__PURE__*/React.createElement(I.arrowLeft, null), " Volver a Candidaturas"), /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: `Paso ${step} de 3`,
+    title: "Nueva oferta",
+    subtitle: "Datos básicos, descripción generada con IA, publicación multi-portal."
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 mb-8"
+  }, ['Datos básicos', 'Descripción', 'Publicación'].map((s, i) => {
+    const n = i + 1;
+    const isActive = step === n;
+    const isDone = step > n;
+    return /*#__PURE__*/React.createElement(React.Fragment, {
+      key: n
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `flex items-center gap-2.5 px-3 py-2 rounded-md ${isActive ? 'bg-[var(--accent-soft)]' : ''}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-6 h-6 rounded-full flex items-center justify-center mono text-[11px] font-semibold ${isActive ? 'bg-[var(--accent)] text-white' : isDone ? 'bg-[var(--success)] text-white' : 'bg-[var(--bg-subtle)] border border-[var(--line-strong)] text-[var(--ink-tertiary)]'}`
+    }, isDone ? /*#__PURE__*/React.createElement(I.check, {
+      style: {
+        width: 12,
+        height: 12
+      }
+    }) : n), /*#__PURE__*/React.createElement("span", {
+      className: `text-[13px] font-medium ${isActive ? 'text-[var(--accent-ink)]' : isDone ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-tertiary)]'}`
+    }, s)), n < 3 && /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 h-px bg-[var(--line)]"
+    }));
+  })), step === 1 && /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[18px] font-semibold tracking-[-0.01em] mb-1"
+  }, "Datos básicos"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[13px] text-[var(--ink-secondary)] mb-6"
+  }, "La IA usará estos campos para generar la descripción."), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Título de la oferta",
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.title,
+    onChange: e => setForm({
+      ...form,
+      title: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Departamento"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.dept,
+    onChange: e => setForm({
+      ...form,
+      dept: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Seniority"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.seniority,
+    onChange: e => setForm({
+      ...form,
+      seniority: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Ubicación"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.location,
+    onChange: e => setForm({
+      ...form,
+      location: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Tipo de contrato"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.contract,
+    onChange: e => setForm({
+      ...form,
+      contract: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Salario mín. (k€)"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.salaryMin,
+    onChange: e => setForm({
+      ...form,
+      salaryMin: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Salario máx. (k€)"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.salaryMax,
+    onChange: e => setForm({
+      ...form,
+      salaryMax: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Tecnologías/skills clave",
+    className: "col-span-2",
+    hint: "Separadas por coma. La IA inferirá requisitos y nice-to-haves."
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: form.technologies,
+    onChange: e => setForm({
+      ...form,
+      technologies: e.target.value
+    })
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-end mt-6 pt-6 border-t border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    iconRight: /*#__PURE__*/React.createElement(I.arrowRight, null),
+    onClick: () => setStep(2)
+  }, "Generar descripción con IA"))), step === 2 && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-2",
+    padding: "p-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Resumen"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[16px] font-semibold leading-tight mb-3"
+  }, form.title), /*#__PURE__*/React.createElement("dl", {
+    className: "space-y-2 text-[12px]"
+  }, [['Departamento', form.dept], ['Ubicación', form.location], ['Contrato', form.contract], ['Salario', `${form.salaryMin}–${form.salaryMax} k€`], ['Stack', form.technologies]].map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    className: "flex justify-between gap-3"
+  }, /*#__PURE__*/React.createElement("dt", {
+    className: "text-[var(--ink-tertiary)]"
+  }, k), /*#__PURE__*/React.createElement("dd", {
+    className: "text-[var(--ink-primary)] text-right"
+  }, v)))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-5 pt-5 border-t border-[var(--line-subtle)]"
+  }, !generated && !generating && /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    icon: /*#__PURE__*/React.createElement(I.sparkle, null),
+    className: "w-full",
+    onClick: generate
+  }, "Generar con IA"), generated && /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    icon: /*#__PURE__*/React.createElement(I.sparkle, null),
+    className: "w-full",
+    onClick: generate
+  }, "Regenerar"))), /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-3 min-h-[480px]",
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Descripción generada"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Editable antes de publicar")), generating && /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "Generando…"), generated && /*#__PURE__*/React.createElement(Badge, {
+    variant: "success",
+    dot: true
+  }, "Listo")), /*#__PURE__*/React.createElement("div", {
+    className: "p-6"
+  }, !generated && !generating && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col items-center justify-center text-center py-16"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-12 h-12 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] mb-4 [&_svg]:w-6 [&_svg]:h-6"
+  }, /*#__PURE__*/React.createElement(I.sparkle, null)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[14px] font-medium mb-1"
+  }, "La IA genera la descripción"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-tertiary)] max-w-sm"
+  }, "A partir del título, departamento y stack que has indicado, la IA propondrá la descripción, must-have, nice-to-have y beneficios.")), generating && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, [60, 80, 40, 90, 70, 50, 75].map((w, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "h-3 rounded bg-[var(--bg-subtle)] shimmer",
+    style: {
+      width: `${w}%`
+    }
+  }))), generated && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-5 text-[13px] leading-relaxed"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Descripción"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[var(--ink-primary)] whitespace-pre-line"
+  }, generated.description)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Requisitos · must-have"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5"
+  }, generated.must.map((r, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--accent)] mt-0.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.check, null)), /*#__PURE__*/React.createElement("span", null, r))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Valorable · nice-to-have"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5"
+  }, generated.nice.map((r, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: "flex gap-2 text-[var(--ink-secondary)]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, "+"), /*#__PURE__*/React.createElement("span", null, r))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Beneficios"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5"
+  }, generated.benefits.map((r, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--success)] mt-0.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.check, null)), /*#__PURE__*/React.createElement("span", null, r)))))))), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-5 flex justify-between"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    icon: /*#__PURE__*/React.createElement(I.arrowLeft, null),
+    onClick: () => setStep(1)
+  }, "Atrás"), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    iconRight: /*#__PURE__*/React.createElement(I.arrowRight, null),
+    onClick: () => setStep(3),
+    className: generated ? '' : 'opacity-50 pointer-events-none'
+  }, "Continuar a publicación"))), step === 3 && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-2",
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Portales de publicación"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Selecciona dónde publicar. Cada portal recibirá una versión optimizada.")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, Object.entries(PORTALS).filter(([k]) => k !== 'referido').map(([key, p]) => /*#__PURE__*/React.createElement("label", {
+    key: key,
+    className: "flex items-center gap-4 px-6 py-4 hover:bg-[var(--bg-subtle)] cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: portals[key] || false,
+    onChange: e => setPortals({
+      ...portals,
+      [key]: e.target.checked
+    }),
+    className: "w-4 h-4 rounded border-[var(--line-strong)] accent-[var(--accent)]"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-md flex items-center justify-center text-white text-[11px] font-bold mono flex-shrink-0",
+    style: {
+      background: p.color
+    }
+  }, p.short), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[14px] font-medium"
+  }, p.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, key === 'linkedin' && 'Visibilidad alta · 30 días · €€€', key === 'infojobs' && 'Volumen alto en España · 30 días · €€', key === 'tecnoempleo' && 'Especializado en perfiles tech · 30 días · €', key === 'wellfound' && 'Startups y talento internacional · 30 días · €€', key === 'indeed' && 'Cobertura masiva · 30 días · €€', key === 'stackoverflow' && 'Desarrolladores senior · 60 días · €€€')), portals[key] && /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "Seleccionado"))))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-semibold mb-3"
+  }, "Resumen"), /*#__PURE__*/React.createElement("dl", {
+    className: "space-y-3 text-[12px]"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", {
+    className: "text-[var(--ink-tertiary)] mb-0.5"
+  }, "Oferta"), /*#__PURE__*/React.createElement("dd", {
+    className: "font-medium"
+  }, form.title)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", {
+    className: "text-[var(--ink-tertiary)] mb-0.5"
+  }, "Portales"), /*#__PURE__*/React.createElement("dd", {
+    className: "font-medium"
+  }, Object.values(portals).filter(Boolean).length, " de ", Object.keys(portals).length)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", {
+    className: "text-[var(--ink-tertiary)] mb-0.5"
+  }, "Coste estimado"), /*#__PURE__*/React.createElement("dd", {
+    className: "font-medium mono"
+  }, Object.values(portals).filter(Boolean).length * 89, "€")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", {
+    className: "text-[var(--ink-tertiary)] mb-0.5"
+  }, "Duración"), /*#__PURE__*/React.createElement("dd", {
+    className: "font-medium"
+  }, "30 días"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-4 border-t border-[var(--line-subtle)] text-[11px] text-[var(--ink-secondary)] leading-relaxed"
+  }, "Al publicar, la IA empezará a procesar candidaturas en cuanto lleguen y las pre-clasificará según los criterios definidos."), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    className: "w-full mt-4",
+    icon: /*#__PURE__*/React.createElement(I.zap, null)
+  }, "Publicar oferta"), /*#__PURE__*/React.createElement("button", {
+    className: "w-full text-[12px] text-[var(--ink-tertiary)] mt-3 hover:text-[var(--ink-primary)]"
+  }, "Guardar como borrador")), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-3 flex justify-between"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    icon: /*#__PURE__*/React.createElement(I.arrowLeft, null),
+    onClick: () => setStep(2)
+  }, "Atrás"))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · JOB DETAIL
+   ═══════════════════════════════════════════════════════════════════ */
+
+const JobDetailView = ({
+  jobId,
+  onNavigate
+}) => {
+  const job = JOBS.find(j => j.id === jobId) || JOBS[0];
+  const [tab, setTab] = useState('publications');
+  const jobCandidates = CANDIDATES.filter(c => c.job === job.id);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onNavigate('jobs'),
+    className: "inline-flex items-center gap-2 text-[12px] text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] mb-4"
+  }, /*#__PURE__*/React.createElement(I.arrowLeft, null), " Candidaturas"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-6 mb-7"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[11px] text-[var(--ink-tertiary)] mb-1.5"
+  }, job.code, " · ", job.dept), /*#__PURE__*/React.createElement("h1", {
+    className: "text-[28px] font-bold tracking-[-0.02em] leading-tight"
+  }, job.title), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 text-[13px] text-[var(--ink-secondary)] mt-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.mapPin, null), " ", job.location), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement("span", null, job.contract), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement("span", null, job.salary), /*#__PURE__*/React.createElement("span", null, "·"), /*#__PURE__*/React.createElement(StatusBadge, {
+    status: job.status
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "ghost",
+    icon: /*#__PURE__*/React.createElement(I.dots, null)
+  }), /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary"
+  }, "Editar oferta"), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    icon: /*#__PURE__*/React.createElement(I.sparkle, null),
+    onClick: () => onNavigate('selection')
+  }, "Ejecutar auto-selección"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-3 mb-6"
+  }, [{
+    l: 'Aplicados',
+    v: job.pipeline.applied
+  }, {
+    l: 'Screening',
+    v: job.pipeline.screening
+  }, {
+    l: 'Entrevista',
+    v: job.pipeline.interview
+  }, {
+    l: 'Oferta',
+    v: job.pipeline.offer
+  }, {
+    l: 'Contratado',
+    v: job.pipeline.hired
+  }].map((s, i) => /*#__PURE__*/React.createElement("div", {
+    key: s.l,
+    className: `bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4 ${i === 0 ? 'border-l-[3px] border-l-[var(--accent)]' : ''}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, s.l), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, s.v)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 mb-6 border-b border-[var(--line)]"
+  }, [{
+    k: 'description',
+    l: 'Descripción'
+  }, {
+    k: 'publications',
+    l: 'Publicaciones',
+    n: job.portals.length
+  }, {
+    k: 'pipeline',
+    l: 'Pipeline',
+    n: jobCandidates.length
+  }, {
+    k: 'analytics',
+    l: 'Analítica'
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.k,
+    onClick: () => setTab(t.k),
+    className: `px-4 py-2.5 text-[13px] font-medium relative transition-colors ${tab === t.k ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'}`
+  }, t.l, t.n != null && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 mono text-[11px] text-[var(--ink-tertiary)]"
+  }, t.n), tab === t.k && /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[-1px] left-2 right-2 h-[2px] bg-[var(--accent)]"
+  })))), tab === 'publications' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Portal"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Estado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Vistas"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Cand."), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Publicado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Caduca"), /*#__PURE__*/React.createElement("th", {
+    className: "px-3"
+  }))), /*#__PURE__*/React.createElement("tbody", null, job.portals.map((pk, i) => {
+    const p = PORTALS[pk];
+    const views = [3420, 1820, 980, 540, 230, 410][i] || 320;
+    const cands = [18, 12, 7, 4, 2, 4][i] || 3;
+    return /*#__PURE__*/React.createElement("tr", {
+      key: pk,
+      className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-8 h-8 rounded-md flex items-center justify-center text-white text-[10px] font-bold mono",
+      style: {
+        background: p.color
+      }
+    }, p.short), /*#__PURE__*/React.createElement("span", {
+      className: "font-medium"
+    }, p.name))), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4"
+    }, /*#__PURE__*/React.createElement(Badge, {
+      variant: "success",
+      dot: true
+    }, "Publicada")), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4 text-right mono font-medium"
+    }, views.toLocaleString('es-ES')), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4 text-right mono font-medium"
+    }, cands), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4 mono text-[12px] text-[var(--ink-tertiary)]"
+    }, job.posted), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4 mono text-[12px] text-[var(--ink-tertiary)]"
+    }, job.expires), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-4"
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "p-1.5 rounded text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)] [&_svg]:w-4 [&_svg]:h-4"
+    }, /*#__PURE__*/React.createElement(I.externalLink, null))));
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "px-5 py-4 bg-[var(--accent-soft)] border-t border-[var(--line)] flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-4 [&_svg]:h-4 text-[var(--accent-ink)]"
+  }, /*#__PURE__*/React.createElement(I.sparkle, null)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 text-[12px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-[var(--accent-ink)]"
+  }, "Sugerencia IA:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-secondary)]"
+  }, " esta oferta tiene buen volumen pero pocos perfiles senior. Considera añadir Stack Overflow Jobs.")), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    size: "sm"
+  }, "Añadir portal"))), tab === 'pipeline' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Candidato"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Estado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Match"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Fuente"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Aplicado"))), /*#__PURE__*/React.createElement("tbody", null, jobCandidates.map(c => /*#__PURE__*/React.createElement("tr", {
+    key: c.id,
+    className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: c.name,
+    size: "sm"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-medium"
+  }, c.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, c.currentRole, " · ", c.currentCompany)))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement(StatusBadge, {
+    status: c.status
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `mono font-semibold text-[14px] ${c.matchScore >= 85 ? 'text-[var(--success)]' : c.matchScore >= 70 ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-tertiary)]'}`
+  }, c.matchScore, "%")), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement(PortalChip, {
+    portal: c.source
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 mono text-[12px] text-[var(--ink-tertiary)]"
+  }, c.appliedDate)))))), tab === 'description' && /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] leading-relaxed text-[var(--ink-primary)] space-y-4 max-w-3xl"
+  }, /*#__PURE__*/React.createElement("p", null, "Buscamos un/a ", job.title, " para nuestro equipo de ", job.dept, ". Trabajarás en estrecha colaboración con producto y diseño para construir soluciones a escala que impactan directamente al negocio."), /*#__PURE__*/React.createElement("h4", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mt-6"
+  }, "Requisitos"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5 list-disc list-inside text-[var(--ink-secondary)]"
+  }, /*#__PURE__*/React.createElement("li", null, "5+ años de experiencia en posiciones similares"), /*#__PURE__*/React.createElement("li", null, "Dominio del stack técnico requerido"), /*#__PURE__*/React.createElement("li", null, "Capacidad de liderazgo y mentorización"), /*#__PURE__*/React.createElement("li", null, "Inglés profesional")), /*#__PURE__*/React.createElement("h4", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mt-6"
+  }, "Beneficios"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5 list-disc list-inside text-[var(--ink-secondary)]"
+  }, /*#__PURE__*/React.createElement("li", null, job.salary, " + bonus por objetivos"), /*#__PURE__*/React.createElement("li", null, "Modalidad: ", job.contract, " · ", job.location), /*#__PURE__*/React.createElement("li", null, "25 días de vacaciones + tu cumpleaños"), /*#__PURE__*/React.createElement("li", null, "1500€/año en formación")))), tab === 'analytics' && /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-12 text-[var(--ink-tertiary)] text-[13px]"
+  }, "Vista de analítica · gráficas de embudo, tiempos por etapa, fuentes top.")));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · CVS UPLOAD
+   ═══════════════════════════════════════════════════════════════════ */
+
+const CVsView = () => {
+  const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState([]);
+  const MOCK_FILES = [{
+    name: 'CV_Lucia_Martin.pdf',
+    size: '248 KB',
+    extracted: {
+      name: 'Lucía Martín Vega',
+      email: 'lucia.martin@gmail.com',
+      skills: ['Python', 'PostgreSQL', 'AWS', 'Docker'],
+      years: 8
+    }
+  }, {
+    name: 'pablo_garcia_designer.pdf',
+    size: '1.2 MB',
+    extracted: {
+      name: 'Pablo García Ruiz',
+      email: 'pablo.garcia@hotmail.es',
+      skills: ['Figma', 'Design Systems'],
+      years: 6
+    }
+  }, {
+    name: 'CV-Sofia-Navarro-2026.pdf',
+    size: '412 KB',
+    extracted: {
+      name: 'Sofía Navarro Gil',
+      email: 'sofia.navarro@gmail.com',
+      skills: ['Python', 'Rust', 'Kubernetes'],
+      years: 11
+    }
+  }, {
+    name: 'Andres_perez.pdf',
+    size: '180 KB',
+    extracted: {
+      name: 'Andrés Pérez Salas',
+      email: 'a.perez.salas@gmail.com',
+      skills: ['SQL', 'Python'],
+      years: 2
+    }
+  }, {
+    name: 'curriculum_carmen.pdf',
+    size: '320 KB',
+    extracted: {
+      name: 'Carmen Iglesias Reyes',
+      email: 'carmen.iglesias@gmail.com',
+      skills: ['Zendesk', 'Salesforce'],
+      years: 6
+    }
+  }, {
+    name: 'raul_dom_content.pdf',
+    size: '288 KB',
+    extracted: {
+      name: 'Raúl Domínguez Cobo',
+      email: 'raul.dominguez@gmail.com',
+      skills: ['SEO', 'Content Strategy'],
+      years: 4
+    }
+  }];
+  const start = () => {
+    setProcessing(true);
+    setProgress(MOCK_FILES.map(f => ({
+      ...f,
+      status: 'queued',
+      pct: 0
+    })));
+    MOCK_FILES.forEach((f, i) => {
+      setTimeout(() => {
+        setProgress(prev => prev.map((p, j) => j === i ? {
+          ...p,
+          status: 'processing',
+          pct: 50
+        } : p));
+      }, 400 + i * 300);
+      setTimeout(() => {
+        setProgress(prev => prev.map((p, j) => j === i ? {
+          ...p,
+          status: 'done',
+          pct: 100
+        } : p));
+      }, 1200 + i * 300);
+    });
+  };
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    title: "Ingesta de CVs",
+    subtitle: "Sube CVs en lote. La IA extrae datos estructurados, detecta duplicados y los cruza con ofertas activas.",
+    actions: /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.clock, null)
+    }, "Historial de lotes")
+  }), !processing && /*#__PURE__*/React.createElement("div", {
+    className: "border-2 border-dashed border-[var(--line-strong)] rounded-xl p-16 text-center bg-[var(--bg-surface)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/30 transition-all cursor-pointer mb-6",
+    onClick: start
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 mx-auto mb-5 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] [&_svg]:w-7 [&_svg]:h-7"
+  }, /*#__PURE__*/React.createElement(I.upload, null)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[18px] font-semibold tracking-[-0.01em] mb-2"
+  }, "Arrastra los CVs aquí"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] text-[var(--ink-secondary)] max-w-md mx-auto mb-5"
+  }, "PDF, DOCX o imagen escaneada. Lotes de hasta 200 archivos. La IA procesa cada uno en menos de 3 segundos."), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    icon: /*#__PURE__*/React.createElement(I.upload, null)
+  }, "Seleccionar archivos"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-6 text-[11px] text-[var(--ink-tertiary)]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, "Detecta automáticamente:"), " nombre, contacto, experiencia, skills, idiomas, formación, duplicados")), processing && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-4 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Procesando lote · ", progress.length, " CVs"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, progress.filter(p => p.status === 'done').length, " de ", progress.length, " completados · ", progress.filter(p => p.status === 'processing').length, " en curso")), /*#__PURE__*/React.createElement(Badge, {
+    variant: progress.every(p => p.status === 'done') ? 'success' : 'accent',
+    dot: true
+  }, progress.every(p => p.status === 'done') ? 'Completado' : 'Procesando')), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, progress.map((f, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "px-6 py-4 flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-md bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--ink-tertiary)] [&_svg]:w-4 [&_svg]:h-4 flex-shrink-0"
+  }, /*#__PURE__*/React.createElement(I.file, null)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-3 mb-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-medium text-[13px] truncate"
+  }, f.name), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[11px] text-[var(--ink-tertiary)] flex-shrink-0"
+  }, f.size)), f.status !== 'done' ? /*#__PURE__*/React.createElement("div", {
+    className: "h-1 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `h-full bg-[var(--accent)] rounded-full transition-all duration-500 ${f.status === 'processing' ? 'animate-pulse' : ''}`,
+    style: {
+      width: `${f.pct}%`
+    }
+  })) : /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 text-[12px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, f.extracted.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, "·"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, f.extracted.email), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, "·"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, f.extracted.years, " años"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, "·"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1"
+  }, f.extracted.skills.slice(0, 3).map(s => /*#__PURE__*/React.createElement("span", {
+    key: s,
+    className: "text-[10px] px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded"
+  }, s))))), /*#__PURE__*/React.createElement("div", {
+    className: "w-20 text-right flex-shrink-0"
+  }, f.status === 'queued' && /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[11px] text-[var(--ink-tertiary)]"
+  }, "En cola"), f.status === 'processing' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "Procesando"), f.status === 'done' && /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--success)] [&_svg]:w-5 [&_svg]:h-5 inline-block"
+  }, /*#__PURE__*/React.createElement(I.check, null))))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · CANDIDATES
+   ═══════════════════════════════════════════════════════════════════ */
+
+const CandidatesView = ({
+  onNavigate
+}) => {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const filtered = useMemo(() => CANDIDATES.filter(c => {
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.skills.some(s => s.toLowerCase().includes(search.toLowerCase()))) return false;
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+    return true;
+  }), [search, statusFilter]);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    title: "Candidatos",
+    subtitle: `${CANDIDATES.length} en base · cruzados contra ofertas activas`,
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar CSV"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.upload, null),
+      onClick: () => onNavigate('cvs')
+    }, "Subir CVs"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-3 mb-6"
+  }, [{
+    l: 'En shortlist',
+    v: CANDIDATES.filter(c => c.status === 'shortlist').length,
+    c: '#1FB6E8'
+  }, {
+    l: 'En entrevista',
+    v: CANDIDATES.filter(c => c.status === 'interview').length,
+    c: '#6366F1'
+  }, {
+    l: 'En screening',
+    v: CANDIDATES.filter(c => c.status === 'screening').length,
+    c: '#9CA3AF'
+  }, {
+    l: 'Auto-descartados',
+    v: CANDIDATES.filter(c => c.status === 'auto-rejected').length,
+    c: '#DC2626'
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.l,
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, s.l), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, s.v), /*#__PURE__*/React.createElement("div", {
+    className: "w-2 h-2 rounded-full mb-2",
+    style: {
+      background: s.c
+    }
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-3 mb-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 max-w-md"
+  }, /*#__PURE__*/React.createElement(Input, {
+    icon: /*#__PURE__*/React.createElement(I.search, null),
+    placeholder: "Nombre, email, habilidad…",
+    value: search,
+    onChange: e => setSearch(e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1"
+  }, [{
+    k: 'all',
+    l: 'Todos'
+  }, {
+    k: 'shortlist',
+    l: 'Shortlist'
+  }, {
+    k: 'interview',
+    l: 'Entrevista'
+  }, {
+    k: 'screening',
+    l: 'Screening'
+  }, {
+    k: 'auto-rejected',
+    l: 'Descartados'
+  }].map(f => /*#__PURE__*/React.createElement("button", {
+    key: f.k,
+    onClick: () => setStatusFilter(f.k),
+    className: `h-9 px-3 text-[12px] font-medium rounded-md transition-colors ${statusFilter === f.k ? 'bg-[var(--ink-primary)] text-white' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)]'}`
+  }, f.l)))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Candidato"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Habilidades"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Idiomas"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Match"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Oferta"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Estado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Fuente"))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(c => /*#__PURE__*/React.createElement("tr", {
+    key: c.id,
+    className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: c.name,
+    size: "sm"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-medium"
+  }, c.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, c.currentRole, " · ", c.years, "a · ", c.location)))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1 max-w-[220px]"
+  }, c.skills.slice(0, 3).map(s => /*#__PURE__*/React.createElement("span", {
+    key: s,
+    className: "text-[10px] px-1.5 py-0.5 bg-[var(--bg-subtle)] border border-[var(--line)] rounded text-[var(--ink-secondary)]"
+  }, s)), c.skills.length > 3 && /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-[var(--ink-tertiary)] py-0.5"
+  }, "+", c.skills.length - 3))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 text-[10px] font-mono"
+  }, Object.entries(c.languages).map(([k, v]) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    className: "px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded uppercase"
+  }, k, "·", v === 'Nativo' ? 'N' : v)))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `mono font-semibold text-[14px] ${c.matchScore >= 85 ? 'text-[var(--success)]' : c.matchScore >= 70 ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-tertiary)]'}`
+  }, c.matchScore, "%")), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 mono text-[11px] text-[var(--ink-tertiary)]"
+  }, c.job.toUpperCase()), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement(StatusBadge, {
+    status: c.status
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement(PortalChip, {
+    portal: c.source
+  }))))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · SELECTION (Auto-selección · killer feature)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const SelectionView = () => {
+  const [job, setJob] = useState('eng-024');
+  const [minExp, setMinExp] = useState(5);
+  const [skills, setSkills] = useState(['Python', 'PostgreSQL']);
+  const [newSkill, setNewSkill] = useState('');
+  const [minLang, setMinLang] = useState('B2');
+  const [prompt, setPrompt] = useState('Buscamos perfiles senior con experiencia en sistemas distribuidos y bases de datos relacionales en producción. Priorizamos a quienes hayan mentorizado equipos. Descarta perfiles con stack principal en Java/Spring sin experiencia equivalente en Python.');
+  const [executed, setExecuted] = useState(false);
+  const [executing, setExecuting] = useState(false);
+  const jobObj = JOBS.find(j => j.id === job);
+  const jobCands = CANDIDATES.filter(c => c.job === job);
+  const proposed = jobCands.filter(c => c.matchScore < 70 || c.status === 'auto-rejected');
+  const passed = jobCands.filter(c => c.matchScore >= 70 && c.status !== 'auto-rejected');
+  const execute = () => {
+    setExecuting(true);
+    setTimeout(() => {
+      setExecuting(false);
+      setExecuted(true);
+    }, 2200);
+  };
+  const reset = () => {
+    setExecuted(false);
+  };
+  const addSkill = () => {
+    if (newSkill.trim()) {
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill('');
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Decisión asistida por IA",
+    title: "Auto-selección",
+    subtitle: "Define filtros estructurados y una intención en lenguaje natural. La IA propone descartes y avances con razonamiento auditable; tú confirmas."
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 space-y-5"
+  }, /*#__PURE__*/React.createElement(Card, {
+    padding: "p-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-semibold mb-1"
+  }, "Oferta"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mb-3"
+  }, "Sobre qué pipeline ejecutar."), /*#__PURE__*/React.createElement("select", {
+    value: job,
+    onChange: e => {
+      setJob(e.target.value);
+      reset();
+    },
+    className: "w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] font-medium hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none"
+  }, JOBS.map(j => /*#__PURE__*/React.createElement("option", {
+    key: j.id,
+    value: j.id
+  }, j.code, " · ", j.title, " (", j.pipeline.applied, ")")))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-semibold mb-1"
+  }, "Filtros estructurados"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mb-4"
+  }, "Reglas duras. Lo que no cumpla, fuera."), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Experiencia mínima (años)"
+  }, /*#__PURE__*/React.createElement(Input, {
+    type: "number",
+    value: minExp,
+    onChange: e => setMinExp(e.target.value)
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Habilidades obligatorias"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5 mb-2"
+  }, skills.map(s => /*#__PURE__*/React.createElement("span", {
+    key: s,
+    className: "inline-flex items-center gap-1.5 h-6 px-2 bg-[var(--accent-soft)] text-[var(--accent-ink)] text-[11px] font-medium rounded"
+  }, s, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSkills(skills.filter(x => x !== s)),
+    className: "opacity-60 hover:opacity-100 [&_svg]:w-3 [&_svg]:h-3"
+  }, /*#__PURE__*/React.createElement(I.x, null))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement(Input, {
+    value: newSkill,
+    onChange: e => setNewSkill(e.target.value),
+    placeholder: "Añadir skill"
+  }), /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    size: "md",
+    onClick: addSkill
+  }, "+"))), /*#__PURE__*/React.createElement(Field, {
+    label: "Idioma mínimo (inglés)"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: minLang,
+    onChange: e => setMinLang(e.target.value),
+    className: "w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none"
+  }, ['A2', 'B1', 'B2', 'C1', 'C2'].map(l => /*#__PURE__*/React.createElement("option", {
+    key: l
+  }, l)))))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--accent-ink)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.sparkle, null)), /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-semibold"
+  }, "Intención (prompt)")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mb-3"
+  }, "Habla a la IA como hablarías a un colega. Lo que no cabe en un filtro estructurado."), /*#__PURE__*/React.createElement("textarea", {
+    value: prompt,
+    onChange: e => setPrompt(e.target.value),
+    rows: 6,
+    className: "w-full p-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] leading-relaxed resize-none hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--warning-soft)] border border-[var(--warning)]/20 rounded-lg p-4 flex gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--warning)] mt-0.5 [&_svg]:w-4 [&_svg]:h-4 flex-shrink-0"
+  }, /*#__PURE__*/React.createElement(I.alert, null)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-secondary)] leading-relaxed"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold text-[var(--ink-primary)]"
+  }, "GDPR Art. 22 · AI Act"), " — Las propuestas de la IA son ", /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "recomendaciones"), ". Cada descarte requiere tu confirmación explícita y queda registrado en la auditoría.")), !executed && /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    size: "lg",
+    icon: /*#__PURE__*/React.createElement(I.sparkle, null),
+    className: "w-full",
+    onClick: execute
+  }, executing ? 'Analizando candidatos…' : `Ejecutar sobre ${jobCands.length} candidatos`), executed && /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    size: "lg",
+    className: "w-full",
+    onClick: reset
+  }, "Volver a ajustar criterios")), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-3 space-y-5"
+  }, !executed && !executing && /*#__PURE__*/React.createElement(Card, {
+    className: "min-h-[480px] flex flex-col items-center justify-center text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] mb-4 [&_svg]:w-7 [&_svg]:h-7"
+  }, /*#__PURE__*/React.createElement(I.funnel, null)), /*#__PURE__*/React.createElement("h3", {
+    className: "text-[18px] font-semibold tracking-[-0.01em] mb-2"
+  }, "Listo cuando tú lo estés"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[13px] text-[var(--ink-secondary)] max-w-md"
+  }, "Cuando ejecutes, verás dos tablas: candidatos que la IA propone ", /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-[var(--danger)]"
+  }, "descartar"), " (con razonamiento y confianza) y candidatos que ", /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-[var(--success)]"
+  }, "pasan los filtros"), ". Decides tú al final.")), executing && /*#__PURE__*/React.createElement(Card, {
+    className: "min-h-[480px] flex flex-col items-center justify-center text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] mb-4 animate-pulse [&_svg]:w-7 [&_svg]:h-7"
+  }, /*#__PURE__*/React.createElement(I.bot, null)), /*#__PURE__*/React.createElement("h3", {
+    className: "text-[18px] font-semibold tracking-[-0.01em] mb-2"
+  }, "La IA está analizando"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[13px] text-[var(--ink-secondary)] max-w-md mb-6"
+  }, "Aplicando filtros estructurados, cruzando con la intención del prompt, y puntuando cada CV."), /*#__PURE__*/React.createElement("div", {
+    className: "w-64 h-1 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-[var(--accent)] rounded-full animate-pulse",
+    style: {
+      width: '70%'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[10px] text-[var(--ink-tertiary)] mt-3"
+  }, "Procesando ", jobCands.length, " candidatos · ~", (jobCands.length * 0.4).toFixed(1), "s")), executed && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, "Analizados"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, jobCands.length)), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--danger-soft)] border border-[var(--danger)]/20 rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--danger)] font-medium mb-1.5"
+  }, "Propuestos para descartar"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em] text-[var(--danger)]"
+  }, proposed.length)), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--success-soft)] border border-[var(--success)]/20 rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--success)] font-medium mb-1.5"
+  }, "Pasan filtro"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em] text-[var(--success)]"
+  }, passed.length))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-semibold tracking-[-0.005em] flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--danger)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.x, null)), "Propuestos para descartar"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Revisa el razonamiento. Mantén o confirma el descarte uno a uno.")), /*#__PURE__*/React.createElement(Button, {
+    variant: "dark",
+    size: "sm"
+  }, "Confirmar ", proposed.length, " descartes")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, proposed.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.id,
+    className: "px-5 py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-3 mb-2"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: c.name,
+    size: "sm"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 flex-wrap"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-[13px]"
+  }, c.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, "· ", c.currentRole), /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[10px] px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-[var(--ink-secondary)]"
+  }, c.years, "a"), /*#__PURE__*/React.createElement("span", {
+    className: `mono font-semibold text-[11px] ml-auto ${c.matchScore < 60 ? 'text-[var(--danger)]' : 'text-[var(--warning)]'}`
+  }, "match ", c.matchScore, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mt-2 mb-2"
+  }, /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "IA · confianza ", Math.round((c.matchScore < 60 ? 0.91 : 0.78) * 100), "%")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-secondary)] leading-snug mb-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-[var(--ink-primary)]"
+  }, "Razonamiento:"), " ", c.rejectReason || 'Cumple filtros estructurados pero no encaja con la intención del prompt para senior con sistemas distribuidos.'), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "ghost",
+    size: "sm"
+  }, "Mantener en pipeline"), /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    size: "sm"
+  }, "Confirmar descarte")))))))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-semibold tracking-[-0.005em] flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--success)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.check, null)), "Pasan filtros · ordenados por match"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Avanzan automáticamente a la siguiente etapa del pipeline.")), /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("tbody", null, [...passed].sort((a, b) => b.matchScore - a.matchScore).map(c => /*#__PURE__*/React.createElement("tr", {
+    key: c.id,
+    className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-3.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: c.name,
+    size: "sm"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-medium"
+  }, c.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, c.currentRole, " · ", c.currentCompany)))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-3.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1"
+  }, c.skills.slice(0, 3).map(s => /*#__PURE__*/React.createElement("span", {
+    key: s,
+    className: "text-[10px] px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded"
+  }, s)))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-3.5 text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `mono font-semibold ${c.matchScore >= 85 ? 'text-[var(--success)]' : 'text-[var(--ink-primary)]'}`
+  }, c.matchScore, "%")))))))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · AUDIT
+   ═══════════════════════════════════════════════════════════════════ */
+
+const AuditView = () => {
+  const totalDecisions = AUDIT_LOG.length;
+  const aiConfirmed = AUDIT_LOG.filter(l => !l.overridden && l.by.includes('IA')).length;
+  const overrides = AUDIT_LOG.filter(l => l.overridden).length;
+  const overrideRate = (overrides / totalDecisions * 100).toFixed(0);
+  const avgConfidence = (AUDIT_LOG.reduce((a, b) => a + b.confidence, 0) / totalDecisions * 100).toFixed(0);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Trazabilidad · GDPR Art. 22 · EU AI Act",
+    title: "Auditoría",
+    subtitle: "Cada decisión asistida por IA queda registrada con su prompt, razonamiento, confianza y aprobación humana. Retención de 36 meses.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.filter, null)
+    }, "Filtrar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar log"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-3 mb-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, "Decisiones registradas"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, totalDecisions), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-1"
+  }, "últimas 4 semanas")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, "IA confirmadas"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em] text-[var(--success)]"
+  }, aiConfirmed), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-1"
+  }, (aiConfirmed / totalDecisions * 100).toFixed(0), "% del total")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, "Overrides humanos"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em] text-[var(--warning)]"
+  }, overrides), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-1"
+  }, "se mantuvo en pipeline")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, "Tasa de override"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, overrideRate, "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-1"
+  }, "↓ 2pp vs. mes ant.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, "Confianza media"), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, avgConfidence, "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-1"
+  }, "en decisiones IA"))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Timestamp"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Candidato"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Oferta"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Decisión"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Razonamiento IA"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Conf."), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Aprobado por"))), /*#__PURE__*/React.createElement("tbody", null, AUDIT_LOG.map((l, i) => /*#__PURE__*/React.createElement("tr", {
+    key: i,
+    className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 mono text-[11px] text-[var(--ink-tertiary)] whitespace-nowrap"
+  }, l.ts), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 font-medium"
+  }, l.candidate), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 mono text-[11px] text-[var(--ink-secondary)]"
+  }, l.job), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4"
+  }, l.decision === 'auto-reject' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "danger",
+    dot: true
+  }, "Descarte"), l.decision === 'pass-to-shortlist' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "success",
+    dot: true
+  }, "Shortlist"), l.decision === 'pass-to-interview' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "info",
+    dot: true
+  }, "Entrevista")), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 max-w-md"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-secondary)] leading-snug"
+  }, l.reason), l.overridden && /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--warning)] mt-1.5 flex items-start gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-3 [&_svg]:h-3 mt-0.5"
+  }, /*#__PURE__*/React.createElement(I.alert, null)), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, "Override:"), " ", l.overrideReason))), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 text-right mono font-semibold"
+  }, Math.round(l.confidence * 100), "%"), /*#__PURE__*/React.createElement("td", {
+    className: "px-5 py-4 text-[12px] whitespace-nowrap"
+  }, l.by))))), /*#__PURE__*/React.createElement("div", {
+    className: "px-5 py-4 bg-[var(--bg-subtle)] border-t border-[var(--line)] flex items-center gap-3 text-[11px] text-[var(--ink-secondary)]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-3.5 [&_svg]:h-3.5 text-[var(--success)]"
+  }, /*#__PURE__*/React.createElement(I.shield, null)), /*#__PURE__*/React.createElement("span", null, "Cumplimiento GDPR Art. 22 (decisiones automatizadas) · EU AI Act categoría alto riesgo · Retención 36 meses · Exportable a CSV/JSON"))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   APP
+   ═══════════════════════════════════════════════════════════════════ */
+
+const App = () => {
+  const [view, setView] = useState('dashboard');
+  const [jobId, setJobId] = useState(null);
+  const navigate = (v, id) => {
+    if (v === 'job-detail') {
+      setJobId(id);
+      setView('job-detail');
+    } else if (v === 'job-create') {
+      setView('job-create');
+    } else {
+      setView(v);
+      setJobId(null);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex h-screen overflow-hidden bg-[var(--bg-canvas)]"
+  }, /*#__PURE__*/React.createElement(Sidebar, {
+    view: view,
+    setView: v => navigate(v)
+  }), /*#__PURE__*/React.createElement("main", {
+    className: "flex-1 overflow-y-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-[1400px] mx-auto px-10 py-10"
+  }, view === 'dashboard' && /*#__PURE__*/React.createElement(DashboardView, {
+    onNavigate: navigate
+  }), view === 'jobs' && /*#__PURE__*/React.createElement(JobsView, {
+    onNavigate: navigate
+  }), view === 'job-create' && /*#__PURE__*/React.createElement(JobCreateView, {
+    onNavigate: navigate
+  }), view === 'job-detail' && /*#__PURE__*/React.createElement(JobDetailView, {
+    jobId: jobId,
+    onNavigate: navigate
+  }), view === 'cvs' && /*#__PURE__*/React.createElement(CVsView, null), view === 'candidates' && /*#__PURE__*/React.createElement(CandidatesView, {
+    onNavigate: navigate
+  }), view === 'selection' && /*#__PURE__*/React.createElement(SelectionView, null), view === 'audit' && /*#__PURE__*/React.createElement(AuditView, null))));
+};
+ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+</script>
+
+</body>
+</html>

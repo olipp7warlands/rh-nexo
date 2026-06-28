@@ -1,0 +1,4516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Núcleo · Core de Recursos Humanos</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+<style>
+  :root {
+    --bg-canvas:#F5F6F8; --bg-surface:#FFFFFF; --bg-subtle:#FAFBFC; --bg-sidebar:#DCE2E8; --bg-sidebar-hover:#CCD4DD; --bg-hover:#EDEFF2;
+    --ink-primary:#0F1419; --ink-secondary:#4B5563; --ink-tertiary:#9CA3AF; --ink-disabled:#D1D5DB; --ink-inverse:#FFFFFF;
+    --line:#E5E7EB; --line-strong:#D1D5DB; --line-subtle:#F1F3F5;
+    --accent:#1FB6E8; --accent-hover:#19A3D0; --accent-pressed:#1390BA; --accent-soft:#E1F4FB; --accent-ink:#0C6B8A;
+    --success:#16A34A; --success-soft:#DCFCE7; --warning:#D97706; --warning-soft:#FEF3C7; --danger:#DC2626; --danger-soft:#FEE2E2; --info:#2563EB; --info-soft:#DBEAFE;
+    --shadow-sm:0 1px 2px rgba(15,20,25,0.04); --shadow-md:0 2px 4px rgba(15,20,25,0.04),0 4px 12px rgba(15,20,25,0.04);
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    font-size:14px; line-height:1.5; color:var(--ink-primary); background:var(--bg-canvas);
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; font-feature-settings:'cv11','ss01','ss03';
+  }
+  .mono { font-family:'JetBrains Mono',ui-monospace,monospace; }
+  .mono-tabular { font-variant-numeric:tabular-nums; }
+
+  /* KPI cards */
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .stat-card { background:var(--bg-surface); border:1px solid var(--line); border-radius:12px; padding:20px; display:grid; grid-template-rows:auto 1fr auto; gap:12px; min-height:140px; }
+  .stat-card.primary { background:var(--accent); border-color:var(--accent); color:white; }
+  .stat-label { font-size:13px; font-weight:500; line-height:1.35; min-height:calc(13px*1.35*2); display:flex; align-items:flex-start; }
+  .stat-card:not(.primary) .stat-label { color:var(--ink-secondary); }
+  .stat-card.primary .stat-label { color:rgba(255,255,255,0.95); }
+  .stat-value { font-size:32px; font-weight:700; letter-spacing:-0.02em; line-height:1; align-self:end; font-variant-numeric:tabular-nums; }
+  .stat-meta { font-size:12px; color:var(--ink-tertiary); line-height:1.4; min-height:16px; display:flex; align-items:center; }
+  .stat-card.primary .stat-meta { color:rgba(255,255,255,0.85); }
+  .stat-delta { display:inline-flex; align-items:center; gap:4px; height:20px; padding:0 8px; border-radius:9999px; font-size:11px; font-weight:500; }
+  .stat-delta.positive { background:var(--success-soft); color:var(--success); }
+  .stat-delta.negative { background:var(--danger-soft); color:var(--danger); }
+
+  /* ─────────── ORG CHART ─────────── */
+  /* Lead cards are a fixed width so connector geometry (lead-center = 92px) is exact */
+  .org-root { display:inline-flex; flex-direction:column; align-items:center; min-width:100%; }
+  .org-card {
+    display:flex; align-items:center; gap:9px; padding:9px 12px;
+    background:var(--bg-surface); border:1px solid var(--line-strong); border-radius:10px;
+    width:172px; transition:all 0.15s; cursor:pointer;
+  }
+  .org-card-lead { width:184px; border-color:var(--ink-primary); }
+  .org-card:hover { border-color:var(--accent); box-shadow:0 2px 8px rgba(15,20,25,0.08); transform:translateY(-1px); }
+  .org-card-lead:hover { border-color:var(--accent); }
+
+  /* CEO → leads bus */
+  .org-bus { display:flex; gap:20px; position:relative; margin-top:46px; align-items:flex-start; }
+  /* CEO vertical drop into the bus */
+  .org-bus::before {
+    content:''; position:absolute; top:-24px; left:50%; transform:translateX(-1px);
+    width:2px; height:24px; background:var(--line-strong);
+  }
+  .org-col { display:flex; flex-direction:column; align-items:flex-start; position:relative; }
+  /* horizontal bus segment over each column (overlaps half the 20px gap on each side) */
+  .org-col::after {
+    content:''; position:absolute; top:-24px; left:-10px; right:-10px; height:2px; background:var(--line-strong);
+  }
+  /* trim outer ends of the bus to each outer lead's center (92px from col-left) */
+  .org-bus > .org-col:first-child::after { left:92px; }
+  .org-bus > .org-col:last-child::after { right:calc(100% - 92px); }
+  /* vertical stub from bus down to each lead card (at lead center) */
+  .org-col::before {
+    content:''; position:absolute; top:-24px; left:92px; transform:translateX(-1px);
+    width:2px; height:24px; background:var(--line-strong);
+  }
+
+  /* lead → reports : left-branching bracket under the centered lead */
+  .org-reports {
+    position:relative; display:flex; flex-direction:column; gap:9px; align-items:flex-start;
+    padding-top:18px; padding-left:26px;
+  }
+  /* horizontal link from under the lead center (92) back to the spine (12), at lead bottom */
+  .org-reports::after {
+    content:''; position:absolute; top:0; left:12px; width:80px; height:2px; background:var(--line);
+  }
+  /* vertical spine running from lead bottom down to the last report's center */
+  .org-reports::before {
+    content:''; position:absolute; top:0; left:12px; bottom:22px; width:2px; background:var(--line);
+  }
+  /* elbow from spine to each report */
+  .org-reports .org-card { position:relative; }
+  .org-reports .org-card::before {
+    content:''; position:absolute; top:50%; left:-14px; width:14px; height:2px; background:var(--line);
+  }
+
+  /* Shimmer */
+  @keyframes shimmer { 0%{background-position:-1000px 0;} 100%{background-position:1000px 0;} }
+  .shimmer { background:linear-gradient(90deg,var(--bg-subtle) 0%,var(--bg-hover) 50%,var(--bg-subtle) 100%); background-size:2000px 100%; animation:shimmer 2s linear infinite; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+  .fade-up { animation:fadeUp 0.4s ease-out forwards; }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--line-strong); border-radius:5px; border:2px solid var(--bg-canvas); }
+  ::-webkit-scrollbar-thumb:hover { background:var(--ink-tertiary); }
+  aside ::-webkit-scrollbar-thumb { border-color:var(--bg-sidebar); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   NÚCLEO — Core de Recursos Humanos
+   Sistema "Clear" · Slate · VITAE como módulo de reclutamiento
+   ═══════════════════════════════════════════════════════════════════ */
+
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useRef
+} = React;
+
+/* ─────────────────────────── ICONS ─────────────────────────── */
+const I = {
+  home: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "9 22 9 12 15 12 15 22"
+  })),
+  users: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "9",
+    cy: "7",
+    r: "4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M23 21v-2a4 4 0 0 0-3-3.87"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M16 3.13a4 4 0 0 1 0 7.75"
+  })),
+  org: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "9",
+    y: "2",
+    width: "6",
+    height: "5",
+    rx: "1"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "17",
+    width: "6",
+    height: "5",
+    rx: "1"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "16",
+    y: "17",
+    width: "6",
+    height: "5",
+    rx: "1"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 7v5M5 17v-2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2"
+  })),
+  plane: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"
+  })),
+  clock: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "12 6 12 12 16 14"
+  })),
+  calendar: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "4",
+    width: "18",
+    height: "18",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "16",
+    y1: "2",
+    x2: "16",
+    y2: "6"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "8",
+    y1: "2",
+    x2: "8",
+    y2: "6"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "3",
+    y1: "10",
+    x2: "21",
+    y2: "10"
+  })),
+  briefcase: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "7",
+    width: "20",
+    height: "14",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"
+  })),
+  target: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "2"
+  })),
+  rocket: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91 0z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"
+  })),
+  euro: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M4 10h12M4 14h9M19 5a7 7 0 0 0-7 14 7 7 0 0 0 7 0"
+  })),
+  file: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "14 2 14 8 20 8"
+  })),
+  chart: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "20",
+    x2: "18",
+    y2: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "20",
+    x2: "12",
+    y2: "4"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "20",
+    x2: "6",
+    y2: "14"
+  })),
+  settings: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "3"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2z"
+  })),
+  search: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "11",
+    cy: "11",
+    r: "8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m21 21-4.35-4.35"
+  })),
+  plus: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "5",
+    x2: "12",
+    y2: "19"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "5",
+    y1: "12",
+    x2: "19",
+    y2: "12"
+  })),
+  bell: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M13.73 21a2 2 0 0 1-3.46 0"
+  })),
+  arrowRight: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "5",
+    y1: "12",
+    x2: "19",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "12 5 19 12 12 19"
+  })),
+  arrowLeft: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "19",
+    y1: "12",
+    x2: "5",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "12 19 5 12 12 5"
+  })),
+  check: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: "20 6 9 17 4 12"
+  })),
+  x: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "6",
+    x2: "6",
+    y2: "18"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "6",
+    x2: "18",
+    y2: "18"
+  })),
+  mapPin: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "10",
+    r: "3"
+  })),
+  mail: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "4",
+    width: "20",
+    height: "16",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m22 7-10 5L2 7"
+  })),
+  phone: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"
+  })),
+  cake: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1M2 21h20M7 8v3M12 8v3M17 8v3M7 4h.01M12 4h.01M17 4h.01"
+  })),
+  dots: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "currentColor"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "5",
+    cy: "12",
+    r: "1.6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "1.6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "19",
+    cy: "12",
+    r: "1.6"
+  })),
+  chevDown: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: "6 9 12 15 18 9"
+  })),
+  chevRight: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: "9 18 15 12 9 6"
+  })),
+  sparkle: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19 16l.7 2.1L22 19l-2.3.9L19 22l-.7-2.1L16 19l2.3-.9z"
+  })),
+  download: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "7 10 12 15 17 10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "15",
+    x2: "12",
+    y2: "3"
+  })),
+  filter: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polygon", {
+    points: "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+  })),
+  message: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+  })),
+  building: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "4",
+    y: "2",
+    width: "16",
+    height: "20",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M9 22v-4h6v4M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"
+  })),
+  heart: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"
+  })),
+  edit: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"
+  })),
+  alert: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "8",
+    x2: "12",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "16",
+    x2: "12.01",
+    y2: "16"
+  })),
+  externalLink: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "15 3 21 3 21 9"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "10",
+    y1: "14",
+    x2: "21",
+    y2: "3"
+  })),
+  clipboard: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "8",
+    y: "2",
+    width: "8",
+    height: "4",
+    rx: "1"
+  })),
+  award: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "8",
+    r: "6"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+  })),
+  circle: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9"
+  })),
+  checkCircle: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M22 11.08V12a10 10 0 1 1-5.93-9.14"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "22 4 12 14.01 9 11.01"
+  })),
+  folder: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"
+  })),
+  pen: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m15 5 4 4"
+  })),
+  percent: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "19",
+    y1: "5",
+    x2: "5",
+    y2: "19"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "6.5",
+    cy: "6.5",
+    r: "2.5"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "17.5",
+    cy: "17.5",
+    r: "2.5"
+  })),
+  trendUp: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("polyline", {
+    points: "22 7 13.5 15.5 8.5 10.5 2 17"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "16 7 22 7 22 13"
+  })),
+  creditCard: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "5",
+    width: "20",
+    height: "14",
+    rx: "2"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "2",
+    y1: "10",
+    x2: "22",
+    y2: "10"
+  })),
+  listChecks: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "m3 17 2 2 4-4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m3 7 2 2 4-4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M13 6h8M13 12h8M13 18h8"
+  })),
+  send: p => /*#__PURE__*/React.createElement("svg", {
+    ...p,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "m22 2-7 20-4-9-9-4Z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M22 2 11 13"
+  }))
+};
+
+/* ─────────────────────────── DATA ─────────────────────────── */
+
+const DEPTS = {
+  eng: {
+    name: 'Ingeniería',
+    color: '#6366F1'
+  },
+  design: {
+    name: 'Diseño',
+    color: '#EC4899'
+  },
+  data: {
+    name: 'Datos',
+    color: '#1FB6E8'
+  },
+  product: {
+    name: 'Producto',
+    color: '#8B5CF6'
+  },
+  marketing: {
+    name: 'Marketing',
+    color: '#F59E0B'
+  },
+  customer: {
+    name: 'Customer',
+    color: '#14B8A6'
+  },
+  people: {
+    name: 'People',
+    color: '#10B981'
+  },
+  finance: {
+    name: 'Finanzas',
+    color: '#0F1419'
+  }
+};
+const AVATAR_COLORS = ['#1FB6E8', '#6366F1', '#14B8A6', '#F59E0B', '#EC4899', '#0F1419', '#8B5CF6', '#10B981'];
+const avatarColor = name => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = h * 31 + name.charCodeAt(i) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+const initials = name => name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+const EMPLOYEES = [{
+  id: 1,
+  name: 'Elena Vázquez',
+  role: 'CEO & Fundadora',
+  dept: 'people',
+  managerId: null,
+  level: 'exec',
+  location: 'Madrid',
+  remote: false,
+  email: 'elena.vazquez@grupo.com',
+  phone: '+34 600 ··· ···',
+  startDate: '2021-01-04',
+  contract: 'Indefinido',
+  status: 'activo',
+  salary: '—',
+  birthday: '12 mar',
+  vac: {
+    total: 23,
+    used: 9,
+    pending: 0
+  },
+  dni: '····5521R',
+  address: 'Calle Serrano ··, Madrid',
+  iban: 'ES·· ···· ···· 4821',
+  emergency: 'Marco Vázquez · +34 6·· ··· ···'
+}, {
+  id: 2,
+  name: 'Blanca Ruiz',
+  role: 'Head of People',
+  dept: 'people',
+  managerId: 1,
+  level: 'lead',
+  location: 'Madrid',
+  remote: false,
+  email: 'blanca.ruiz@grupo.com',
+  phone: '+34 611 ··· ···',
+  startDate: '2021-06-15',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '04 jul',
+  vac: {
+    total: 23,
+    used: 11,
+    pending: 2
+  },
+  salary: '58.000 €',
+  dni: '····3092M',
+  address: 'Calle Goya ··, Madrid',
+  iban: 'ES·· ···· ···· 1180',
+  emergency: 'Laura Ruiz · +34 6·· ··· ···'
+}, {
+  id: 3,
+  name: 'Carlos Soto Vega',
+  role: 'VP Engineering',
+  dept: 'eng',
+  managerId: 1,
+  level: 'exec',
+  location: 'Madrid',
+  remote: false,
+  email: 'carlos.soto@grupo.com',
+  phone: '+34 622 ··· ···',
+  startDate: '2024-09-02',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '21 ene',
+  vac: {
+    total: 23,
+    used: 6,
+    pending: 0
+  },
+  salary: '95.000 €',
+  dni: '····7741K',
+  address: 'Calle Alcalá ··, Madrid',
+  iban: 'ES·· ···· ···· 9921',
+  emergency: 'Marta Vega · +34 6·· ··· ···'
+}, {
+  id: 4,
+  name: 'Sofía Navarro Gil',
+  role: 'Principal Engineer',
+  dept: 'eng',
+  managerId: 3,
+  level: 'senior',
+  location: 'Barcelona',
+  remote: true,
+  email: 'sofia.navarro@grupo.com',
+  phone: '+34 633 ··· ···',
+  startDate: '2026-06-23',
+  contract: 'Indefinido',
+  status: 'onboarding',
+  birthday: '08 sep',
+  vac: {
+    total: 23,
+    used: 0,
+    pending: 0
+  },
+  salary: '82.000 €',
+  dni: '····1182T',
+  address: 'Carrer de Mallorca ··, Barcelona',
+  iban: 'ES·· ···· ···· 2210',
+  emergency: 'Jordi Navarro · +34 6·· ··· ···',
+  fromRecruitment: true
+}, {
+  id: 5,
+  name: 'Lucía Martín Vega',
+  role: 'Tech Lead',
+  dept: 'eng',
+  managerId: 3,
+  level: 'lead',
+  location: 'Madrid',
+  remote: false,
+  email: 'lucia.martin@grupo.com',
+  phone: '+34 644 ··· ···',
+  startDate: '2025-02-10',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '15 may',
+  vac: {
+    total: 23,
+    used: 14,
+    pending: 0
+  },
+  salary: '72.000 €',
+  dni: '····6634P',
+  address: 'Calle Princesa ··, Madrid',
+  iban: 'ES·· ···· ···· 5567',
+  emergency: 'Ana Martín · +34 6·· ··· ···'
+}, {
+  id: 6,
+  name: 'Diego Ortega Marín',
+  role: 'Backend Engineer',
+  dept: 'eng',
+  managerId: 3,
+  level: 'mid',
+  location: 'Madrid',
+  remote: false,
+  email: 'diego.ortega@grupo.com',
+  phone: '+34 655 ··· ···',
+  startDate: '2025-07-01',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '27 nov',
+  vac: {
+    total: 23,
+    used: 8,
+    pending: 5
+  },
+  salary: '52.000 €',
+  dni: '····4490L',
+  address: 'Calle Fuencarral ··, Madrid',
+  iban: 'ES·· ···· ···· 7732',
+  emergency: 'Pedro Ortega · +34 6·· ··· ···'
+}, {
+  id: 7,
+  name: 'Elena Castro Prat',
+  role: 'Design Lead',
+  dept: 'design',
+  managerId: 1,
+  level: 'lead',
+  location: 'Barcelona',
+  remote: true,
+  email: 'elena.castro@grupo.com',
+  phone: '+34 666 ··· ···',
+  startDate: '2023-03-20',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '02 feb',
+  vac: {
+    total: 23,
+    used: 10,
+    pending: 0
+  },
+  salary: '70.000 €',
+  dni: '····2235N',
+  address: 'Passeig de Gràcia ··, Barcelona',
+  iban: 'ES·· ···· ···· 3398',
+  emergency: 'Marc Castro · +34 6·· ··· ···'
+}, {
+  id: 8,
+  name: 'Pablo García Ruiz',
+  role: 'Senior Designer',
+  dept: 'design',
+  managerId: 7,
+  level: 'senior',
+  location: 'Barcelona',
+  remote: true,
+  email: 'pablo.garcia@grupo.com',
+  phone: '+34 677 ··· ···',
+  startDate: '2024-11-04',
+  contract: 'Indefinido',
+  status: 'ausente',
+  birthday: '19 ago',
+  vac: {
+    total: 23,
+    used: 18,
+    pending: 0
+  },
+  salary: '56.000 €',
+  dni: '····8801C',
+  address: 'Carrer de València ··, Barcelona',
+  iban: 'ES·· ···· ···· 4421',
+  emergency: 'Núria García · +34 6·· ··· ···'
+}, {
+  id: 9,
+  name: 'María Fernández Lozano',
+  role: 'Product Designer',
+  dept: 'design',
+  managerId: 7,
+  level: 'mid',
+  location: 'Bilbao',
+  remote: true,
+  email: 'maria.fernandez@grupo.com',
+  phone: '+34 688 ··· ···',
+  startDate: '2025-09-15',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '30 abr',
+  vac: {
+    total: 23,
+    used: 5,
+    pending: 0
+  },
+  salary: '48.000 €',
+  dni: '····5567H',
+  address: 'Gran Vía ··, Bilbao',
+  iban: 'ES·· ···· ···· 1145',
+  emergency: 'Iker Fernández · +34 6·· ··· ···'
+}, {
+  id: 10,
+  name: 'Patricia Gómez Aznar',
+  role: 'Data Lead',
+  dept: 'data',
+  managerId: 1,
+  level: 'lead',
+  location: 'Madrid',
+  remote: false,
+  email: 'patricia.gomez@grupo.com',
+  phone: '+34 699 ··· ···',
+  startDate: '2024-01-22',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '11 oct',
+  vac: {
+    total: 23,
+    used: 12,
+    pending: 0
+  },
+  salary: '68.000 €',
+  dni: '····3340D',
+  address: 'Calle Velázquez ··, Madrid',
+  iban: 'ES·· ···· ···· 8876',
+  emergency: 'Luis Gómez · +34 6·· ··· ···'
+}, {
+  id: 11,
+  name: 'Andrés Pérez Salas',
+  role: 'Data Analyst',
+  dept: 'data',
+  managerId: 10,
+  level: 'mid',
+  location: 'Madrid',
+  remote: false,
+  email: 'andres.perez@grupo.com',
+  phone: '+34 610 ··· ···',
+  startDate: '2025-10-06',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '06 jun',
+  vac: {
+    total: 23,
+    used: 3,
+    pending: 0
+  },
+  salary: '44.000 €',
+  dni: '····9912F',
+  address: 'Calle Atocha ··, Madrid',
+  iban: 'ES·· ···· ···· 2234',
+  emergency: 'Sara Pérez · +34 6·· ··· ···'
+}, {
+  id: 12,
+  name: 'Iván Moreno Páez',
+  role: 'Marketing Manager',
+  dept: 'marketing',
+  managerId: 1,
+  level: 'lead',
+  location: 'Madrid',
+  remote: false,
+  email: 'ivan.moreno@grupo.com',
+  phone: '+34 621 ··· ···',
+  startDate: '2023-05-08',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '24 dic',
+  vac: {
+    total: 23,
+    used: 9,
+    pending: 0
+  },
+  salary: '62.000 €',
+  dni: '····4456J',
+  address: 'Calle Hortaleza ··, Madrid',
+  iban: 'ES·· ···· ···· 6690',
+  emergency: 'Clara Moreno · +34 6·· ··· ···'
+}, {
+  id: 13,
+  name: 'Raúl Domínguez Cobo',
+  role: 'Content Marketing',
+  dept: 'marketing',
+  managerId: 12,
+  level: 'mid',
+  location: 'Málaga',
+  remote: true,
+  email: 'raul.dominguez@grupo.com',
+  phone: '+34 632 ··· ···',
+  startDate: '2026-06-12',
+  contract: 'Indefinido',
+  status: 'onboarding',
+  birthday: '17 mar',
+  vac: {
+    total: 23,
+    used: 0,
+    pending: 0
+  },
+  salary: '42.000 €',
+  dni: '····7723G',
+  address: 'Calle Larios ··, Málaga',
+  iban: 'ES·· ···· ···· 3312',
+  emergency: 'Eva Domínguez · +34 6·· ··· ···',
+  fromRecruitment: true
+}, {
+  id: 14,
+  name: 'Ana Romero Cano',
+  role: 'Customer Success Lead',
+  dept: 'customer',
+  managerId: 1,
+  level: 'lead',
+  location: 'Valencia',
+  remote: false,
+  email: 'ana.romero@grupo.com',
+  phone: '+34 643 ··· ···',
+  startDate: '2024-04-15',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '09 jul',
+  vac: {
+    total: 23,
+    used: 13,
+    pending: 0
+  },
+  salary: '58.000 €',
+  dni: '····2218R',
+  address: 'Calle Colón ··, Valencia',
+  iban: 'ES·· ···· ···· 5543',
+  emergency: 'Pau Romero · +34 6·· ··· ···'
+}, {
+  id: 15,
+  name: 'Carmen Iglesias Reyes',
+  role: 'CS Manager',
+  dept: 'customer',
+  managerId: 14,
+  level: 'mid',
+  location: 'Valencia',
+  remote: false,
+  email: 'carmen.iglesias@grupo.com',
+  phone: '+34 654 ··· ···',
+  startDate: '2025-06-01',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '21 feb',
+  vac: {
+    total: 23,
+    used: 7,
+    pending: 3
+  },
+  salary: '46.000 €',
+  dni: '····8845K',
+  address: 'Avenida del Puerto ··, Valencia',
+  iban: 'ES·· ···· ···· 1198',
+  emergency: 'José Iglesias · +34 6·· ··· ···'
+}, {
+  id: 16,
+  name: 'Javier Ramos Gil',
+  role: 'Finance Manager',
+  dept: 'finance',
+  managerId: 1,
+  level: 'lead',
+  location: 'Madrid',
+  remote: false,
+  email: 'javier.ramos@grupo.com',
+  phone: '+34 665 ··· ···',
+  startDate: '2022-09-12',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '03 nov',
+  vac: {
+    total: 23,
+    used: 15,
+    pending: 0
+  },
+  salary: '66.000 €',
+  dni: '····3367M',
+  address: 'Paseo de la Castellana ··, Madrid',
+  iban: 'ES·· ···· ···· 7741',
+  emergency: 'Lucía Ramos · +34 6·· ··· ···'
+}, {
+  id: 17,
+  name: 'Marcos Ortiz León',
+  role: 'Talent Acquisition',
+  dept: 'people',
+  managerId: 2,
+  level: 'mid',
+  location: 'Madrid',
+  remote: false,
+  email: 'marcos.ortiz@grupo.com',
+  phone: '+34 676 ··· ···',
+  startDate: '2025-03-03',
+  contract: 'Indefinido',
+  status: 'activo',
+  birthday: '14 sep',
+  vac: {
+    total: 23,
+    used: 6,
+    pending: 0
+  },
+  salary: '40.000 €',
+  dni: '····5590P',
+  address: 'Calle Bravo Murillo ··, Madrid',
+  iban: 'ES·· ···· ···· 2256',
+  emergency: 'Rosa Ortiz · +34 6·· ··· ···'
+}];
+const empById = id => EMPLOYEES.find(e => e.id === id);
+const reportsOf = id => EMPLOYEES.filter(e => e.managerId === id);
+const ABSENCES = [{
+  id: 1,
+  empId: 6,
+  type: 'vacaciones',
+  start: '2026-07-14',
+  end: '2026-07-18',
+  days: 5,
+  status: 'pendiente',
+  reason: 'Vacaciones de verano'
+}, {
+  id: 2,
+  empId: 15,
+  type: 'vacaciones',
+  start: '2026-07-21',
+  end: '2026-07-23',
+  days: 3,
+  status: 'pendiente',
+  reason: 'Días personales'
+}, {
+  id: 3,
+  empId: 2,
+  type: 'personal',
+  start: '2026-06-30',
+  end: '2026-06-30',
+  days: 1,
+  status: 'pendiente',
+  reason: 'Asunto personal'
+}, {
+  id: 4,
+  empId: 8,
+  type: 'vacaciones',
+  start: '2026-06-25',
+  end: '2026-06-30',
+  days: 4,
+  status: 'aprobada',
+  reason: 'Vacaciones'
+}, {
+  id: 5,
+  empId: 5,
+  type: 'enfermedad',
+  start: '2026-06-27',
+  end: '2026-06-27',
+  days: 1,
+  status: 'aprobada',
+  reason: 'Baja médica'
+}, {
+  id: 6,
+  empId: 11,
+  type: 'vacaciones',
+  start: '2026-08-04',
+  end: '2026-08-14',
+  days: 9,
+  status: 'pendiente',
+  reason: 'Vacaciones de agosto'
+}, {
+  id: 7,
+  empId: 12,
+  type: 'personal',
+  start: '2026-07-07',
+  end: '2026-07-07',
+  days: 1,
+  status: 'aprobada',
+  reason: 'Mudanza'
+}, {
+  id: 8,
+  empId: 9,
+  type: 'vacaciones',
+  start: '2026-07-28',
+  end: '2026-08-01',
+  days: 5,
+  status: 'aprobada',
+  reason: 'Vacaciones'
+}];
+const ABSENCE_TYPE = {
+  vacaciones: {
+    label: 'Vacaciones',
+    color: '#1FB6E8',
+    icon: 'plane'
+  },
+  enfermedad: {
+    label: 'Baja médica',
+    color: '#DC2626',
+    icon: 'heart'
+  },
+  personal: {
+    label: 'Personal',
+    color: '#8B5CF6',
+    icon: 'calendar'
+  },
+  maternidad: {
+    label: 'Maternidad',
+    color: '#EC4899',
+    icon: 'heart'
+  }
+};
+
+// "out today" = absences active on 2026-06-27 (Pablo on vac, Lucía sick)
+const OUT_TODAY = [8, 5];
+const STARTING_SOON = [4, 13]; // onboarding
+
+/* ── ONBOARDING ── */
+const ONB_PHASES = [{
+  key: 'antes',
+  label: 'Antes de empezar'
+}, {
+  key: 'dia1',
+  label: 'Primer día'
+}, {
+  key: 'semana1',
+  label: 'Primera semana'
+}, {
+  key: 'mes1',
+  label: 'Primer mes'
+}];
+const ONB_TASKS = [{
+  id: 't1',
+  phase: 'antes',
+  label: 'Firmar contrato y documentación',
+  owner: 'RRHH'
+}, {
+  id: 't2',
+  phase: 'antes',
+  label: 'Preparar equipo informático',
+  owner: 'IT'
+}, {
+  id: 't3',
+  phase: 'antes',
+  label: 'Crear cuentas y accesos',
+  owner: 'IT'
+}, {
+  id: 't4',
+  phase: 'antes',
+  label: 'Asignar buddy de acompañamiento',
+  owner: 'Manager'
+}, {
+  id: 't5',
+  phase: 'dia1',
+  label: 'Bienvenida y tour de la empresa',
+  owner: 'RRHH'
+}, {
+  id: 't6',
+  phase: 'dia1',
+  label: 'Entrega de equipo y accesos',
+  owner: 'IT'
+}, {
+  id: 't7',
+  phase: 'dia1',
+  label: 'Reunión inicial con el manager',
+  owner: 'Manager'
+}, {
+  id: 't8',
+  phase: 'semana1',
+  label: 'Presentación al equipo',
+  owner: 'Manager'
+}, {
+  id: 't9',
+  phase: 'semana1',
+  label: 'Formación de producto',
+  owner: 'Equipo'
+}, {
+  id: 't10',
+  phase: 'semana1',
+  label: 'Configurar entorno de desarrollo',
+  owner: 'Equipo'
+}, {
+  id: 't11',
+  phase: 'mes1',
+  label: 'Definir objetivos del primer trimestre',
+  owner: 'Manager'
+}, {
+  id: 't12',
+  phase: 'mes1',
+  label: 'Feedback de la primera semana',
+  owner: 'RRHH'
+}, {
+  id: 't13',
+  phase: 'mes1',
+  label: 'Revisión de los 30 días',
+  owner: 'Manager'
+}];
+const ONBOARDING = [{
+  empId: 13,
+  buddyId: 12,
+  done: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10']
+},
+// Raúl, started 06-12, advanced
+{
+  empId: 4,
+  buddyId: 5,
+  done: ['t1', 't2', 't3', 't4', 't5', 't6', 't7']
+} // Sofía, started 06-23, early
+];
+
+/* ── DESEMPEÑO ── */
+const PERF_CYCLE = {
+  name: 'Revisión Q2 2026',
+  start: '2026-06-01',
+  end: '2026-06-30',
+  progress: 62
+};
+// review status per employee: self/manager/oneToOne booleans + final rating (or null)
+const PERF_STATUS = {
+  1: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: null
+  },
+  2: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.6
+  },
+  3: {
+    self: true,
+    manager: true,
+    o2o: false,
+    rating: null
+  },
+  5: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.4
+  },
+  6: {
+    self: true,
+    manager: false,
+    o2o: false,
+    rating: null
+  },
+  7: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.1
+  },
+  8: {
+    self: false,
+    manager: false,
+    o2o: false,
+    rating: null
+  },
+  9: {
+    self: true,
+    manager: false,
+    o2o: false,
+    rating: null
+  },
+  10: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.3
+  },
+  11: {
+    self: true,
+    manager: true,
+    o2o: false,
+    rating: 3.8
+  },
+  12: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.0
+  },
+  14: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.5
+  },
+  15: {
+    self: false,
+    manager: false,
+    o2o: false,
+    rating: null
+  },
+  16: {
+    self: true,
+    manager: true,
+    o2o: true,
+    rating: 4.2
+  },
+  17: {
+    self: true,
+    manager: false,
+    o2o: false,
+    rating: null
+  }
+};
+const OKRS = [{
+  id: 1,
+  scope: 'Empresa',
+  owner: 1,
+  objective: 'Consolidar el producto en el mercado español',
+  krs: [{
+    t: 'Alcanzar 5.000 clientes activos',
+    p: 68
+  }, {
+    t: 'Reducir el churn mensual al 3%',
+    p: 80
+  }, {
+    t: 'NPS por encima de 50',
+    p: 55
+  }]
+}, {
+  id: 2,
+  scope: 'Ingeniería',
+  owner: 3,
+  objective: 'Escalar la plataforma para 10x de carga',
+  krs: [{
+    t: 'Migrar autenticación a nuevo sistema',
+    p: 75
+  }, {
+    t: 'Reducir latencia p95 por debajo de 200ms',
+    p: 60
+  }, {
+    t: 'Cobertura de tests al 80%',
+    p: 45
+  }]
+}, {
+  id: 3,
+  scope: 'Marketing',
+  owner: 12,
+  objective: 'Multiplicar la generación de demanda',
+  krs: [{
+    t: 'Triplicar leads cualificados',
+    p: 52
+  }, {
+    t: 'Publicar 12 casos de éxito',
+    p: 33
+  }]
+}];
+
+/* ── NÓMINA ── */
+const parseSalary = s => {
+  if (!s || s === '—') return 0;
+  return parseInt(s.replace(/[^0-9]/g, ''));
+};
+// rough progressive IRPF rate by annual gross (España, orientativo)
+const irpfRate = annual => annual >= 80000 ? 0.30 : annual >= 60000 ? 0.26 : annual >= 45000 ? 0.22 : annual >= 30000 ? 0.18 : 0.14;
+const SS_RATE = 0.0635; // cuota trabajador
+const payrollFor = e => {
+  const annual = parseSalary(e.salary);
+  const bruto = annual / 12;
+  const irpf = bruto * irpfRate(annual);
+  const ss = bruto * SS_RATE;
+  const neto = bruto - irpf - ss;
+  return {
+    annual,
+    bruto,
+    irpf,
+    ss,
+    neto
+  };
+};
+const fmtEur = n => n.toLocaleString('es-ES', {
+  maximumFractionDigits: 0
+}) + ' €';
+const NOMINA_INCIDENCIAS = [{
+  empId: 5,
+  type: 'Bonus',
+  concept: 'Objetivo Q1 cumplido',
+  amount: 1200
+}, {
+  empId: 6,
+  type: 'Horas extra',
+  concept: '12h proyecto migración',
+  amount: 340
+}, {
+  empId: 8,
+  type: 'Deducción',
+  concept: '4 días sin sueldo',
+  amount: -620
+}, {
+  empId: 12,
+  type: 'Bonus',
+  concept: 'Campaña Q2',
+  amount: 900
+}];
+
+/* ── DOCUMENTOS ── */
+const DOC_CATS = ['Contratos', 'Nóminas', 'Políticas', 'Certificados', 'Formación'];
+const DOC_CAT_COLOR = {
+  Contratos: '#6366F1',
+  Nóminas: '#16A34A',
+  Políticas: '#D97706',
+  Certificados: '#1FB6E8',
+  Formación: '#EC4899'
+};
+const DOCUMENTS = [{
+  id: 1,
+  name: 'Política de teletrabajo 2026',
+  cat: 'Políticas',
+  ownerId: 2,
+  date: '2026-01-15',
+  status: 'vigente',
+  sign: '17/17'
+}, {
+  id: 2,
+  name: 'Plan de igualdad del grupo',
+  cat: 'Políticas',
+  ownerId: 2,
+  date: '2025-11-02',
+  status: 'vigente',
+  sign: '—'
+}, {
+  id: 3,
+  name: 'Contrato · Sofía Navarro',
+  cat: 'Contratos',
+  ownerId: 2,
+  date: '2026-06-23',
+  status: 'firmado',
+  sign: '2/2'
+}, {
+  id: 4,
+  name: 'Contrato · Raúl Domínguez',
+  cat: 'Contratos',
+  ownerId: 2,
+  date: '2026-06-12',
+  status: 'firmado',
+  sign: '2/2'
+}, {
+  id: 5,
+  name: 'Certificado de retenciones 2025',
+  cat: 'Certificados',
+  ownerId: 16,
+  date: '2026-01-31',
+  status: 'emitido',
+  sign: '—'
+}, {
+  id: 6,
+  name: 'Nóminas · junio 2026 (lote)',
+  cat: 'Nóminas',
+  ownerId: 16,
+  date: '2026-06-30',
+  status: 'pendiente',
+  sign: '—'
+}, {
+  id: 7,
+  name: 'Acuerdo de confidencialidad · Sofía Navarro',
+  cat: 'Contratos',
+  ownerId: 2,
+  date: '2026-06-24',
+  status: 'pendiente',
+  sign: '0/1'
+}, {
+  id: 8,
+  name: 'Certificado de formación · RGPD',
+  cat: 'Formación',
+  ownerId: 17,
+  date: '2026-05-20',
+  status: 'vigente',
+  sign: '14/17'
+}, {
+  id: 9,
+  name: 'Protocolo de prevención de riesgos',
+  cat: 'Políticas',
+  ownerId: 2,
+  date: '2025-09-10',
+  status: 'vigente',
+  sign: '17/17'
+}, {
+  id: 10,
+  name: 'Acuerdo de teletrabajo · Raúl Domínguez',
+  cat: 'Contratos',
+  ownerId: 2,
+  date: '2026-06-12',
+  status: 'pendiente',
+  sign: '1/2'
+}];
+const DOC_TEMPLATES = [{
+  name: 'Contrato indefinido',
+  cat: 'Contratos'
+}, {
+  name: 'Carta de oferta',
+  cat: 'Contratos'
+}, {
+  name: 'Certificado laboral',
+  cat: 'Certificados'
+}, {
+  name: 'Acuerdo de teletrabajo',
+  cat: 'Políticas'
+}, {
+  name: 'Anexo de modificación',
+  cat: 'Contratos'
+}, {
+  name: 'Recibí de equipo informático',
+  cat: 'Certificados'
+}];
+
+/* ─────────────────────────── ATOMIC COMPONENTS ─────────────────────────── */
+
+const Button = ({
+  variant = 'primary',
+  size = 'md',
+  icon,
+  iconRight,
+  children,
+  onClick,
+  className = ''
+}) => {
+  const sizes = {
+    sm: 'h-7 px-3 text-xs',
+    md: 'h-9 px-4 text-[13px]',
+    lg: 'h-11 px-5 text-sm'
+  };
+  const variants = {
+    primary: 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)] border border-transparent',
+    secondary: 'bg-[var(--bg-surface)] text-[var(--ink-primary)] border border-[var(--line-strong)] hover:bg-[var(--bg-subtle)] hover:border-[var(--ink-tertiary)]',
+    ghost: 'bg-transparent text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)] border border-transparent',
+    danger: 'bg-[var(--danger)] text-white hover:bg-red-700 border border-transparent',
+    dark: 'bg-[var(--ink-primary)] text-white hover:bg-[#1A2027] border border-transparent'
+  };
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    className: `inline-flex items-center justify-center gap-2 font-medium rounded-md transition-all whitespace-nowrap ${sizes[size]} ${variants[variant]} ${className}`
+  }, icon && /*#__PURE__*/React.createElement("span", {
+    className: "-ml-0.5 [&_svg]:w-4 [&_svg]:h-4"
+  }, icon), children, iconRight && /*#__PURE__*/React.createElement("span", {
+    className: "-mr-0.5 [&_svg]:w-4 [&_svg]:h-4"
+  }, iconRight));
+};
+const Badge = ({
+  variant = 'neutral',
+  dot = false,
+  children,
+  className = ''
+}) => {
+  const variants = {
+    success: 'bg-[var(--success-soft)] text-[var(--success)]',
+    info: 'bg-[var(--info-soft)] text-[var(--info)]',
+    warning: 'bg-[var(--warning-soft)] text-[var(--warning)]',
+    danger: 'bg-[var(--danger-soft)] text-[var(--danger)]',
+    neutral: 'bg-gray-100 text-gray-600',
+    accent: 'bg-[var(--accent-soft)] text-[var(--accent-ink)]'
+  };
+  return /*#__PURE__*/React.createElement("span", {
+    className: `inline-flex items-center gap-1.5 h-[22px] px-2.5 text-[11px] font-medium rounded-full leading-none ${variants[variant]} ${className}`
+  }, dot && /*#__PURE__*/React.createElement("span", {
+    className: "w-1.5 h-1.5 rounded-full bg-current"
+  }), children);
+};
+const Avatar = ({
+  name,
+  size = 'md',
+  className = ''
+}) => {
+  const sizes = {
+    xs: 'w-6 h-6 text-[10px]',
+    sm: 'w-7 h-7 text-[11px]',
+    md: 'w-9 h-9 text-[13px]',
+    lg: 'w-12 h-12 text-base',
+    xl: 'w-20 h-20 text-2xl'
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: `${sizes[size]} rounded-full flex items-center justify-center font-medium text-white flex-shrink-0 ${className}`,
+    style: {
+      background: avatarColor(name)
+    }
+  }, initials(name));
+};
+const Card = ({
+  children,
+  className = '',
+  padding = 'p-6'
+}) => /*#__PURE__*/React.createElement("div", {
+  className: `bg-[var(--bg-surface)] border border-[var(--line)] rounded-xl ${padding} ${className}`
+}, children);
+const Input = ({
+  icon,
+  type = 'text',
+  placeholder,
+  value,
+  onChange,
+  className = ''
+}) => {
+  if (icon) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: `relative ${className}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-tertiary)] [&_svg]:w-4 [&_svg]:h-4 pointer-events-none"
+    }, icon), /*#__PURE__*/React.createElement("input", {
+      type: type,
+      placeholder: placeholder,
+      value: value,
+      onChange: onChange,
+      className: "w-full h-9 pl-10 pr-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] placeholder:text-[var(--ink-tertiary)] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none transition-all"
+    }));
+  }
+  return /*#__PURE__*/React.createElement("input", {
+    type: type,
+    placeholder: placeholder,
+    value: value,
+    onChange: onChange,
+    className: `w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] placeholder:text-[var(--ink-tertiary)] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none transition-all ${className}`
+  });
+};
+const DeptChip = ({
+  dept,
+  className = ''
+}) => {
+  const d = DEPTS[dept];
+  if (!d) return null;
+  return /*#__PURE__*/React.createElement("span", {
+    className: `inline-flex items-center gap-1.5 h-6 px-2 rounded text-[11px] font-medium ${className}`,
+    style: {
+      background: `${d.color}15`,
+      color: d.color
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-1.5 h-1.5 rounded-full",
+    style: {
+      background: d.color
+    }
+  }), d.name);
+};
+const EmpStatus = ({
+  status
+}) => {
+  const map = {
+    activo: {
+      v: 'success',
+      t: 'Activo'
+    },
+    onboarding: {
+      v: 'info',
+      t: 'Onboarding'
+    },
+    ausente: {
+      v: 'warning',
+      t: 'Ausente'
+    },
+    baja: {
+      v: 'neutral',
+      t: 'Baja'
+    }
+  };
+  const x = map[status];
+  if (!x) return null;
+  return /*#__PURE__*/React.createElement(Badge, {
+    variant: x.v,
+    dot: true
+  }, x.t);
+};
+const Field = ({
+  label,
+  value,
+  mono = false
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "flex flex-col gap-1"
+}, /*#__PURE__*/React.createElement("dt", {
+  className: "text-[11px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium"
+}, label), /*#__PURE__*/React.createElement("dd", {
+  className: `text-[13px] text-[var(--ink-primary)] ${mono ? 'mono' : ''}`
+}, value));
+const KPICard = ({
+  label,
+  value,
+  meta,
+  primary = false,
+  delta
+}) => /*#__PURE__*/React.createElement("div", {
+  className: `stat-card ${primary ? 'primary' : ''}`
+}, /*#__PURE__*/React.createElement("div", {
+  className: "stat-label"
+}, label), /*#__PURE__*/React.createElement("div", {
+  className: "stat-value mono-tabular"
+}, value), /*#__PURE__*/React.createElement("div", {
+  className: "stat-meta"
+}, delta && /*#__PURE__*/React.createElement("span", {
+  className: `stat-delta ${delta.positive ? 'positive' : 'negative'}`
+}, delta.positive ? '↑' : '↓', " ", delta.text), meta && /*#__PURE__*/React.createElement("span", {
+  className: delta ? 'ml-2' : ''
+}, meta)));
+const PageHeader = ({
+  eyebrow,
+  title,
+  subtitle,
+  actions
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "flex items-end justify-between gap-6 mb-8"
+}, /*#__PURE__*/React.createElement("div", null, eyebrow && /*#__PURE__*/React.createElement("div", {
+  className: "text-[11px] font-medium tracking-[0.08em] uppercase text-[var(--ink-tertiary)] mb-1.5"
+}, eyebrow), /*#__PURE__*/React.createElement("h1", {
+  className: "text-[28px] font-bold tracking-[-0.02em] leading-tight"
+}, title), subtitle && /*#__PURE__*/React.createElement("p", {
+  className: "text-[14px] text-[var(--ink-secondary)] mt-2 max-w-2xl"
+}, subtitle)), actions && /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center gap-2"
+}, actions));
+
+/* ─────────────────────────── SIDEBAR ─────────────────────────── */
+
+const NAV = [{
+  section: 'Principal',
+  items: [{
+    key: 'inicio',
+    label: 'Inicio',
+    icon: 'home'
+  }, {
+    key: 'empleados',
+    label: 'Empleados',
+    icon: 'users'
+  }, {
+    key: 'organigrama',
+    label: 'Organigrama',
+    icon: 'org'
+  }]
+}, {
+  section: 'Tiempo',
+  items: [{
+    key: 'ausencias',
+    label: 'Ausencias',
+    icon: 'plane'
+  }, {
+    key: 'fichaje',
+    label: 'Fichaje',
+    icon: 'clock',
+    soon: true
+  }, {
+    key: 'calendario',
+    label: 'Calendario',
+    icon: 'calendar',
+    soon: true
+  }]
+}, {
+  section: 'Talento',
+  items: [{
+    key: 'reclutamiento',
+    label: 'Reclutamiento',
+    icon: 'briefcase',
+    tag: 'VITAE'
+  }, {
+    key: 'desempeno',
+    label: 'Desempeño',
+    icon: 'target'
+  }, {
+    key: 'onboarding',
+    label: 'Onboarding',
+    icon: 'rocket'
+  }]
+}, {
+  section: 'Empresa',
+  items: [{
+    key: 'nomina',
+    label: 'Nómina',
+    icon: 'euro'
+  }, {
+    key: 'documentos',
+    label: 'Documentos',
+    icon: 'file'
+  }, {
+    key: 'informes',
+    label: 'Informes',
+    icon: 'chart',
+    soon: true
+  }]
+}];
+const Sidebar = ({
+  view,
+  setView
+}) => /*#__PURE__*/React.createElement("aside", {
+  className: "w-[244px] flex-shrink-0 h-full bg-[var(--bg-sidebar)] border-r border-[var(--line-strong)] flex flex-col"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "px-5 pt-6 pb-1 flex items-center gap-2.5"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "w-7 h-7 rounded-lg bg-[var(--ink-primary)] flex items-center justify-center"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "w-2.5 h-2.5 bg-[var(--accent)] rounded-sm"
+})), /*#__PURE__*/React.createElement("span", {
+  className: "font-bold text-[17px] tracking-[-0.02em]"
+}, "Núcleo"), /*#__PURE__*/React.createElement("span", {
+  className: "mono text-[10px] text-[var(--ink-tertiary)] ml-auto"
+}, "RRHH")), /*#__PURE__*/React.createElement("div", {
+  className: "px-5 pb-4 text-[11px] text-[var(--ink-tertiary)] pl-[52px] -mt-1"
+}, "Core de personas"), /*#__PURE__*/React.createElement("nav", {
+  className: "flex-1 px-3 overflow-y-auto pb-4"
+}, NAV.map(grp => /*#__PURE__*/React.createElement("div", {
+  key: grp.section
+}, /*#__PURE__*/React.createElement("div", {
+  className: "px-3 pt-4 pb-1.5 mono text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--ink-tertiary)]"
+}, grp.section), grp.items.map(item => {
+  const active = view === item.key || item.key === 'empleados' && view === 'empleado-detalle';
+  const Ic = I[item.icon];
+  return /*#__PURE__*/React.createElement("button", {
+    key: item.key,
+    onClick: () => setView(item.key),
+    className: `relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all w-full text-left ${active ? 'bg-[var(--bg-surface)] text-[var(--ink-primary)] font-semibold shadow-[0_1px_2px_rgba(15,20,25,0.05)]' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-sidebar-hover)] hover:text-[var(--ink-primary)]'}`
+  }, active && /*#__PURE__*/React.createElement("span", {
+    className: "absolute -left-3 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-[var(--accent)] rounded-r"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-4 [&_svg]:h-4 flex-shrink-0"
+  }, /*#__PURE__*/React.createElement(Ic, null)), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1"
+  }, item.label), item.tag && /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    className: "!h-4 !px-1.5 !text-[9px]"
+  }, item.tag), item.soon && /*#__PURE__*/React.createElement("span", {
+    className: "w-1.5 h-1.5 rounded-full bg-[var(--ink-tertiary)]/40"
+  }));
+})))), /*#__PURE__*/React.createElement("div", {
+  className: "border-t border-[var(--line-strong)] p-4 flex items-center gap-3"
+}, /*#__PURE__*/React.createElement(Avatar, {
+  name: "Blanca Ruiz",
+  size: "sm"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "flex-1 min-w-0"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "text-[12px] font-semibold leading-tight"
+}, "Blanca Ruiz"), /*#__PURE__*/React.createElement("div", {
+  className: "mono text-[10px] text-[var(--ink-tertiary)]"
+}, "Head of People")), /*#__PURE__*/React.createElement("button", {
+  className: "p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--bg-sidebar-hover)] hover:text-[var(--ink-primary)]"
+}, /*#__PURE__*/React.createElement(I.settings, null))));
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · INICIO (HR admin dashboard)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const InicioView = ({
+  onNavigate
+}) => {
+  const deptCounts = useMemo(() => {
+    const c = {};
+    EMPLOYEES.forEach(e => {
+      c[e.dept] = (c[e.dept] || 0) + 1;
+    });
+    return Object.entries(c).sort((a, b) => b[1] - a[1]);
+  }, []);
+  const maxDept = Math.max(...deptCounts.map(d => d[1]));
+  const pending = ABSENCES.filter(a => a.status === 'pendiente');
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Buenos días, Blanca",
+    title: "Inicio",
+    subtitle: "El pulso de la organización hoy.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Informe"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null),
+      onClick: () => onNavigate('empleados')
+    }, "Añadir empleado"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "stat-grid mb-8"
+  }, /*#__PURE__*/React.createElement(KPICard, {
+    primary: true,
+    label: "Plantilla total",
+    value: "17",
+    delta: {
+      positive: true,
+      text: '+2'
+    },
+    meta: "este mes"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Ausencias hoy",
+    value: "2",
+    meta: "2 aprobadas"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Aprobaciones pendientes",
+    value: String(pending.length),
+    meta: "requieren tu acción"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Rotación 12m",
+    value: "4%",
+    delta: {
+      positive: true,
+      text: '−1pp'
+    },
+    meta: "muy por debajo del sector"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Plantilla por departamento"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "17 personas en 7 áreas")), /*#__PURE__*/React.createElement(Button, {
+    variant: "ghost",
+    size: "sm",
+    iconRight: /*#__PURE__*/React.createElement(I.arrowRight, null),
+    onClick: () => onNavigate('organigrama')
+  }, "Organigrama")), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, deptCounts.map(([key, count]) => /*#__PURE__*/React.createElement("div", {
+    key: key,
+    className: "flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-28 text-[13px] font-medium flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2 h-2 rounded-full",
+    style: {
+      background: DEPTS[key].color
+    }
+  }), DEPTS[key].name), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 h-2.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full rounded-full transition-all duration-700",
+    style: {
+      width: `${count / maxDept * 100}%`,
+      background: DEPTS[key].color
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[12px] font-medium w-8 text-right"
+  }, count))))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0",
+    className: "flex-1 flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Próximas incorporaciones"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Onboarding en curso · vía VITAE")), /*#__PURE__*/React.createElement(Badge, {
+    variant: "info",
+    dot: true
+  }, STARTING_SOON.length, " en proceso")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 divide-y divide-[var(--line-subtle)]"
+  }, STARTING_SOON.map(id => {
+    const e = empById(id);
+    return /*#__PURE__*/React.createElement("button", {
+      key: id,
+      onClick: () => onNavigate('empleado-detalle', id),
+      className: "w-full px-6 py-4 flex items-center gap-4 hover:bg-[var(--bg-subtle)] text-left transition-colors"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "md"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-semibold text-[14px]"
+    }, e.name), e.fromRecruitment && /*#__PURE__*/React.createElement(Badge, {
+      variant: "accent",
+      className: "!h-[18px] !text-[9px] !px-1.5"
+    }, "contratado vía VITAE")), /*#__PURE__*/React.createElement("div", {
+      className: "text-[12px] text-[var(--ink-tertiary)]"
+    }, e.role, " · ", DEPTS[e.dept].name)), /*#__PURE__*/React.createElement("div", {
+      className: "text-right flex-shrink-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[12px] font-medium"
+    }, "Incorporación"), /*#__PURE__*/React.createElement("div", {
+      className: "mono text-[11px] text-[var(--ink-tertiary)]"
+    }, e.startDate)), /*#__PURE__*/React.createElement(EmpStatus, {
+      status: e.status
+    }));
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-1 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Aprobaciones"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Pendientes de ti")), /*#__PURE__*/React.createElement(Badge, {
+    variant: "warning"
+  }, pending.length)), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, pending.slice(0, 4).map(a => {
+    const e = empById(a.empId);
+    const t = ABSENCE_TYPE[a.type];
+    return /*#__PURE__*/React.createElement("div", {
+      key: a.id,
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2.5 mb-2"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[12px] font-medium leading-tight truncate"
+    }, e.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-[var(--ink-tertiary)]"
+    }, t.label, " · ", a.days, "d")), /*#__PURE__*/React.createElement("span", {
+      className: "w-2 h-2 rounded-full",
+      style: {
+        background: t.color
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-1.5"
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "flex-1 h-7 rounded-md bg-[var(--ink-primary)] text-white text-[11px] font-medium hover:bg-[#1A2027]"
+    }, "Aprobar"), /*#__PURE__*/React.createElement("button", {
+      className: "flex-1 h-7 rounded-md border border-[var(--line-strong)] text-[11px] font-medium hover:bg-[var(--bg-subtle)]"
+    }, "Rechazar")));
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onNavigate('ausencias'),
+    className: "w-full px-5 py-3 text-[12px] font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-soft)] border-t border-[var(--line-subtle)] flex items-center justify-center gap-1.5"
+  }, "Ver todas ", /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.arrowRight, null)))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold tracking-[-0.005em]"
+  }, "Hoy"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "27 de junio")), /*#__PURE__*/React.createElement("div", {
+    className: "px-5 py-4 space-y-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Ausentes"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, OUT_TODAY.map(id => {
+    const e = empById(id);
+    const abs = ABSENCES.find(a => a.empId === id && a.status === 'aprobada');
+    const t = abs ? ABSENCE_TYPE[abs.type] : ABSENCE_TYPE.vacaciones;
+    const Ic = I[t.icon];
+    return /*#__PURE__*/React.createElement("div", {
+      key: id,
+      className: "flex items-center gap-2.5"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[12px] font-medium flex-1"
+    }, e.name), /*#__PURE__*/React.createElement("span", {
+      className: "inline-flex items-center gap-1 text-[11px]",
+      style: {
+        color: t.color
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "[&_svg]:w-3 [&_svg]:h-3"
+    }, Ic && /*#__PURE__*/React.createElement(Ic, null)), t.label));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-2"
+  }, "Cumpleaños esta semana"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-7 h-7 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.cake, null)), /*#__PURE__*/React.createElement("span", {
+    className: "text-[12px]"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "font-semibold"
+  }, "Blanca Ruiz"), " · 4 jul"))))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · EMPLEADOS (directory)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const EmpleadosView = ({
+  onNavigate
+}) => {
+  const [search, setSearch] = useState('');
+  const [dept, setDept] = useState('all');
+  const filtered = useMemo(() => EMPLOYEES.filter(e => {
+    if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.role.toLowerCase().includes(search.toLowerCase())) return false;
+    if (dept !== 'all' && e.dept !== dept) return false;
+    return true;
+  }), [search, dept]);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    title: "Empleados",
+    subtitle: `${EMPLOYEES.length} personas en el grupo`,
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null)
+    }, "Añadir empleado"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-3 mb-6"
+  }, [{
+    l: 'Activos',
+    v: EMPLOYEES.filter(e => e.status === 'activo').length,
+    c: '#16A34A'
+  }, {
+    l: 'En onboarding',
+    v: EMPLOYEES.filter(e => e.status === 'onboarding').length,
+    c: '#2563EB'
+  }, {
+    l: 'Ausentes',
+    v: EMPLOYEES.filter(e => e.status === 'ausente').length,
+    c: '#D97706'
+  }, {
+    l: 'En remoto',
+    v: EMPLOYEES.filter(e => e.remote).length,
+    c: '#8B5CF6'
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.l,
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, s.l), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, s.v), /*#__PURE__*/React.createElement("div", {
+    className: "w-2 h-2 rounded-full mb-2",
+    style: {
+      background: s.c
+    }
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-3 mb-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 max-w-md"
+  }, /*#__PURE__*/React.createElement(Input, {
+    icon: /*#__PURE__*/React.createElement(I.search, null),
+    placeholder: "Nombre o puesto…",
+    value: search,
+    onChange: e => setSearch(e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 flex-wrap"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDept('all'),
+    className: `h-9 px-3 text-[12px] font-medium rounded-md transition-colors ${dept === 'all' ? 'bg-[var(--ink-primary)] text-white' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)]'}`
+  }, "Todos"), Object.entries(DEPTS).map(([k, d]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    onClick: () => setDept(k),
+    className: `h-9 px-3 text-[12px] font-medium rounded-md transition-colors ${dept === k ? 'bg-[var(--ink-primary)] text-white' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)]'}`
+  }, d.name)))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Empleado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Departamento"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Manager"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Ubicación"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Antigüedad"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Estado"))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(e => {
+    const mgr = e.managerId ? empById(e.managerId) : null;
+    return /*#__PURE__*/React.createElement("tr", {
+      key: e.id,
+      onClick: () => onNavigate('empleado-detalle', e.id),
+      className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "sm"
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "font-medium flex items-center gap-2"
+    }, e.name, e.remote && /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] px-1.5 py-0.5 bg-[var(--bg-subtle)] border border-[var(--line)] rounded text-[var(--ink-tertiary)] uppercase tracking-wide"
+    }, "remoto")), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-[var(--ink-tertiary)]"
+    }, e.role)))), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4"
+    }, /*#__PURE__*/React.createElement(DeptChip, {
+      dept: e.dept
+    })), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4"
+    }, mgr ? /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: mgr.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[12px] text-[var(--ink-secondary)]"
+    }, mgr.name)) : /*#__PURE__*/React.createElement("span", {
+      className: "text-[12px] text-[var(--ink-tertiary)]"
+    }, "—")), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4 text-[12px] text-[var(--ink-secondary)]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "inline-flex items-center gap-1.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+    }, /*#__PURE__*/React.createElement(I.mapPin, null), " ", e.location)), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4 mono text-[12px] text-[var(--ink-tertiary)]"
+    }, e.startDate), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-4"
+    }, /*#__PURE__*/React.createElement(EmpStatus, {
+      status: e.status
+    })));
+  })))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · EMPLEADO DETALLE (profile)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const EmpleadoDetalleView = ({
+  empId,
+  onNavigate
+}) => {
+  const e = empById(empId) || EMPLOYEES[0];
+  const [tab, setTab] = useState('resumen');
+  const mgr = e.managerId ? empById(e.managerId) : null;
+  const team = reportsOf(e.id);
+  const empAbsences = ABSENCES.filter(a => a.empId === e.id);
+  const vacPct = Math.round(e.vac.used / e.vac.total * 100);
+  const tabs = [{
+    k: 'resumen',
+    l: 'Resumen'
+  }, {
+    k: 'personal',
+    l: 'Información personal'
+  }, {
+    k: 'puesto',
+    l: 'Puesto y contrato'
+  }, {
+    k: 'compensacion',
+    l: 'Compensación'
+  }, {
+    k: 'ausencias',
+    l: 'Ausencias'
+  }, {
+    k: 'documentos',
+    l: 'Documentos'
+  }, {
+    k: 'desempeno',
+    l: 'Desempeño'
+  }];
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onNavigate('empleados'),
+    className: "inline-flex items-center gap-2 text-[12px] text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] mb-4"
+  }, /*#__PURE__*/React.createElement(I.arrowLeft, null), " Empleados"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-5 mb-7"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: e.name,
+    size: "xl"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 pt-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 mb-1"
+  }, /*#__PURE__*/React.createElement("h1", {
+    className: "text-[26px] font-bold tracking-[-0.02em] leading-tight"
+  }, e.name), /*#__PURE__*/React.createElement(EmpStatus, {
+    status: e.status
+  }), e.fromRecruitment && /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "Contratado vía VITAE")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[15px] text-[var(--ink-secondary)] mb-3"
+  }, e.role, " · ", /*#__PURE__*/React.createElement(DeptChip, {
+    dept: e.dept,
+    className: "!inline-flex align-middle"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-5 text-[12px] text-[var(--ink-tertiary)]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.mail, null), " ", e.email), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.phone, null), " ", e.phone), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 [&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.mapPin, null), " ", e.location, e.remote ? ' · Remoto' : ''))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "ghost",
+    icon: /*#__PURE__*/React.createElement(I.dots, null)
+  }), /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    icon: /*#__PURE__*/React.createElement(I.message, null)
+  }, "Mensaje"), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    icon: /*#__PURE__*/React.createElement(I.edit, null)
+  }, "Editar"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 mb-6 border-b border-[var(--line)] overflow-x-auto"
+  }, tabs.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.k,
+    onClick: () => setTab(t.k),
+    className: `px-4 py-2.5 text-[13px] font-medium relative transition-colors whitespace-nowrap ${tab === t.k ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'}`
+  }, t.l, tab === t.k && /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[-1px] left-2 right-2 h-[2px] bg-[var(--accent)]"
+  })))), tab === 'resumen' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Información general"), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-3 gap-x-6 gap-y-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Puesto",
+    value: e.role
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Departamento",
+    value: DEPTS[e.dept].name
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Manager",
+    value: mgr ? mgr.name : '—'
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Ubicación",
+    value: `${e.location}${e.remote ? ' · Remoto' : ''}`
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Fecha de alta",
+    value: e.startDate,
+    mono: true
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Tipo de contrato",
+    value: e.contract
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Email",
+    value: e.email
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Teléfono",
+    value: e.phone,
+    mono: true
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Cumpleaños",
+    value: e.birthday
+  }))), team.length > 0 && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Equipo directo"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, team.length, " ", team.length === 1 ? 'persona reporta' : 'personas reportan', " a ", e.name.split(' ')[0])), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, team.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => onNavigate('empleado-detalle', t.id),
+    className: "w-full px-6 py-3.5 flex items-center gap-3 hover:bg-[var(--bg-subtle)] text-left transition-colors"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: t.name,
+    size: "sm"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-medium text-[13px]"
+  }, t.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, t.role)), /*#__PURE__*/React.createElement(EmpStatus, {
+    status: t.status
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.chevRight, null))))))), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-1 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Saldo de vacaciones"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end justify-between mb-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[32px] font-bold tracking-[-0.02em] leading-none"
+  }, e.vac.total - e.vac.used), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-1"
+  }, "días disponibles")), /*#__PURE__*/React.createElement("div", {
+    className: "text-right text-[11px] text-[var(--ink-tertiary)] leading-relaxed"
+  }, /*#__PURE__*/React.createElement("div", null, e.vac.used, " usados"), /*#__PURE__*/React.createElement("div", null, e.vac.total, " totales"), e.vac.pending > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[var(--warning)]"
+  }, e.vac.pending, " pendientes"))), /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-[var(--accent)] rounded-full",
+    style: {
+      width: `${vacPct}%`
+    }
+  })), /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    size: "sm",
+    className: "w-full mt-4",
+    icon: /*#__PURE__*/React.createElement(I.plane, null),
+    onClick: () => onNavigate('ausencias')
+  }, "Solicitar ausencia")), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-3"
+  }, "Antigüedad"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] [&_svg]:w-5 [&_svg]:h-5"
+  }, /*#__PURE__*/React.createElement(I.award, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[14px] font-semibold"
+  }, e.startDate.startsWith('2026') ? 'Recién incorporado' : e.startDate.startsWith('2025') ? '1 año' : e.startDate.startsWith('2024') ? '2 años' : '3+ años'), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, "desde ", e.startDate)))))), tab === 'personal' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Datos personales"), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-2 gap-x-6 gap-y-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Nombre completo",
+    value: e.name
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "DNI/NIE",
+    value: e.dni,
+    mono: true
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Fecha de nacimiento",
+    value: e.birthday
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Nacionalidad",
+    value: "Española"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Dirección",
+    value: e.address
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Contacto de emergencia"), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-1 gap-y-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Persona de contacto",
+    value: e.emergency
+  }))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Datos bancarios"), /*#__PURE__*/React.createElement(Badge, {
+    variant: "neutral"
+  }, "Cifrado")), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-1 gap-y-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "IBAN",
+    value: e.iban,
+    mono: true
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[var(--ink-tertiary)] mt-4 leading-relaxed"
+  }, "Datos sensibles enmascarados. Acceso completo restringido a Nómina y al propio empleado (RGPD).")))), tab === 'puesto' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Puesto"), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-2 gap-x-6 gap-y-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Cargo",
+    value: e.role
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Departamento",
+    value: DEPTS[e.dept].name
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Nivel",
+    value: {
+      exec: 'Dirección',
+      lead: 'Lead / Manager',
+      senior: 'Senior',
+      mid: 'Mid',
+      junior: 'Junior'
+    }[e.level]
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Manager",
+    value: mgr ? mgr.name : '—'
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Personas a cargo",
+    value: team.length > 0 ? `${team.length}` : '—'
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Ubicación",
+    value: `${e.location}${e.remote ? ' · Remoto' : ''}`
+  }))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Contrato"), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-2 gap-x-6 gap-y-5"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Tipo",
+    value: e.contract
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Fecha de alta",
+    value: e.startDate,
+    mono: true
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Jornada",
+    value: "Completa · 40h/sem"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Periodo de prueba",
+    value: e.status === 'onboarding' ? 'En curso' : 'Superado'
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Convenio",
+    value: "Sector tecnológico"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Modalidad",
+    value: e.remote ? 'Remoto' : 'Híbrido'
+  })))), tab === 'compensacion' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Retribución actual"), /*#__PURE__*/React.createElement(Badge, {
+    variant: "neutral"
+  }, "Confidencial")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end gap-3 mb-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[36px] font-bold tracking-[-0.02em] leading-none"
+  }, e.salary), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mb-1.5"
+  }, "bruto anual")), /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-3 gap-x-6 gap-y-5 pt-5 border-t border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Salario base",
+    value: e.salary
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Variable",
+    value: e.level === 'exec' || e.level === 'lead' ? 'Hasta 15%' : 'Hasta 8%'
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Pagas",
+    value: "12 + 2 prorrateadas"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Revisión anterior",
+    value: e.startDate.startsWith('2026') ? '—' : 'Ene 2026'
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Próxima revisión",
+    value: "Ene 2027"
+  }), /*#__PURE__*/React.createElement(Field, {
+    label: "Banda salarial",
+    value: {
+      exec: 'E5',
+      lead: 'E4',
+      senior: 'E3',
+      mid: 'E2',
+      junior: 'E1'
+    }[e.level]
+  }))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Beneficios"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-2.5 text-[13px]"
+  }, ['Seguro médico privado', 'Ticket restaurante', 'Formación 1.500€/año', '25 días de vacaciones'].map(b => /*#__PURE__*/React.createElement("li", {
+    key: b,
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--success)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.check, null)), b))))), tab === 'ausencias' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Saldo ", new Date().getFullYear()), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[12px] mb-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, "Vacaciones"), /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[var(--ink-tertiary)]"
+  }, e.vac.used, "/", e.vac.total)), /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-[var(--accent)] rounded-full",
+    style: {
+      width: `${vacPct}%`
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 grid grid-cols-2 gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-subtle)] rounded-lg p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[22px] font-bold"
+  }, e.vac.total - e.vac.used), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wide"
+  }, "disponibles")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[var(--bg-subtle)] rounded-lg p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[22px] font-bold text-[var(--warning)]"
+  }, e.vac.pending), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wide"
+  }, "pendientes"))))), /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-2",
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Historial de ausencias"), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    size: "sm",
+    icon: /*#__PURE__*/React.createElement(I.plus, null)
+  }, "Solicitar")), empAbsences.length > 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, empAbsences.map(a => {
+    const t = ABSENCE_TYPE[a.type];
+    const Ic = I[t.icon];
+    return /*#__PURE__*/React.createElement("div", {
+      key: a.id,
+      className: "px-6 py-3.5 flex items-center gap-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-8 h-8 rounded-md flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4",
+      style: {
+        background: `${t.color}15`,
+        color: t.color
+      }
+    }, Ic && /*#__PURE__*/React.createElement(Ic, null)), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[13px] font-medium"
+    }, t.label), /*#__PURE__*/React.createElement("div", {
+      className: "mono text-[11px] text-[var(--ink-tertiary)]"
+    }, a.start, " → ", a.end)), /*#__PURE__*/React.createElement("span", {
+      className: "mono text-[12px] text-[var(--ink-secondary)]"
+    }, a.days, "d"), a.status === 'aprobada' ? /*#__PURE__*/React.createElement(Badge, {
+      variant: "success",
+      dot: true
+    }, "Aprobada") : a.status === 'pendiente' ? /*#__PURE__*/React.createElement(Badge, {
+      variant: "warning",
+      dot: true
+    }, "Pendiente") : /*#__PURE__*/React.createElement(Badge, {
+      variant: "danger",
+      dot: true
+    }, "Rechazada"));
+  })) : /*#__PURE__*/React.createElement("div", {
+    className: "px-6 py-10 text-center text-[13px] text-[var(--ink-tertiary)]"
+  }, "Sin ausencias registradas este año."))), tab === 'documentos' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Documentos"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Contratos, nóminas y documentación firmada")), /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    size: "sm",
+    icon: /*#__PURE__*/React.createElement(I.plus, null)
+  }, "Subir")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, [{
+    name: 'Contrato indefinido.pdf',
+    type: 'Contrato',
+    date: e.startDate,
+    status: 'firmado'
+  }, {
+    name: 'Nómina junio 2026.pdf',
+    type: 'Nómina',
+    date: '2026-06-30',
+    status: 'disponible'
+  }, {
+    name: 'Nómina mayo 2026.pdf',
+    type: 'Nómina',
+    date: '2026-05-31',
+    status: 'disponible'
+  }, {
+    name: 'Política de privacidad.pdf',
+    type: 'RGPD',
+    date: e.startDate,
+    status: 'firmado'
+  }, {
+    name: 'Acuerdo de teletrabajo.pdf',
+    type: 'Anexo',
+    date: e.startDate,
+    status: e.remote ? 'firmado' : 'no aplica'
+  }].map((d, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "px-6 py-3.5 flex items-center gap-4 hover:bg-[var(--bg-subtle)]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-md bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--ink-tertiary)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.file, null)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] font-medium"
+  }, d.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, d.type, " · ", d.date)), d.status === 'firmado' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "success",
+    dot: true
+  }, "Firmado"), d.status === 'disponible' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "info",
+    dot: true
+  }, "Disponible"), d.status === 'no aplica' && /*#__PURE__*/React.createElement(Badge, {
+    variant: "neutral"
+  }, "No aplica"), /*#__PURE__*/React.createElement("button", {
+    className: "p-1.5 rounded text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.download, null)))))), tab === 'desempeno' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Última evaluación"), e.status === 'onboarding' ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-8 text-[13px] text-[var(--ink-tertiary)]"
+  }, "Aún sin evaluación.", /*#__PURE__*/React.createElement("br", null), "Primera revisión a los 3 meses.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 mb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[32px] font-bold tracking-[-0.02em]"
+  }, "4,2"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] font-medium"
+  }, "Supera expectativas"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, "de 5,0 · Q1 2026"))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, [['Impacto', 4.5], ['Colaboración', 4.0], ['Autonomía', 4.2]].map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+    key: k
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px] mb-1"
+  }, /*#__PURE__*/React.createElement("span", null, k), /*#__PURE__*/React.createElement("span", {
+    className: "mono"
+  }, v)), /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-[var(--accent)] rounded-full",
+    style: {
+      width: `${v / 5 * 100}%`
+    }
+  }))))))), /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Objetivos del trimestre"), e.status === 'onboarding' ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-12 text-[13px] text-[var(--ink-tertiary)]"
+  }, "Objetivos por definir tras el onboarding.") : /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, [{
+    g: 'Liderar la migración del sistema de autenticación',
+    p: 75
+  }, {
+    g: 'Mentorizar a 2 perfiles del equipo',
+    p: 50
+  }, {
+    g: 'Reducir la deuda técnica del módulo core',
+    p: 30
+  }].map((o, i) => /*#__PURE__*/React.createElement("div", {
+    key: i
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center mb-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[13px] font-medium"
+  }, o.g), /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[12px] text-[var(--ink-tertiary)]"
+  }, o.p, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full rounded-full",
+    style: {
+      width: `${o.p}%`,
+      background: o.p >= 70 ? 'var(--success)' : o.p >= 40 ? 'var(--accent)' : 'var(--warning)'
+    }
+  }))))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · ORGANIGRAMA
+   ═══════════════════════════════════════════════════════════════════ */
+
+const OrgNode = ({
+  emp,
+  onNavigate,
+  lead = false
+}) => /*#__PURE__*/React.createElement("button", {
+  onClick: () => onNavigate('empleado-detalle', emp.id),
+  className: `org-card group ${lead ? 'org-card-lead' : ''}`
+}, /*#__PURE__*/React.createElement(Avatar, {
+  name: emp.name,
+  size: lead ? 'md' : 'sm'
+}), /*#__PURE__*/React.createElement("div", {
+  className: "min-w-0 text-left"
+}, /*#__PURE__*/React.createElement("div", {
+  className: `font-semibold truncate ${lead ? 'text-[13px]' : 'text-[12px]'}`
+}, emp.name), /*#__PURE__*/React.createElement("div", {
+  className: "text-[10px] text-[var(--ink-tertiary)] truncate"
+}, emp.role)));
+const OrganigramaView = ({
+  onNavigate
+}) => {
+  const ceo = EMPLOYEES.find(e => e.managerId === null);
+  const leads = reportsOf(ceo.id);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    title: "Organigrama",
+    subtitle: "Estructura del grupo · 17 personas, 7 áreas.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.search, null)
+    }, "Buscar persona"))
+  }), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0",
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto p-10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "org-root"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col items-center"
+  }, /*#__PURE__*/React.createElement(OrgNode, {
+    emp: ceo,
+    onNavigate: onNavigate,
+    lead: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "org-bus"
+  }, leads.map(lead => {
+    const team = reportsOf(lead.id);
+    return /*#__PURE__*/React.createElement("div", {
+      key: lead.id,
+      className: "org-col"
+    }, /*#__PURE__*/React.createElement(OrgNode, {
+      emp: lead,
+      onNavigate: onNavigate,
+      lead: true
+    }), team.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "org-reports"
+    }, team.map(r => /*#__PURE__*/React.createElement(OrgNode, {
+      key: r.id,
+      emp: r,
+      onNavigate: onNavigate
+    }))));
+  }))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · AUSENCIAS
+   ═══════════════════════════════════════════════════════════════════ */
+
+const AusenciasView = () => {
+  const [tab, setTab] = useState('solicitudes');
+  const pending = ABSENCES.filter(a => a.status === 'pendiente');
+  const approved = ABSENCES.filter(a => a.status === 'aprobada');
+
+  // Build a simple July timeline
+  const julyDays = Array.from({
+    length: 31
+  }, (_, i) => i + 1);
+  const teamForCal = EMPLOYEES.filter(e => ABSENCES.some(a => a.empId === e.id)).slice(0, 8);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Tiempo",
+    title: "Ausencias",
+    subtitle: "Solicitudes, calendario del equipo y saldos. Las aprobaciones quedan registradas.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null)
+    }, "Nueva solicitud"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-3 mb-6"
+  }, [{
+    l: 'Ausentes hoy',
+    v: OUT_TODAY.length,
+    c: '#D97706'
+  }, {
+    l: 'Pendientes de aprobar',
+    v: pending.length,
+    c: '#DC2626'
+  }, {
+    l: 'Aprobadas este mes',
+    v: approved.length,
+    c: '#16A34A'
+  }, {
+    l: 'Días de equipo en julio',
+    v: '27',
+    c: '#1FB6E8'
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.l,
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, s.l), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, s.v), /*#__PURE__*/React.createElement("div", {
+    className: "w-2 h-2 rounded-full mb-2",
+    style: {
+      background: s.c
+    }
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 mb-6 border-b border-[var(--line)]"
+  }, [{
+    k: 'solicitudes',
+    l: 'Solicitudes',
+    n: pending.length
+  }, {
+    k: 'calendario',
+    l: 'Calendario del equipo'
+  }, {
+    k: 'saldos',
+    l: 'Saldos'
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.k,
+    onClick: () => setTab(t.k),
+    className: `px-4 py-2.5 text-[13px] font-medium relative transition-colors ${tab === t.k ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'}`
+  }, t.l, t.n != null && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 mono text-[11px] text-[var(--ink-tertiary)]"
+  }, t.n), tab === t.k && /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[-1px] left-2 right-2 h-[2px] bg-[var(--accent)]"
+  })))), tab === 'solicitudes' && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--warning)] [&_svg]:w-4 [&_svg]:h-4"
+  }, /*#__PURE__*/React.createElement(I.clock, null)), "Pendientes de aprobar"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Requieren tu decisión")), /*#__PURE__*/React.createElement(Button, {
+    variant: "dark",
+    size: "sm"
+  }, "Aprobar todas")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, pending.map(a => {
+    const e = empById(a.empId);
+    const t = ABSENCE_TYPE[a.type];
+    const Ic = I[t.icon];
+    return /*#__PURE__*/React.createElement("div", {
+      key: a.id,
+      className: "px-6 py-4 flex items-center gap-4"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "md"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-semibold text-[13px]"
+    }, e.name), /*#__PURE__*/React.createElement("span", {
+      className: "inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded",
+      style: {
+        background: `${t.color}15`,
+        color: t.color
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "[&_svg]:w-3 [&_svg]:h-3"
+    }, Ic && /*#__PURE__*/React.createElement(Ic, null)), t.label)), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-[var(--ink-tertiary)] mt-0.5"
+    }, a.reason, " · ", /*#__PURE__*/React.createElement("span", {
+      className: "mono"
+    }, a.start, " → ", a.end))), /*#__PURE__*/React.createElement("div", {
+      className: "text-center px-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mono text-[18px] font-bold"
+    }, a.days), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-[var(--ink-tertiary)] uppercase"
+    }, "días")), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      size: "sm"
+    }, "Rechazar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      size: "sm",
+      icon: /*#__PURE__*/React.createElement(I.check, null)
+    }, "Aprobar")));
+  }))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Aprobadas recientemente")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, approved.map(a => {
+    const e = empById(a.empId);
+    const t = ABSENCE_TYPE[a.type];
+    const Ic = I[t.icon];
+    return /*#__PURE__*/React.createElement("div", {
+      key: a.id,
+      className: "px-6 py-3.5 flex items-center gap-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-8 h-8 rounded-md flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4",
+      style: {
+        background: `${t.color}15`,
+        color: t.color
+      }
+    }, Ic && /*#__PURE__*/React.createElement(Ic, null)), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-medium text-[13px]"
+    }, e.name), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-[var(--ink-tertiary)] ml-2"
+    }, t.label)), /*#__PURE__*/React.createElement("span", {
+      className: "mono text-[11px] text-[var(--ink-tertiary)]"
+    }, a.start, " → ", a.end), /*#__PURE__*/React.createElement("span", {
+      className: "mono text-[12px] text-[var(--ink-secondary)] w-10 text-right"
+    }, a.days, "d"), /*#__PURE__*/React.createElement(Badge, {
+      variant: "success",
+      dot: true
+    }, "Aprobada"));
+  })))), tab === 'calendario' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0",
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Julio 2026"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Quién está fuera y cuándo")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 text-[11px]"
+  }, Object.entries(ABSENCE_TYPE).slice(0, 3).map(([k, t]) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    className: "inline-flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-sm",
+    style: {
+      background: t.color
+    }
+  }), t.label)))), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-[900px] p-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-px mb-2 pl-[160px]"
+  }, julyDays.map(d => /*#__PURE__*/React.createElement("div", {
+    key: d,
+    className: `flex-1 text-center text-[9px] mono ${[4, 5, 11, 12, 18, 19, 25, 26].includes(d) ? 'text-[var(--ink-tertiary)]/40' : 'text-[var(--ink-tertiary)]'}`
+  }, d))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, teamForCal.map(e => {
+    const abs = ABSENCES.filter(a => a.empId === e.id && a.start.startsWith('2026-07'));
+    return /*#__PURE__*/React.createElement("div", {
+      key: e.id,
+      className: "flex items-center gap-px"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-[160px] flex items-center gap-2 pr-3 flex-shrink-0"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[12px] font-medium truncate"
+    }, e.name)), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex items-center gap-px relative h-7"
+    }, julyDays.map(d => {
+      const isWeekend = [4, 5, 11, 12, 18, 19, 25, 26].includes(d);
+      return /*#__PURE__*/React.createElement("div", {
+        key: d,
+        className: `flex-1 h-full rounded-sm ${isWeekend ? 'bg-[var(--bg-subtle)]/50' : 'bg-[var(--bg-subtle)]'}`
+      });
+    }), abs.map(a => {
+      const t = ABSENCE_TYPE[a.type];
+      const startD = parseInt(a.start.split('-')[2]);
+      const endD = parseInt(a.end.split('-')[2]);
+      const left = (startD - 1) / 31 * 100;
+      const width = (endD - startD + 1) / 31 * 100;
+      return /*#__PURE__*/React.createElement("div", {
+        key: a.id,
+        className: "absolute h-5 rounded top-1 flex items-center px-1.5",
+        style: {
+          left: `${left}%`,
+          width: `${width}%`,
+          background: t.color
+        },
+        title: `${t.label} · ${a.days}d`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-white font-medium truncate"
+      }, t.label));
+    })));
+  }))))), tab === 'saldos' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Empleado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Departamento"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Usados"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Pendientes"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Disponibles"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] w-40"
+  }, "Progreso"))), /*#__PURE__*/React.createElement("tbody", null, EMPLOYEES.map(e => {
+    const pct = Math.round(e.vac.used / e.vac.total * 100);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: e.id,
+      className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "font-medium"
+    }, e.name))), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement(DeptChip, {
+      dept: e.dept
+    })), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5 text-right mono"
+    }, e.vac.used), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5 text-right mono"
+    }, e.vac.pending > 0 ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[var(--warning)]"
+    }, e.vac.pending) : '—'), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5 text-right mono font-semibold"
+    }, e.vac.total - e.vac.used), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full bg-[var(--accent)] rounded-full",
+      style: {
+        width: `${pct}%`
+      }
+    }))));
+  })))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · RECLUTAMIENTO (condensed — links to VITAE)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const ReclutamientoView = () => /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+  eyebrow: "Talento · módulo VITAE",
+  title: "Reclutamiento",
+  subtitle: "Infraestructura de selección con IA. Integrada con el resto del Core: los candidatos contratados pasan directamente a Empleados.",
+  actions: /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    icon: /*#__PURE__*/React.createElement(I.externalLink, null)
+  }, "Abrir VITAE")
+}), /*#__PURE__*/React.createElement("div", {
+  className: "stat-grid mb-8"
+}, /*#__PURE__*/React.createElement(KPICard, {
+  primary: true,
+  label: "Candidatos en base",
+  value: "2.847",
+  meta: "total acumulado"
+}), /*#__PURE__*/React.createElement(KPICard, {
+  label: "Procesos abiertos",
+  value: "12",
+  delta: {
+    positive: true,
+    text: '+2'
+  },
+  meta: "vs. mes anterior"
+}), /*#__PURE__*/React.createElement(KPICard, {
+  label: "Contratados este mes",
+  value: "2",
+  meta: "ya en plantilla"
+}), /*#__PURE__*/React.createElement(KPICard, {
+  label: "Tiempo a oferta",
+  value: "18d",
+  delta: {
+    positive: true,
+    text: '−2d'
+  },
+  meta: "mediana"
+})), /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-3 gap-6"
+}, /*#__PURE__*/React.createElement(Card, {
+  className: "col-span-2",
+  padding: "p-0"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between"
+}, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+  className: "text-[16px] font-semibold"
+}, "Procesos activos"), /*#__PURE__*/React.createElement("p", {
+  className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+}, "Gestionados en VITAE")), /*#__PURE__*/React.createElement(Button, {
+  variant: "ghost",
+  size: "sm",
+  iconRight: /*#__PURE__*/React.createElement(I.externalLink, null)
+}, "Ver en VITAE")), /*#__PURE__*/React.createElement("div", {
+  className: "divide-y divide-[var(--line-subtle)]"
+}, [{
+  code: 'ENG-024',
+  title: 'Senior Backend Engineer',
+  cand: 47,
+  status: 'Activa'
+}, {
+  code: 'DES-009',
+  title: 'Product Designer',
+  cand: 23,
+  status: 'Caduca pronto'
+}, {
+  code: 'DAT-012',
+  title: 'Data Analyst',
+  cand: 18,
+  status: 'En revisión'
+}, {
+  code: 'CS-007',
+  title: 'Customer Success Manager',
+  cand: 31,
+  status: 'Activa'
+}].map(j => /*#__PURE__*/React.createElement("div", {
+  key: j.code,
+  className: "px-6 py-4 flex items-center gap-4"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex-1"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex items-baseline gap-2"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "font-semibold text-[14px]"
+}, j.title), /*#__PURE__*/React.createElement("span", {
+  className: "mono text-[11px] text-[var(--ink-tertiary)]"
+}, j.code)), /*#__PURE__*/React.createElement("div", {
+  className: "text-[12px] text-[var(--ink-tertiary)]"
+}, j.cand, " candidatos en pipeline")), /*#__PURE__*/React.createElement(Badge, {
+  variant: j.status === 'Activa' ? 'success' : j.status === 'Caduca pronto' ? 'warning' : 'info',
+  dot: true
+}, j.status))))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center gap-2 mb-1"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "text-[var(--accent-ink)] [&_svg]:w-4 [&_svg]:h-4"
+}, /*#__PURE__*/React.createElement(I.sparkle, null)), /*#__PURE__*/React.createElement("h3", {
+  className: "text-[16px] font-semibold"
+}, "Del embudo a la plantilla")), /*#__PURE__*/React.createElement("p", {
+  className: "text-[12px] text-[var(--ink-tertiary)] mb-4"
+}, "Contrataciones recientes vía VITAE, ya activas en el Core."), /*#__PURE__*/React.createElement("div", {
+  className: "space-y-3"
+}, EMPLOYEES.filter(e => e.fromRecruitment).map(e => /*#__PURE__*/React.createElement("div", {
+  key: e.id,
+  className: "flex items-center gap-3 p-2.5 rounded-lg bg-[var(--accent-soft)]/40 border border-[var(--accent-soft)]"
+}, /*#__PURE__*/React.createElement(Avatar, {
+  name: e.name,
+  size: "sm"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "flex-1 min-w-0"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "font-medium text-[12px] truncate"
+}, e.name), /*#__PURE__*/React.createElement("div", {
+  className: "text-[10px] text-[var(--ink-tertiary)]"
+}, e.role)), /*#__PURE__*/React.createElement(EmpStatus, {
+  status: e.status
+})))), /*#__PURE__*/React.createElement("div", {
+  className: "mt-4 pt-4 border-t border-[var(--line-subtle)] text-[11px] text-[var(--ink-secondary)] leading-relaxed"
+}, "Cuando un candidato acepta una oferta en VITAE, su ficha se crea automáticamente aquí con el onboarding en marcha."))));
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · ONBOARDING
+   ═══════════════════════════════════════════════════════════════════ */
+
+const OnboardingView = () => {
+  const [sel, setSel] = useState(ONBOARDING[0].empId);
+  const cur = ONBOARDING.find(o => o.empId === sel);
+  const curEmp = empById(cur.empId);
+  const buddy = empById(cur.buddyId);
+  const mgr = curEmp.managerId ? empById(curEmp.managerId) : null;
+  const totalTasks = ONB_TASKS.length;
+  const progressOf = o => Math.round(o.done.length / totalTasks * 100);
+  const totalPending = ONBOARDING.reduce((s, o) => s + (totalTasks - o.done.length), 0);
+  const avgProgress = Math.round(ONBOARDING.reduce((s, o) => s + progressOf(o), 0) / ONBOARDING.length);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Talento",
+    title: "Onboarding",
+    subtitle: "Incorporaciones en curso y su checklist. Los nuevos llegan directamente desde VITAE.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.listChecks, null)
+    }, "Plantilla"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null)
+    }, "Nuevo proceso"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "stat-grid mb-8"
+  }, /*#__PURE__*/React.createElement(KPICard, {
+    primary: true,
+    label: "Procesos activos",
+    value: String(ONBOARDING.length),
+    meta: "en onboarding"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Tareas pendientes",
+    value: String(totalPending),
+    meta: "en todos los procesos"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Progreso medio",
+    value: avgProgress + '%',
+    meta: "del checklist"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Próxima incorporación",
+    value: "hoy",
+    meta: "Sofía Navarro"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6 items-start"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-1 flex flex-col gap-3"
+  }, ONBOARDING.map(o => {
+    const e = empById(o.empId);
+    const p = progressOf(o);
+    return /*#__PURE__*/React.createElement("button", {
+      key: o.empId,
+      onClick: () => setSel(o.empId),
+      className: `text-left bg-[var(--bg-surface)] border rounded-xl p-4 transition-all ${sel === o.empId ? 'border-[var(--accent)] shadow-[0_2px_8px_rgba(31,182,232,0.12)]' : 'border-[var(--line)] hover:border-[var(--line-strong)]'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3 mb-3"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "md"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-semibold text-[13px] truncate"
+    }, e.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-[var(--ink-tertiary)] truncate"
+    }, e.role)), e.fromRecruitment && /*#__PURE__*/React.createElement("span", {
+      className: "text-[var(--accent-ink)] [&_svg]:w-4 [&_svg]:h-4",
+      title: "vía VITAE"
+    }, /*#__PURE__*/React.createElement(I.sparkle, null))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between text-[11px] mb-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[var(--ink-tertiary)]"
+    }, "Inicio ", e.startDate), /*#__PURE__*/React.createElement("span", {
+      className: "mono font-semibold"
+    }, p, "%")), /*#__PURE__*/React.createElement("div", {
+      className: "h-1.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full rounded-full",
+      style: {
+        width: `${p}%`,
+        background: p >= 66 ? 'var(--success)' : p >= 33 ? 'var(--accent)' : 'var(--warning)'
+      }
+    })));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "border border-dashed border-[var(--line-strong)] rounded-xl p-4 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-tertiary)]"
+  }, "Los candidatos que aceptan oferta en ", /*#__PURE__*/React.createElement("b", {
+    className: "text-[var(--accent-ink)]"
+  }, "VITAE"), " aparecen aquí automáticamente."))), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-4 border-b border-[var(--line-subtle)] flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: curEmp.name,
+    size: "lg"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[17px] font-bold tracking-[-0.01em]"
+  }, curEmp.name), curEmp.fromRecruitment && /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true
+  }, "vía VITAE")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-[var(--ink-tertiary)]"
+  }, curEmp.role, " · ", DEPTS[curEmp.dept].name, " · inicio ", curEmp.startDate)), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold"
+  }, progressOf(cur), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wide"
+  }, "completado"))), /*#__PURE__*/React.createElement("div", {
+    className: "px-6 py-3 flex items-center gap-6 border-b border-[var(--line-subtle)] bg-[var(--bg-subtle)]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-[12px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, "Manager:"), mgr && /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 font-medium"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: mgr.name,
+    size: "xs"
+  }), mgr.name)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-[12px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-tertiary)]"
+  }, "Buddy:"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 font-medium"
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: buddy.name,
+    size: "xs"
+  }), buddy.name))), /*#__PURE__*/React.createElement("div", {
+    className: "p-6 space-y-6"
+  }, ONB_PHASES.map(ph => {
+    const tasks = ONB_TASKS.filter(t => t.phase === ph.key);
+    const doneCount = tasks.filter(t => cur.done.includes(t.id)).length;
+    return /*#__PURE__*/React.createElement("div", {
+      key: ph.key
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-3"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-[12px] font-semibold uppercase tracking-wider text-[var(--ink-secondary)]"
+    }, ph.label), /*#__PURE__*/React.createElement("span", {
+      className: "mono text-[11px] text-[var(--ink-tertiary)]"
+    }, doneCount, "/", tasks.length), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 h-px bg-[var(--line-subtle)]"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-1.5"
+    }, tasks.map(t => {
+      const done = cur.done.includes(t.id);
+      return /*#__PURE__*/React.createElement("div", {
+        key: t.id,
+        className: `flex items-center gap-3 px-3 py-2.5 rounded-lg ${done ? 'bg-[var(--bg-subtle)]' : 'border border-[var(--line)]'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: done ? 'text-[var(--success)] [&_svg]:w-[18px] [&_svg]:h-[18px]' : 'text-[var(--ink-disabled)] [&_svg]:w-[18px] [&_svg]:h-[18px]'
+      }, done ? /*#__PURE__*/React.createElement(I.checkCircle, null) : /*#__PURE__*/React.createElement(I.circle, null)), /*#__PURE__*/React.createElement("span", {
+        className: `flex-1 text-[13px] ${done ? 'text-[var(--ink-tertiary)] line-through' : 'font-medium'}`
+      }, t.label), /*#__PURE__*/React.createElement(Badge, {
+        variant: "neutral"
+      }, t.owner));
+    })));
+  }))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · DESEMPEÑO
+   ═══════════════════════════════════════════════════════════════════ */
+
+const DesempenoView = () => {
+  const [tab, setTab] = useState('ciclo');
+  const ratings = Object.values(PERF_STATUS).map(s => s.rating).filter(r => r != null);
+  const reviewed = ratings.length;
+  const totalRev = Object.keys(PERF_STATUS).length;
+  const avgRating = (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Talento",
+    title: "Desempeño",
+    subtitle: "Ciclos de evaluación, objetivos y resultados del equipo.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.target, null)
+    }, "Nuevo objetivo"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "stat-grid mb-8"
+  }, /*#__PURE__*/React.createElement(KPICard, {
+    primary: true,
+    label: "Ciclo activo",
+    value: PERF_CYCLE.progress + '%',
+    meta: PERF_CYCLE.name
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Evaluaciones cerradas",
+    value: `${reviewed}/${totalRev}`,
+    meta: "con calificación"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Valoración media",
+    value: avgRating,
+    meta: "sobre 5,0"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Objetivos en curso",
+    value: String(OKRS.reduce((s, o) => s + o.krs.length, 0)),
+    meta: `${OKRS.length} OKRs`
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 mb-6 border-b border-[var(--line)]"
+  }, [{
+    k: 'ciclo',
+    l: 'Ciclo actual'
+  }, {
+    k: 'objetivos',
+    l: 'Objetivos (OKRs)'
+  }, {
+    k: 'resultados',
+    l: 'Resultados'
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.k,
+    onClick: () => setTab(t.k),
+    className: `px-4 py-2.5 text-[13px] font-medium relative ${tab === t.k ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'}`
+  }, t.l, tab === t.k && /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[-1px] left-2 right-2 h-[2px] bg-[var(--accent)]"
+  })))), tab === 'ciclo' && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "!bg-[var(--ink-primary)] !border-[var(--ink-primary)] text-white"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-4 [&_svg]:h-4 text-[var(--accent)]"
+  }, /*#__PURE__*/React.createElement(I.target, null)), /*#__PURE__*/React.createElement("h3", {
+    className: "text-[16px] font-semibold"
+  }, PERF_CYCLE.name)), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-white/60"
+  }, "Periodo ", PERF_CYCLE.start, " → ", PERF_CYCLE.end, " · cierra en pocos días")), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[28px] font-bold"
+  }, PERF_CYCLE.progress, "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-white/60 uppercase tracking-wide"
+  }, "completado"))), /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-white/15 rounded-full overflow-hidden mt-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-[var(--accent)] rounded-full",
+    style: {
+      width: `${PERF_CYCLE.progress}%`
+    }
+  }))), /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Seguimiento de evaluaciones"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Estado por persona en el ciclo actual")), /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Empleado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center px-3 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Autoeval."), /*#__PURE__*/React.createElement("th", {
+    className: "text-center px-3 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Eval. manager"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center px-3 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "1:1"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Valoración"))), /*#__PURE__*/React.createElement("tbody", null, EMPLOYEES.filter(e => PERF_STATUS[e.id]).map(e => {
+    const s = PERF_STATUS[e.id];
+    const Dot = ({
+      on
+    }) => /*#__PURE__*/React.createElement("span", {
+      className: `inline-flex items-center justify-center w-5 h-5 rounded-full [&_svg]:w-3 [&_svg]:h-3 ${on ? 'bg-[var(--success-soft)] text-[var(--success)]' : 'bg-[var(--bg-subtle)] text-[var(--ink-disabled)]'}`
+    }, on ? /*#__PURE__*/React.createElement(I.check, null) : /*#__PURE__*/React.createElement(I.x, null));
+    return /*#__PURE__*/React.createElement("tr", {
+      key: e.id,
+      className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "font-medium"
+    }, e.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-[var(--ink-tertiary)]"
+    }, e.role)))), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-center"
+    }, /*#__PURE__*/React.createElement(Dot, {
+      on: s.self
+    }))), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-center"
+    }, /*#__PURE__*/React.createElement(Dot, {
+      on: s.manager
+    }))), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-center"
+    }, /*#__PURE__*/React.createElement(Dot, {
+      on: s.o2o
+    }))), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3 text-right"
+    }, s.rating != null ? /*#__PURE__*/React.createElement("span", {
+      className: "mono font-semibold"
+    }, s.rating.toFixed(1)) : /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-[var(--ink-tertiary)]"
+    }, "pendiente")));
+  }))))), tab === 'objetivos' && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-5"
+  }, OKRS.map(okr => {
+    const owner = empById(okr.owner);
+    const avg = Math.round(okr.krs.reduce((s, k) => s + k.p, 0) / okr.krs.length);
+    return /*#__PURE__*/React.createElement(Card, {
+      key: okr.id
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start justify-between mb-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-1.5"
+    }, /*#__PURE__*/React.createElement(Badge, {
+      variant: okr.scope === 'Empresa' ? 'accent' : 'neutral'
+    }, okr.scope), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-[var(--ink-tertiary)] inline-flex items-center gap-1.5"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: owner.name,
+      size: "xs"
+    }), owner.name)), /*#__PURE__*/React.createElement("h3", {
+      className: "text-[16px] font-semibold tracking-[-0.005em]"
+    }, okr.objective)), /*#__PURE__*/React.createElement("div", {
+      className: "text-right"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mono text-[22px] font-bold"
+    }, avg, "%"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wide"
+    }, "avance"))), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-3"
+    }, okr.krs.map((k, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "flex items-center gap-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 text-[13px]"
+    }, k.t), /*#__PURE__*/React.createElement("div", {
+      className: "w-48 h-2 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full rounded-full",
+      style: {
+        width: `${k.p}%`,
+        background: k.p >= 70 ? 'var(--success)' : k.p >= 40 ? 'var(--accent)' : 'var(--warning)'
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "mono text-[12px] font-medium w-10 text-right"
+    }, k.p, "%")))));
+  })), tab === 'resultados' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6 items-start"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-1"
+  }, "Distribución de valoraciones"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mb-5"
+  }, ratings.length, " evaluaciones cerradas · escala 1–5"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, [{
+    band: 'Excepcional (4,5–5,0)',
+    count: ratings.filter(r => r >= 4.5).length,
+    color: '#16A34A'
+  }, {
+    band: 'Supera expectativas (4,0–4,4)',
+    count: ratings.filter(r => r >= 4.0 && r < 4.5).length,
+    color: '#1FB6E8'
+  }, {
+    band: 'Cumple (3,0–3,9)',
+    count: ratings.filter(r => r >= 3.0 && r < 4.0).length,
+    color: '#D97706'
+  }, {
+    band: 'A desarrollar (<3,0)',
+    count: ratings.filter(r => r < 3.0).length,
+    color: '#DC2626'
+  }].map(b => {
+    const pct = ratings.length ? b.count / ratings.length * 100 : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: b.band,
+      className: "flex items-center gap-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-52 text-[13px] font-medium"
+    }, b.band), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 h-6 bg-[var(--bg-subtle)] rounded-md overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full rounded-md flex items-center px-2",
+      style: {
+        width: `${Math.max(pct, 5)}%`,
+        background: b.color
+      }
+    }, b.count > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-white font-semibold"
+    }, b.count))));
+  }))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Mejor valorados"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, EMPLOYEES.filter(e => PERF_STATUS[e.id] && PERF_STATUS[e.id].rating != null).sort((a, b) => PERF_STATUS[b.id].rating - PERF_STATUS[a.id].rating).slice(0, 5).map((e, i) => /*#__PURE__*/React.createElement("div", {
+    key: e.id,
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[12px] text-[var(--ink-tertiary)] w-4"
+  }, i + 1), /*#__PURE__*/React.createElement(Avatar, {
+    name: e.name,
+    size: "xs"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] font-medium truncate"
+  }, e.name)), /*#__PURE__*/React.createElement("span", {
+    className: "mono text-[13px] font-semibold"
+  }, PERF_STATUS[e.id].rating.toFixed(1))))))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · NÓMINA
+   ═══════════════════════════════════════════════════════════════════ */
+
+const NominaView = () => {
+  const [tab, setTab] = useState('resumen');
+  const paid = EMPLOYEES.filter(e => parseSalary(e.salary) > 0);
+  const totalBruto = paid.reduce((s, e) => s + payrollFor(e).bruto, 0);
+  const totalNeto = paid.reduce((s, e) => s + payrollFor(e).neto, 0);
+  const totalIrpf = paid.reduce((s, e) => s + payrollFor(e).irpf, 0);
+  const totalSs = paid.reduce((s, e) => s + payrollFor(e).ss, 0);
+  const ssEmpresa = totalBruto * 0.30;
+  const totalCost = totalBruto + ssEmpresa;
+  const byDept = useMemo(() => {
+    const m = {};
+    paid.forEach(e => {
+      m[e.dept] = (m[e.dept] || 0) + payrollFor(e).bruto;
+    });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, []);
+  const maxDept = Math.max(...byDept.map(d => d[1]));
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Empresa",
+    title: "Nómina",
+    subtitle: "Cierre de junio 2026. Importes orientativos calculados sobre el salario bruto.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.download, null)
+    }, "Exportar a gestoría"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.check, null)
+    }, "Procesar nómina"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "stat-grid mb-8"
+  }, /*#__PURE__*/React.createElement(KPICard, {
+    primary: true,
+    label: "Coste total del mes",
+    value: fmtEur(totalCost),
+    meta: "bruto + SS empresa"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Nóminas a procesar",
+    value: String(paid.length),
+    meta: "en borrador"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Coste medio",
+    value: fmtEur(totalCost / paid.length),
+    meta: "por empleado"
+  }), /*#__PURE__*/React.createElement(KPICard, {
+    label: "Variación",
+    value: "+4,2%",
+    meta: "vs. mayo · +2 altas"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 mb-6 border-b border-[var(--line)]"
+  }, [{
+    k: 'resumen',
+    l: 'Resumen'
+  }, {
+    k: 'nominas',
+    l: 'Nóminas'
+  }, {
+    k: 'incidencias',
+    l: 'Incidencias',
+    n: NOMINA_INCIDENCIAS.length
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.k,
+    onClick: () => setTab(t.k),
+    className: `px-4 py-2.5 text-[13px] font-medium relative ${tab === t.k ? 'text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'}`
+  }, t.l, t.n != null && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 mono text-[11px] text-[var(--ink-tertiary)]"
+  }, t.n), tab === t.k && /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[-1px] left-2 right-2 h-[2px] bg-[var(--accent)]"
+  })))), tab === 'resumen' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-6 items-start"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-1"
+  }, "Coste por departamento"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mb-5"
+  }, "Bruto mensual agregado"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, byDept.map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    className: "flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-28 text-[13px] font-medium flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2 h-2 rounded-full",
+    style: {
+      background: DEPTS[k].color
+    }
+  }), DEPTS[k].name), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 h-2.5 bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full rounded-full",
+    style: {
+      width: `${v / maxDept * 100}%`,
+      background: DEPTS[k].color
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[12px] font-medium w-24 text-right"
+  }, fmtEur(v))))))), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-1 flex flex-col gap-6"
+  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold mb-4"
+  }, "Desglose del mes"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3 text-[13px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-secondary)]"
+  }, "Salario bruto"), /*#__PURE__*/React.createElement("span", {
+    className: "mono font-medium"
+  }, fmtEur(totalBruto))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-secondary)]"
+  }, "SS empresa"), /*#__PURE__*/React.createElement("span", {
+    className: "mono font-medium"
+  }, fmtEur(ssEmpresa))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between pt-3 border-t border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "Coste total"), /*#__PURE__*/React.createElement("span", {
+    className: "mono font-bold"
+  }, fmtEur(totalCost)))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-4 border-t border-[var(--line-subtle)] space-y-3 text-[13px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-secondary)]"
+  }, "Retenciones IRPF"), /*#__PURE__*/React.createElement("span", {
+    className: "mono"
+  }, fmtEur(totalIrpf))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--ink-secondary)]"
+  }, "Cotización trabajador"), /*#__PURE__*/React.createElement("span", {
+    className: "mono"
+  }, fmtEur(totalSs))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "Neto a pagar"), /*#__PURE__*/React.createElement("span", {
+    className: "mono font-bold text-[var(--success)]"
+  }, fmtEur(totalNeto))))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl p-5 border",
+    style: {
+      background: 'var(--warning-soft)',
+      borderColor: 'rgba(217,119,6,0.25)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[var(--warning)] [&_svg]:w-5 [&_svg]:h-5 mt-0.5"
+  }, /*#__PURE__*/React.createElement(I.alert, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] font-semibold text-[var(--warning)]"
+  }, "Nómina en borrador"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-secondary)] mt-1"
+  }, "Revisa las ", NOMINA_INCIDENCIAS.length, " incidencias antes de procesar el pago.")))))), tab === 'nominas' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Empleado"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-4 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Bruto"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-4 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "IRPF"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-4 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "SS"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Neto"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Estado"))), /*#__PURE__*/React.createElement("tbody", null, paid.map(e => {
+    const p = payrollFor(e);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: e.id,
+      className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "font-medium"
+    }, e.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-[var(--ink-tertiary)]"
+    }, DEPTS[e.dept].name)))), /*#__PURE__*/React.createElement("td", {
+      className: "px-4 py-3 text-right mono"
+    }, fmtEur(p.bruto)), /*#__PURE__*/React.createElement("td", {
+      className: "px-4 py-3 text-right mono text-[var(--ink-tertiary)]"
+    }, "−", fmtEur(p.irpf)), /*#__PURE__*/React.createElement("td", {
+      className: "px-4 py-3 text-right mono text-[var(--ink-tertiary)]"
+    }, "−", fmtEur(p.ss)), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3 text-right mono font-semibold"
+    }, fmtEur(p.neto)), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3"
+    }, /*#__PURE__*/React.createElement(Badge, {
+      variant: "neutral",
+      dot: true
+    }, "Borrador")));
+  })))), tab === 'incidencias' && /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 pt-5 pb-3 border-b border-[var(--line-subtle)]"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[15px] font-semibold"
+  }, "Incidencias del mes"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-[var(--ink-tertiary)] mt-0.5"
+  }, "Variables que afectan a la nómina de junio")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-[var(--line-subtle)]"
+  }, NOMINA_INCIDENCIAS.map((inc, i) => {
+    const e = empById(inc.empId);
+    const pos = inc.amount >= 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "px-6 py-4 flex items-center gap-4"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: e.name,
+      size: "sm"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-medium text-[13px]"
+    }, e.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-[var(--ink-tertiary)]"
+    }, inc.concept)), /*#__PURE__*/React.createElement(Badge, {
+      variant: inc.type === 'Bonus' ? 'success' : inc.type === 'Deducción' ? 'danger' : 'info'
+    }, inc.type), /*#__PURE__*/React.createElement("div", {
+      className: `mono text-[14px] font-semibold w-24 text-right ${pos ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`
+    }, pos ? '+' : '', fmtEur(inc.amount)));
+  }))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · DOCUMENTOS
+   ═══════════════════════════════════════════════════════════════════ */
+
+const DocumentosView = () => {
+  const [cat, setCat] = useState('all');
+  const [mode, setMode] = useState('docs');
+  const pendientes = DOCUMENTS.filter(d => d.status === 'pendiente').length;
+  const filtered = DOCUMENTS.filter(d => cat === 'all' || d.cat === cat);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: "Empresa",
+    title: "Documentos",
+    subtitle: "Repositorio documental del grupo, plantillas y firmas pendientes.",
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+      variant: "secondary",
+      icon: /*#__PURE__*/React.createElement(I.listChecks, null),
+      onClick: () => setMode('plantillas')
+    }, "Plantillas"), /*#__PURE__*/React.createElement(Button, {
+      variant: "primary",
+      icon: /*#__PURE__*/React.createElement(I.plus, null)
+    }, "Subir documento"))
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-3 mb-6"
+  }, [{
+    l: 'Documentos',
+    v: DOCUMENTS.length,
+    c: '#1FB6E8'
+  }, {
+    l: 'Pendientes de firma',
+    v: pendientes,
+    c: '#DC2626'
+  }, {
+    l: 'Plantillas',
+    v: DOC_TEMPLATES.length,
+    c: '#8B5CF6'
+  }, {
+    l: 'Categorías',
+    v: DOC_CATS.length,
+    c: '#16A34A'
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.l,
+    className: "bg-[var(--bg-surface)] border border-[var(--line)] rounded-lg p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] font-medium mb-1.5"
+  }, s.l), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mono text-[24px] font-bold tracking-[-0.02em]"
+  }, s.v), /*#__PURE__*/React.createElement("div", {
+    className: "w-2 h-2 rounded-full mb-2",
+    style: {
+      background: s.c
+    }
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 p-1 bg-[var(--bg-hover)] rounded-lg"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMode('docs'),
+    className: `px-3 h-8 text-[12px] font-medium rounded-md transition-colors ${mode === 'docs' ? 'bg-[var(--bg-surface)] shadow-sm text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)]'}`
+  }, "Documentos"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMode('plantillas'),
+    className: `px-3 h-8 text-[12px] font-medium rounded-md transition-colors ${mode === 'plantillas' ? 'bg-[var(--bg-surface)] shadow-sm text-[var(--ink-primary)]' : 'text-[var(--ink-secondary)]'}`
+  }, "Plantillas")), mode === 'docs' && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 flex-wrap"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setCat('all'),
+    className: `h-8 px-3 text-[12px] font-medium rounded-md transition-colors ${cat === 'all' ? 'bg-[var(--ink-primary)] text-white' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)]'}`
+  }, "Todas"), DOC_CATS.map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    onClick: () => setCat(c),
+    className: `h-8 px-3 text-[12px] font-medium rounded-md transition-colors ${cat === c ? 'bg-[var(--ink-primary)] text-white' : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-hover)]'}`
+  }, c)))), mode === 'docs' ? /*#__PURE__*/React.createElement(Card, {
+    padding: "p-0"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-[13px]"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-[var(--bg-subtle)] border-b border-[var(--line)]"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Documento"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Categoría"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Responsable"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Fecha"), /*#__PURE__*/React.createElement("th", {
+    className: "text-center px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Firmas"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]"
+  }, "Estado"), /*#__PURE__*/React.createElement("th", {
+    className: "px-5 py-3"
+  }))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(d => {
+    const owner = empById(d.ownerId);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: d.id,
+      className: "border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-8 h-8 rounded-md flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4",
+      style: {
+        background: `${DOC_CAT_COLOR[d.cat]}15`,
+        color: DOC_CAT_COLOR[d.cat]
+      }
+    }, /*#__PURE__*/React.createElement(I.file, null)), /*#__PURE__*/React.createElement("span", {
+      className: "font-medium"
+    }, d.name))), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "inline-flex items-center gap-1.5 h-6 px-2 rounded text-[11px] font-medium",
+      style: {
+        background: `${DOC_CAT_COLOR[d.cat]}15`,
+        color: DOC_CAT_COLOR[d.cat]
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-1.5 h-1.5 rounded-full",
+      style: {
+        background: DOC_CAT_COLOR[d.cat]
+      }
+    }), d.cat)), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: owner.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[12px] text-[var(--ink-secondary)]"
+    }, owner.name))), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5 mono text-[12px] text-[var(--ink-tertiary)]"
+    }, d.date), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5 text-center mono text-[12px]"
+    }, d.sign), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5"
+    }, d.status === 'pendiente' ? /*#__PURE__*/React.createElement(Badge, {
+      variant: "warning",
+      dot: true
+    }, "Pendiente firma") : d.status === 'vigente' ? /*#__PURE__*/React.createElement(Badge, {
+      variant: "success",
+      dot: true
+    }, "Vigente") : d.status === 'firmado' ? /*#__PURE__*/React.createElement(Badge, {
+      variant: "success",
+      dot: true
+    }, "Firmado") : /*#__PURE__*/React.createElement(Badge, {
+      variant: "info",
+      dot: true
+    }, "Emitido")), /*#__PURE__*/React.createElement("td", {
+      className: "px-5 py-3.5 text-right"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-end gap-1"
+    }, d.status === 'pendiente' && /*#__PURE__*/React.createElement("button", {
+      className: "h-7 px-2.5 rounded-md bg-[var(--ink-primary)] text-white text-[11px] font-medium inline-flex items-center gap-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "[&_svg]:w-3 [&_svg]:h-3"
+    }, /*#__PURE__*/React.createElement(I.pen, null)), "Firmar"), /*#__PURE__*/React.createElement("button", {
+      className: "p-1.5 rounded text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)] [&_svg]:w-4 [&_svg]:h-4"
+    }, /*#__PURE__*/React.createElement(I.download, null)))));
+  })))) : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-4"
+  }, DOC_TEMPLATES.map((t, i) => /*#__PURE__*/React.createElement("button", {
+    key: i,
+    className: "text-left bg-[var(--bg-surface)] border border-[var(--line)] rounded-xl p-5 hover:border-[var(--accent)] hover:shadow-[0_2px_8px_rgba(15,20,25,0.06)] transition-all"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-lg flex items-center justify-center mb-3 [&_svg]:w-5 [&_svg]:h-5",
+    style: {
+      background: `${DOC_CAT_COLOR[t.cat]}15`,
+      color: DOC_CAT_COLOR[t.cat]
+    }
+  }, /*#__PURE__*/React.createElement(I.file, null)), /*#__PURE__*/React.createElement("div", {
+    className: "font-semibold text-[14px] mb-1"
+  }, t.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-[var(--ink-tertiary)]"
+  }, t.cat), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-3 border-t border-[var(--line-subtle)] flex items-center gap-1.5 text-[12px] font-medium text-[var(--accent-ink)]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "[&_svg]:w-3.5 [&_svg]:h-3.5"
+  }, /*#__PURE__*/React.createElement(I.plus, null)), "Usar plantilla")))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW · COMING SOON (generic)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const COMING = {
+  fichaje: {
+    icon: 'clock',
+    title: 'Fichaje',
+    desc: 'Control horario, fichajes de entrada/salida, horas extra y cumplimiento del registro de jornada. Requiere integración con el hardware de fichaje.'
+  },
+  calendario: {
+    icon: 'calendar',
+    title: 'Calendario',
+    desc: 'Vista unificada de ausencias, festivos por ubicación, eventos de empresa y disponibilidad del equipo.'
+  },
+  informes: {
+    icon: 'chart',
+    title: 'Informes',
+    desc: 'Cuadros de mando de RRHH: headcount, rotación, absentismo, coste de plantilla y diversidad.'
+  }
+};
+const ComingSoonView = ({
+  which,
+  onNavigate
+}) => {
+  const c = COMING[which] || {
+    icon: 'settings',
+    title: which,
+    desc: 'Módulo en construcción.'
+  };
+  const Ic = I[c.icon];
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PageHeader, {
+    eyebrow: `Módulo · ${c.title}`,
+    title: c.title
+  }), /*#__PURE__*/React.createElement(Card, {
+    className: "flex flex-col items-center justify-center text-center py-20"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-16 h-16 rounded-2xl bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent-ink)] mb-5 [&_svg]:w-8 [&_svg]:h-8"
+  }, /*#__PURE__*/React.createElement(Ic, null)), /*#__PURE__*/React.createElement(Badge, {
+    variant: "accent",
+    dot: true,
+    className: "mb-4"
+  }, "Próximamente"), /*#__PURE__*/React.createElement("h3", {
+    className: "text-[20px] font-bold tracking-[-0.01em] mb-2"
+  }, c.title), /*#__PURE__*/React.createElement("p", {
+    className: "text-[14px] text-[var(--ink-secondary)] max-w-md mb-6"
+  }, c.desc), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement(Button, {
+    variant: "secondary",
+    onClick: () => onNavigate('inicio')
+  }, "Volver a Inicio"), /*#__PURE__*/React.createElement(Button, {
+    variant: "primary",
+    icon: /*#__PURE__*/React.createElement(I.bell, null)
+  }, "Avisarme cuando esté"))));
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   APP
+   ═══════════════════════════════════════════════════════════════════ */
+
+const App = () => {
+  const [view, setView] = useState('inicio');
+  const [empId, setEmpId] = useState(null);
+  const navigate = (v, id) => {
+    if (v === 'empleado-detalle') {
+      setEmpId(id);
+      setView('empleado-detalle');
+    } else {
+      setView(v);
+    }
+  };
+  const COMING_KEYS = ['fichaje', 'calendario', 'informes'];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex h-screen overflow-hidden bg-[var(--bg-canvas)]"
+  }, /*#__PURE__*/React.createElement(Sidebar, {
+    view: view,
+    setView: v => navigate(v)
+  }), /*#__PURE__*/React.createElement("main", {
+    className: "flex-1 overflow-y-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-[1400px] mx-auto px-10 py-10"
+  }, view === 'inicio' && /*#__PURE__*/React.createElement(InicioView, {
+    onNavigate: navigate
+  }), view === 'empleados' && /*#__PURE__*/React.createElement(EmpleadosView, {
+    onNavigate: navigate
+  }), view === 'empleado-detalle' && /*#__PURE__*/React.createElement(EmpleadoDetalleView, {
+    empId: empId,
+    onNavigate: navigate
+  }), view === 'organigrama' && /*#__PURE__*/React.createElement(OrganigramaView, {
+    onNavigate: navigate
+  }), view === 'ausencias' && /*#__PURE__*/React.createElement(AusenciasView, null), view === 'reclutamiento' && /*#__PURE__*/React.createElement(ReclutamientoView, null), view === 'onboarding' && /*#__PURE__*/React.createElement(OnboardingView, null), view === 'desempeno' && /*#__PURE__*/React.createElement(DesempenoView, null), view === 'nomina' && /*#__PURE__*/React.createElement(NominaView, null), view === 'documentos' && /*#__PURE__*/React.createElement(DocumentosView, null), COMING_KEYS.includes(view) && /*#__PURE__*/React.createElement(ComingSoonView, {
+    which: view,
+    onNavigate: navigate
+  }))));
+};
+ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+</script>
+</body>
+</html>

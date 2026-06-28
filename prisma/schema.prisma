@@ -1,0 +1,320 @@
+// Núcleo — modelo de datos del Core de RRHH
+// Documentado en CLAUDE.md y PLAN.md. Dinero en euros (Int); si se requiere
+// precisión contable, migrar campos monetarios a Decimal.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────── Enums ────────────────────────────
+enum Role            { ADMIN RRHH MANAGER EMPLEADO }
+enum EmployeeStatus  { ACTIVO ONBOARDING AUSENTE BAJA }
+enum ContractType    { INDEFINIDO TEMPORAL PRACTICAS FREELANCE }
+enum AbsenceType     { VACACIONES ENFERMEDAD PERSONAL MATERNIDAD }
+enum AbsenceStatus   { PENDIENTE APROBADA RECHAZADA }
+enum OnboardingPhase { ANTES DIA1 SEMANA1 MES1 }
+enum CycleStatus     { BORRADOR ACTIVO CERRADO }
+enum PayrollStatus   { BORRADOR PROCESADA PAGADA }
+enum PayslipStatus   { BORRADOR EMITIDA PAGADA }
+enum PayrollItemType { BONUS HORAS_EXTRA DEDUCCION }
+enum DocumentCategory{ CONTRATOS NOMINAS POLITICAS CERTIFICADOS FORMACION }
+enum DocumentStatus  { VIGENTE FIRMADO PENDIENTE EMITIDO }
+enum SignatureStatus { PENDIENTE FIRMADA }
+
+// ─────────────────────── Identidad / Organización ───────────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  role          Role      @default(EMPLEADO)
+  employee      Employee? @relation(fields: [employeeId], references: [id])
+  employeeId    String?   @unique
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  notifications Notification[]
+  auditLogs     AuditLog[] @relation("AuditActor")
+}
+
+model Department {
+  id      String     @id @default(cuid())
+  name    String     @unique
+  color   String
+  lead    Employee?  @relation("DeptLead", fields: [leadId], references: [id])
+  leadId  String?
+  members Employee[] @relation("DeptMembers")
+}
+
+model Employee {
+  id              String         @id @default(cuid())
+  fullName        String
+  email           String         @unique
+  phone           String?
+  jobTitle        String
+  level           String         // exec | lead | senior | mid | junior
+  location        String
+  remote          Boolean        @default(false)
+  startDate       DateTime
+  contractType    ContractType   @default(INDEFINIDO)
+  status          EmployeeStatus @default(ACTIVO)
+  salary          Int?           // bruto anual en euros
+  birthday        String?
+  dni             String?
+  address         String?
+  iban            String?
+  emergency       String?
+  fromRecruitment Boolean        @default(false)
+
+  department      Department?    @relation("DeptMembers", fields: [departmentId], references: [id])
+  departmentId    String?
+  leadingDepts    Department[]   @relation("DeptLead")
+
+  manager         Employee?      @relation("Reports", fields: [managerId], references: [id])
+  managerId       String?
+  reports         Employee[]     @relation("Reports")
+
+  user            User?
+
+  absences          Absence[]           @relation("EmployeeAbsences")
+  approvedAbsences  Absence[]           @relation("AbsenceApprover")
+  balances          LeaveBalance[]
+  onboarding        OnboardingProcess?  @relation("OnbEmployee")
+  buddyOf           OnboardingProcess[] @relation("OnbBuddy")
+  reviews           Review[]            @relation("ReviewEmployee")
+  reviewing         Review[]            @relation("ReviewReviewer")
+  objectives        Objective[]
+  payslips          Payslip[]
+  payrollItems      PayrollItem[]
+  documents         Document[]          @relation("DocOwner")
+  signatures        DocumentSignature[]
+  timeEntries       TimeEntry[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+// ──────────────────────────── Tiempo ────────────────────────────
+model Absence {
+  id         String        @id @default(cuid())
+  employee   Employee      @relation("EmployeeAbsences", fields: [employeeId], references: [id])
+  employeeId String
+  type       AbsenceType
+  startDate  DateTime
+  endDate    DateTime
+  days       Int
+  status     AbsenceStatus @default(PENDIENTE)
+  reason     String?
+  approver   Employee?     @relation("AbsenceApprover", fields: [approverId], references: [id])
+  approverId String?
+  decidedAt  DateTime?
+  createdAt  DateTime      @default(now())
+}
+
+model LeaveBalance {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  year       Int
+  total      Int
+  used       Int      @default(0)
+  pending    Int      @default(0)
+  @@unique([employeeId, year])
+}
+
+model Holiday {
+  id       String   @id @default(cuid())
+  date     DateTime
+  name     String
+  location String?  // null = festivo nacional
+}
+
+model TimeEntry {
+  id         String    @id @default(cuid())
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  employeeId String
+  clockIn    DateTime
+  clockOut   DateTime?
+  source     String?   // id de dispositivo / app
+}
+
+// ──────────────────────────── Talento ────────────────────────────
+model OnboardingTemplate {
+  id        String                   @id @default(cuid())
+  name      String
+  tasks     OnboardingTemplateTask[]
+  processes OnboardingProcess[]
+}
+
+model OnboardingTemplateTask {
+  id         String             @id @default(cuid())
+  template   OnboardingTemplate @relation(fields: [templateId], references: [id])
+  templateId String
+  label      String
+  phase      OnboardingPhase
+  owner      String
+  order      Int                @default(0)
+}
+
+model OnboardingProcess {
+  id         String              @id @default(cuid())
+  employee   Employee            @relation("OnbEmployee", fields: [employeeId], references: [id])
+  employeeId String              @unique
+  buddy      Employee?           @relation("OnbBuddy", fields: [buddyId], references: [id])
+  buddyId    String?
+  template   OnboardingTemplate? @relation(fields: [templateId], references: [id])
+  templateId String?
+  startDate  DateTime
+  status     String              @default("EN_CURSO")
+  tasks      OnboardingTask[]
+}
+
+model OnboardingTask {
+  id         String            @id @default(cuid())
+  process    OnboardingProcess @relation(fields: [processId], references: [id])
+  processId  String
+  label      String
+  phase      OnboardingPhase
+  owner      String
+  done       Boolean           @default(false)
+  doneAt     DateTime?
+}
+
+model PerformanceCycle {
+  id         String      @id @default(cuid())
+  name       String
+  startDate  DateTime
+  endDate    DateTime
+  status     CycleStatus @default(ACTIVO)
+  reviews    Review[]
+  objectives Objective[]
+}
+
+model Review {
+  id          String           @id @default(cuid())
+  cycle       PerformanceCycle @relation(fields: [cycleId], references: [id])
+  cycleId     String
+  employee    Employee         @relation("ReviewEmployee", fields: [employeeId], references: [id])
+  employeeId  String
+  reviewer    Employee?        @relation("ReviewReviewer", fields: [reviewerId], references: [id])
+  reviewerId  String?
+  selfDone    Boolean          @default(false)
+  managerDone Boolean          @default(false)
+  o2oDone     Boolean          @default(false)
+  rating      Float?
+  @@unique([cycleId, employeeId])
+}
+
+model Objective {
+  id         String            @id @default(cuid())
+  cycle      PerformanceCycle? @relation(fields: [cycleId], references: [id])
+  cycleId    String?
+  scope      String            // "Empresa" | nombre de área
+  owner      Employee          @relation(fields: [ownerId], references: [id])
+  ownerId    String
+  title      String
+  keyResults KeyResult[]
+}
+
+model KeyResult {
+  id          String    @id @default(cuid())
+  objective   Objective @relation(fields: [objectiveId], references: [id])
+  objectiveId String
+  title       String
+  progress    Int       @default(0)
+}
+
+// ──────────────────────────── Empresa ────────────────────────────
+model PayrollRun {
+  id          String        @id @default(cuid())
+  period      String        @unique // "2026-06"
+  status      PayrollStatus @default(BORRADOR)
+  totalGross  Int           @default(0)
+  totalCost   Int           @default(0)
+  processedAt DateTime?
+  createdAt   DateTime      @default(now())
+  payslips    Payslip[]
+  items       PayrollItem[]
+}
+
+model Payslip {
+  id         String        @id @default(cuid())
+  run        PayrollRun    @relation(fields: [runId], references: [id])
+  runId      String
+  employee   Employee      @relation(fields: [employeeId], references: [id])
+  employeeId String
+  gross      Int
+  irpf       Int
+  ss         Int
+  net        Int
+  status     PayslipStatus @default(BORRADOR)
+  pdfUrl     String?
+  @@unique([runId, employeeId])
+}
+
+model PayrollItem {
+  id         String          @id @default(cuid())
+  run        PayrollRun      @relation(fields: [runId], references: [id])
+  runId      String
+  employee   Employee        @relation(fields: [employeeId], references: [id])
+  employeeId String
+  type       PayrollItemType
+  concept    String
+  amount     Int             // euros; negativo = deducción
+}
+
+model Document {
+  id         String              @id @default(cuid())
+  name       String
+  category   DocumentCategory
+  owner      Employee            @relation("DocOwner", fields: [ownerId], references: [id])
+  ownerId    String
+  fileUrl    String?
+  status     DocumentStatus      @default(VIGENTE)
+  createdAt  DateTime            @default(now())
+  signatures DocumentSignature[]
+}
+
+model DocumentSignature {
+  id         String          @id @default(cuid())
+  document   Document        @relation(fields: [documentId], references: [id])
+  documentId String
+  employee   Employee        @relation(fields: [employeeId], references: [id])
+  employeeId String
+  status     SignatureStatus @default(PENDIENTE)
+  signedAt   DateTime?
+  @@unique([documentId, employeeId])
+}
+
+model DocumentTemplate {
+  id       String           @id @default(cuid())
+  name     String
+  category DocumentCategory
+  fileUrl  String?
+}
+
+// ──────────────────────────── Transversal ────────────────────────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
+  actorId   String?
+  action    String   // CREATE | UPDATE | DELETE | APPROVE | REJECT | SIGN | PROCESS_PAYROLL ...
+  entity    String   // Employee | Absence | Payslip ...
+  entityId  String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
