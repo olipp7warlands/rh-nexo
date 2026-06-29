@@ -15,6 +15,7 @@ import { AusenciasPage } from './features/absences/AusenciasPage';
 import { CalendarioPage } from './features/absences/CalendarioPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
 import { DesempenoPage } from './features/performance/DesempenoPage';
+import { InformesPage } from './features/reports/InformesPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
 
@@ -26,6 +27,7 @@ const PAGES: Record<string, JSX.Element> = {
   '/calendario': <CalendarioPage />,
   '/onboarding': <OnboardingPage />,
   '/desempeno': <DesempenoPage />,
+  '/informes': <InformesPage />,
 };
 
 const qc = new QueryClient({

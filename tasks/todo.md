@@ -1,38 +1,35 @@
-# Fase 3 — Talento: Onboarding + Desempeño · rama `fase-3-talento`
+# Fase 5 — Informes · rama `fase-5-informes`
 
-> Fases 0–2 ✅ (`1c4a660`, `9b668b8`, `1984295`). AC: completar tareas y evaluaciones persiste y
-> mueve los KPIs; los OKRs reflejan el avance real. Definición de Hecho en cada tarea.
+> Fases 0–3 fusionadas en `master` (`5b1e50c`). Fase 4 (Nómina) pendiente; Informes se calcula
+> desde datos existentes (empleados, salario, ausencias, reviews). AC: cada métrica desde datos
+> reales y cuadra con su módulo de origen. Filtros por departamento. Export.
 
-## Bloque 1 — Backend Onboarding ✅
-- [x] 1a. `OnboardingModule`: GET /onboarding (scoped + progreso), GET /:id, PATCH /tasks/:id (done+audit),
-      POST /onboarding (crea desde plantilla), GET /onboarding/templates
-- [x] 1b. Test: marcar tarea sube el progreso y persiste
+## Bloque 1 — Backend ✅
+- [x] 1a. `ReportsModule` (solo ADMIN/RRHH): GET /reports/overview?departmentId (headcount, rotación,
+      absentismo por tipo, coste por área, distribución de desempeño, diversidad por ubicación/modalidad) + export CSV
+- [x] 1b. Test: overview cuadra con conteos reales (suma por depto = activos; remoto+presencial = activos); RBAC 403
 
-## Bloque 2 — Backend Desempeño ✅
-- [x] 2a. `PerformanceModule`: GET/POST /cycles, GET /cycles/:id (reviews+OKRs), PATCH /reviews/:id
-      (permiso self/manager/RRHH/ADMIN + audit), POST /objectives, PATCH /key-results/:id (owner/elevado)
-- [x] 2b. Tests: review persiste (rating+managerDone), KR progress persiste, RBAC ciclo
+## Bloque 2 — Frontend ✅
+- [x] 2. Dashboard `/informes`: 4 KPIs + 4 barras (plantilla/coste/desempeño/diversidad), filtro de depto,
+      export CSV; mensaje de acceso restringido para roles sin permiso
 
-## Bloque 3 — Frontend Onboarding ✅
-- [x] 3. Lista con % progreso + detalle con checklist por fase (toggle persiste, gated por rol)
-
-## Bloque 4 — Frontend Desempeño ✅
-- [x] 4. Selector de ciclo + KPIs, reviews con toggles+rating (self propio / manager elevado), OKRs con KR editables
-
-## Bloque 5 — Cierre ✅
-- [x] 5. 18/18 tests · build turbo 2/2 · endpoints verificados vía proxy
+## Bloque 3 — Cierre ✅
+- [x] 3. 20/20 tests · build turbo 2/2 · overview verificado vía proxy (coste 959.000€, EMPLEADO 403)
 
 ## Revisión
 
-**Fase 3 completada** en `fase-3-talento`. Onboarding y Desempeño operativos con Definición de Hecho:
-- **Onboarding**: marcar/desmarcar tareas persiste y mueve el % de progreso (KPI). Crear proceso desde plantilla.
-- **Desempeño**: reviews (self/manager/1:1 + rating) persisten; OKRs con progreso de Key Results editable.
-- **Permisos**: scoping por rol (EMPLEADO propio · MANAGER su equipo · RRHH/ADMIN todo); self-eval por el propio
-  empleado; KR editable por owner o rol elevado. Cambios auditados.
+**Fase 5 completada** en `fase-5-informes`. Cuadro de mando analítico desde datos reales:
+- **Métricas**: headcount (total/estado/depto), rotación (bajas), absentismo (días aprobados, por tipo),
+  coste de plantilla por área (Σ salario), distribución de desempeño (buckets de rating), diversidad
+  (ubicación + remoto/presencial). Cuadran con sus módulos de origen (verificado en test).
+- **Permisos**: dato sensible (coste) → solo ADMIN/RRHH; EMPLEADO/MANAGER reciben 403 y la UI lo explica.
+- **Filtros**: por departamento. **Export**: CSV de plantilla y coste por área.
 
-**Verificación**: 18/18 tests (4 nuevos de Talento) · build turbo 2/2 · onboarding (7/13, 10/13) y ciclo Q2
-(15 reviews, 3 OKRs) comprobados vía proxy. Limitación: sin verificación visual por navegador (sin MCP).
+**Nota de alcance**: Fase 4 (Nómina) no construida; el coste se calcula desde `Employee.salary` (suficiente
+para Informes). El modelo no tiene género → diversidad mostrada por ubicación/modalidad.
+
+**Verificación**: 20/20 tests (2 nuevos) · build turbo 2/2 · overview vía proxy. Sin verificación visual (sin MCP).
 
 ### Siguiente
-- Confirmar commit de Fase 3.
-- Fase 4 (Nómina + Documentos) o fusión de fases a master.
+- Confirmar commit + fusión a master.
+- Fase 4 (Nómina + Documentos) o Fase 6 (VITAE).
