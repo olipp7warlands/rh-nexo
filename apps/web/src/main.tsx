@@ -13,6 +13,8 @@ import { OrganigramaPage } from './features/employees/OrganigramaPage';
 import { InicioPage } from './features/absences/InicioPage';
 import { AusenciasPage } from './features/absences/AusenciasPage';
 import { CalendarioPage } from './features/absences/CalendarioPage';
+import { OnboardingPage } from './features/onboarding/OnboardingPage';
+import { DesempenoPage } from './features/performance/DesempenoPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
 
@@ -22,6 +24,8 @@ const PAGES: Record<string, JSX.Element> = {
   '/organigrama': <OrganigramaPage />,
   '/ausencias': <AusenciasPage />,
   '/calendario': <CalendarioPage />,
+  '/onboarding': <OnboardingPage />,
+  '/desempeno': <DesempenoPage />,
 };
 
 const qc = new QueryClient({

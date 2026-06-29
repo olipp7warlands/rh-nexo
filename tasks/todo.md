@@ -1,40 +1,38 @@
-# Fase 2 — Tiempo: Ausencias (+ Calendario) · rama `fase-2-ausencias`
+# Fase 3 — Talento: Onboarding + Desempeño · rama `fase-3-talento`
 
-> Fases 0 (`1c4a660`) y 1 (`9b668b8`) ✅. AC Fase 2: una solicitud de un empleado aparece en la
-> cola del manager/RRHH, se aprueba, baja el saldo y se ve en el calendario; export descarga fichero.
+> Fases 0–2 ✅ (`1c4a660`, `9b668b8`, `1984295`). AC: completar tareas y evaluaciones persiste y
+> mueve los KPIs; los OKRs reflejan el avance real. Definición de Hecho en cada tarea.
 
-## Bloque 1 — Backend ✅
-- [x] 1a. `HolidaysModule` (GET /holidays?location) + 12 festivos 2026 en el seed
-- [x] 1b. `AbsencesModule`: POST (días=laborables−festivos, valida saldo, pending+=), GET scoped por rol,
-      PATCH approve/reject (ownership manager, ajusta saldo, notifica, audita), GET calendar, GET export(csv)
-- [x] 1c. 5 tests integración: días=5, cola del manager, RBAC 403, aprobar mueve pending→used, CSV
+## Bloque 1 — Backend Onboarding ✅
+- [x] 1a. `OnboardingModule`: GET /onboarding (scoped + progreso), GET /:id, PATCH /tasks/:id (done+audit),
+      POST /onboarding (crea desde plantilla), GET /onboarding/templates
+- [x] 1b. Test: marcar tarea sube el progreso y persiste
 
-## Bloque 2 — Frontend Ausencias ✅
-- [x] 2a. Mi saldo + mis solicitudes + "Nueva solicitud" (RHF+Zod, preview de días)
-- [x] 2b. `ApprovalQueue` (manager/RRHH): aprobar/rechazar inline
-- [x] 2c. Exportar CSV (`downloadFile` con Bearer)
+## Bloque 2 — Backend Desempeño ✅
+- [x] 2a. `PerformanceModule`: GET/POST /cycles, GET /cycles/:id (reviews+OKRs), PATCH /reviews/:id
+      (permiso self/manager/RRHH/ADMIN + audit), POST /objectives, PATCH /key-results/:id (owner/elevado)
+- [x] 2b. Tests: review persiste (rating+managerDone), KR progress persiste, RBAC ciclo
 
-## Bloque 3 — Inicio ✅
-- [x] 3. Dashboard: saldo propio + cola de aprobaciones (o mis solicitudes si no aprueba)
+## Bloque 3 — Frontend Onboarding ✅
+- [x] 3. Lista con % progreso + detalle con checklist por fase (toggle persiste, gated por rol)
 
-## Bloque 4 — Calendario ✅
-- [x] 4. Rejilla mensual (lun-primero, nav de mes) con aprobadas del equipo + festivos
+## Bloque 4 — Frontend Desempeño ✅
+- [x] 4. Selector de ciclo + KPIs, reviews con toggles+rating (self propio / manager elevado), OKRs con KR editables
 
 ## Bloque 5 — Cierre ✅
-- [x] 5. 14/14 tests · build turbo 2/2 · scoping verificado vía proxy (manager=equipo, RRHH=todo)
+- [x] 5. 18/18 tests · build turbo 2/2 · endpoints verificados vía proxy
 
 ## Revisión
 
-**Fase 2 completada** en `fase-2-ausencias`. Flujo de ausencias end-to-end con Definición de Hecho:
-- **Persiste + audita**: crear/aprobar/rechazar escriben en BD y `AuditLog`; decisiones generan `Notification`.
-- **Saldo real**: crear suma a `pending`; aprobar mueve `pending→used`; rechazar libera `pending`.
-  Validación de saldo insuficiente en servidor. Días = laborables − festivos (por ubicación).
-- **Permisos**: EMPLEADO ve/crea lo suyo; MANAGER su equipo (aprueba solo a sus reportes); RRHH/ADMIN todo.
-- **UI**: solicitud (preview de días), cola de aprobación (Ausencias + Inicio), calendario mensual, export CSV.
+**Fase 3 completada** en `fase-3-talento`. Onboarding y Desempeño operativos con Definición de Hecho:
+- **Onboarding**: marcar/desmarcar tareas persiste y mueve el % de progreso (KPI). Crear proceso desde plantilla.
+- **Desempeño**: reviews (self/manager/1:1 + rating) persisten; OKRs con progreso de Key Results editable.
+- **Permisos**: scoping por rol (EMPLEADO propio · MANAGER su equipo · RRHH/ADMIN todo); self-eval por el propio
+  empleado; KR editable por owner o rol elevado. Cambios auditados.
 
-**Verificación**: 14/14 tests integración (5 nuevos de ausencias) · build turbo 2/2 · endpoints y scoping
-comprobados vía proxy. Festivos sembrados (12). Limitación: sin verificación visual por navegador (sin MCP).
+**Verificación**: 18/18 tests (4 nuevos de Talento) · build turbo 2/2 · onboarding (7/13, 10/13) y ciclo Q2
+(15 reviews, 3 OKRs) comprobados vía proxy. Limitación: sin verificación visual por navegador (sin MCP).
 
 ### Siguiente
-- Confirmar commit de Fase 2.
-- Fase 3 (Onboarding + Desempeño) o seguir según prioridad.
+- Confirmar commit de Fase 3.
+- Fase 4 (Nómina + Documentos) o fusión de fases a master.
