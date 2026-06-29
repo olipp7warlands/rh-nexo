@@ -61,6 +61,22 @@ const ABSENCES = [
   { employeeId:'e9',  type:'VACACIONES', start:'2026-07-28', end:'2026-08-01', days:5, status:'APROBADA',  reason:'Vacaciones' },
 ] as const;
 
+// Festivos 2026 (nacionales = location null; algunos autonómicos por ubicación)
+const HOLIDAYS = [
+  { date:'2026-01-01', name:'Año Nuevo',            location:null },
+  { date:'2026-01-06', name:'Reyes',                location:null },
+  { date:'2026-04-03', name:'Viernes Santo',        location:null },
+  { date:'2026-05-01', name:'Día del Trabajo',      location:null },
+  { date:'2026-08-15', name:'Asunción',             location:null },
+  { date:'2026-10-12', name:'Fiesta Nacional',      location:null },
+  { date:'2026-11-01', name:'Todos los Santos',     location:null },
+  { date:'2026-12-06', name:'Constitución',         location:null },
+  { date:'2026-12-08', name:'Inmaculada',           location:null },
+  { date:'2026-12-25', name:'Navidad',              location:null },
+  { date:'2026-05-02', name:'Comunidad de Madrid',  location:'Madrid' },
+  { date:'2026-09-11', name:'Diada',                location:'Barcelona' },
+] as const;
+
 const ONB_TASKS = [
   { id:'t1',  phase:'ANTES',   label:'Firmar contrato y documentación', owner:'RRHH' },
   { id:'t2',  phase:'ANTES',   label:'Preparar equipo informático', owner:'IT' },
@@ -163,6 +179,10 @@ async function main() {
   // Ausencias
   for (const a of ABSENCES)
     await db.absence.create({ data: { employeeId: a.employeeId, type: a.type as AbsenceType, startDate: D(a.start), endDate: D(a.end), days: a.days, status: a.status as AbsenceStatus, reason: a.reason, approverId: a.status === 'APROBADA' ? 'e2' : undefined, decidedAt: a.status === 'APROBADA' ? new Date() : undefined } });
+
+  // Festivos
+  for (const h of HOLIDAYS)
+    await db.holiday.create({ data: { date: D(h.date), name: h.name, location: h.location ?? undefined } });
 
   // Onboarding
   const tpl = await db.onboardingTemplate.create({ data: { name: 'Onboarding estándar' } });

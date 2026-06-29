@@ -81,6 +81,23 @@ export const api = {
   del: <T>(p: string) => request<T>(p, { method: 'DELETE' }),
 };
 
+/** Descarga un fichero del backend (con Bearer) y dispara el guardado en el navegador. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${BASE}/api${path}`, {
+    headers: tokenStore.access ? { Authorization: `Bearer ${tokenStore.access}` } : {},
+  });
+  if (!res.ok) throw new Error(`No se pudo exportar (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // Login: no reintentar con refresh (un 401 aquí = credenciales inválidas, no sesión caducada).
 export const authApi = {
   login: (email: string, password: string) =>

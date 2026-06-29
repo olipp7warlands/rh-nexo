@@ -10,8 +10,19 @@ import { AppShell } from './layout/AppShell';
 import { EmpleadosPage } from './features/employees/EmpleadosPage';
 import { EmployeeDetailPage } from './features/employees/EmployeeDetailPage';
 import { OrganigramaPage } from './features/employees/OrganigramaPage';
+import { InicioPage } from './features/absences/InicioPage';
+import { AusenciasPage } from './features/absences/AusenciasPage';
+import { CalendarioPage } from './features/absences/CalendarioPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
+
+const PAGES: Record<string, JSX.Element> = {
+  '/': <InicioPage />,
+  '/empleados': <EmpleadosPage />,
+  '/organigrama': <OrganigramaPage />,
+  '/ausencias': <AusenciasPage />,
+  '/calendario': <CalendarioPage />,
+};
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -30,17 +41,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route element={<AppShell />}>
                 <Route path="/empleados/:id" element={<EmployeeDetailPage />} />
                 {NAV.flatMap((section) =>
-                  section.items.map((item) => {
-                    const element =
-                      item.path === '/empleados' ? (
-                        <EmpleadosPage />
-                      ) : item.path === '/organigrama' ? (
-                        <OrganigramaPage />
-                      ) : (
-                        <PlaceholderPage eyebrow={section.section} title={item.label} />
-                      );
-                    return <Route key={item.key} path={item.path} element={element} />;
-                  }),
+                  section.items.map((item) => (
+                    <Route
+                      key={item.key}
+                      path={item.path}
+                      element={PAGES[item.path] ?? <PlaceholderPage eyebrow={section.section} title={item.label} />}
+                    />
+                  )),
                 )}
               </Route>
             </Route>

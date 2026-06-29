@@ -28,6 +28,21 @@ export function formatEuro(amount?: number | null): string {
   return `${amount.toLocaleString('es-ES')} €`;
 }
 
+/** Días laborables (lun–vie) entre dos ISO inclusive. Preview cliente; el servidor también descuenta festivos. */
+export function businessDays(startISO: string, endISO: string): number {
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
+  let count = 0;
+  const d = new Date(start);
+  while (d <= end) {
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) count++;
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return count;
+}
+
 export const LEVEL_LABEL: Record<string, string> = {
   exec: 'Dirección',
   lead: 'Lead / Manager',
