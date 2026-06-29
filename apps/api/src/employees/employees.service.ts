@@ -1,14 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
+import { AuthUser } from '../auth/decorators/current-user.decorator';
 
 @Injectable()
 export class EmployeesService {
   constructor(private readonly db: PrismaService) {}
 
-  findAll(params: { search?: string; departmentId?: string }) {
+  async findAll(params: { search?: string; departmentId?: string }, viewer?: AuthUser) {
     const { search, departmentId } = params;
-    return this.db.employee.findMany({
+    const employees = await this.db.employee.findMany({
       where: {
         departmentId: departmentId || undefined,
         OR: search
@@ -21,15 +22,30 @@ export class EmployeesService {
       include: { department: true, manager: { select: { id: true, fullName: true } } },
       orderBy: { fullName: 'asc' },
     });
+    return employees.map((e) => this.maskSensitive(e, viewer));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: AuthUser) {
     const emp = await this.db.employee.findUnique({
       where: { id },
       include: { department: true, manager: true, reports: true, balances: true },
     });
     if (!emp) throw new NotFoundException('Empleado no encontrado');
-    return emp;
+    return this.maskSensitive(emp, viewer);
+  }
+
+  /**
+   * Salario e IBAN solo son visibles para ADMIN/RRHH y el propio empleado.
+   * Sin `viewer` (uso interno: antes/después de auditoría) no se enmascara.
+   */
+  private maskSensitive<T extends { id: string; salary: number | null; iban: string | null }>(
+    emp: T,
+    viewer?: AuthUser,
+  ): T {
+    if (!viewer) return emp;
+    const privileged =
+      viewer.role === 'ADMIN' || viewer.role === 'RRHH' || viewer.employeeId === emp.id;
+    return privileged ? emp : { ...emp, salary: null, iban: null };
   }
 
   async create(dto: CreateEmployeeDto, actorUserId?: string) {

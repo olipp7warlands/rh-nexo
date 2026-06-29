@@ -11,5 +11,9 @@
     "./preset": "./tailwind-preset.cjs"
   },
   "peerDependencies": { "react": "^18.0.0" },
-  "dependencies": { "clsx": "^2.1.1", "tailwind-merge": "^2.5.2" }
+  "dependencies": { "clsx": "^2.1.1", "tailwind-merge": "^2.5.2" },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0"
+  }
 }

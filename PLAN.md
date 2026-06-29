@@ -1,7 +1,7 @@
-# Núcleo — Plan de desarrollo por fases
+# Nexo — Plan de desarrollo por fases
 
 > **De prototipo a producto funcional.** Documento de traspaso a Claude Code.
-> Núcleo es el Core de Recursos Humanos del grupo. VITAE es su módulo de reclutamiento.
+> Nexo es el Core de Recursos Humanos del grupo. VITAE es su módulo de reclutamiento.
 
 ---
 

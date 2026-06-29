@@ -1,11 +1,11 @@
-# Núcleo — Guía para Claude Code
+# Nexo — Guía para Claude Code
 
 > Lee este archivo al inicio de cada sesión. Define qué es el producto, cómo está
 > montado el repo y las reglas que NO se negocian. Para el detalle por fases, ver `PLAN.md`.
 
-## Qué es Núcleo
+## Qué es Nexo
 
-Núcleo es el **Core de Recursos Humanos** de un grupo de empresas (estilo Personio/Factorial):
+Nexo es el **Core de Recursos Humanos** de un grupo de empresas (estilo Personio/Factorial):
 empleados, organigrama, ausencias, fichaje, onboarding, desempeño, nómina, documentos e informes.
 **VITAE** es su módulo de reclutamiento (ATS), ya prototipado.
 

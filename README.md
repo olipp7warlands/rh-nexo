@@ -1,4 +1,4 @@
-# Núcleo
+# Nexo
 
 Core de Recursos Humanos del grupo (estilo Personio/Factorial), con **VITAE** como módulo de
 reclutamiento. Monorepo con frontend React + backend NestJS + PostgreSQL.

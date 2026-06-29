@@ -5,7 +5,7 @@
  * Usa ids explícitos (e1..e17, d-*) para poder enlazar manager/departamento
  * sin segundas pasadas. Las contraseñas se hashean con bcrypt.
  */
-import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, OnboardingPhase, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus } from '@prisma/client';
+import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, OnboardingPhase, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus, CandidateSource } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const db = new PrismaClient();
@@ -129,6 +129,8 @@ async function main() {
   console.log('🌱  Limpiando y sembrando…');
   // Orden inverso de dependencias
   await db.$transaction([
+    db.auditDecision.deleteMany(), db.evaluation.deleteMany(), db.interview.deleteMany(),
+    db.application.deleteMany(), db.job.deleteMany(), db.stage.deleteMany(), db.candidate.deleteMany(),
     db.auditLog.deleteMany(), db.notification.deleteMany(),
     db.documentSignature.deleteMany(), db.document.deleteMany(), db.documentTemplate.deleteMany(),
     db.payrollItem.deleteMany(), db.payslip.deleteMany(), db.payrollRun.deleteMany(),
@@ -201,6 +203,49 @@ async function main() {
   for (const d of DOCS) await db.document.create({ data: { name: d.name, category: d.cat as DocumentCategory, ownerId: d.ownerId, status: d.status as DocumentStatus, createdAt: D(d.date) } });
   for (const t of DOC_TEMPLATES) await db.documentTemplate.create({ data: { name: t.name, category: t.category as DocumentCategory } });
 
+  // ── Reclutamiento (VITAE) ──
+  // Pipeline (etapas ordenadas)
+  const STAGE_NAMES = ['Nuevo', 'Cribado', 'Entrevista', 'Prueba técnica', 'Oferta', 'Contratado'];
+  const stages: Record<string, string> = {};
+  for (const [i, name] of STAGE_NAMES.entries()) {
+    const s = await db.stage.create({ data: { name, order: i + 1 } });
+    stages[name] = s.id;
+  }
+
+  // Ofertas: 2 ya cubiertas (Sofía, Raúl) + 3 abiertas
+  const jobSofia = await db.job.create({ data: { title: 'Principal Engineer', departmentId: 'd-eng', location: 'Barcelona', remote: true, level: 'senior', status: 'CERRADA', openings: 1, hiringManagerId: 'e3', closedAt: D('2026-06-20') } });
+  const jobRaul  = await db.job.create({ data: { title: 'Content Marketing', departmentId: 'd-marketing', location: 'Málaga', remote: true, level: 'mid', status: 'CERRADA', openings: 1, hiringManagerId: 'e12', closedAt: D('2026-06-10') } });
+  const jobFront = await db.job.create({ data: { title: 'Senior Frontend Engineer', departmentId: 'd-eng', location: 'Madrid', remote: true, level: 'senior', status: 'ABIERTA', openings: 2, hiringManagerId: 'e3', description: 'React + TypeScript para el equipo de plataforma.' } });
+  const jobData  = await db.job.create({ data: { title: 'Data Engineer', departmentId: 'd-data', location: 'Madrid', remote: false, level: 'mid', status: 'ABIERTA', openings: 1, hiringManagerId: 'e10' } });
+  const jobCS    = await db.job.create({ data: { title: 'Customer Success Manager', departmentId: 'd-customer', location: 'Valencia', remote: false, level: 'mid', status: 'ABIERTA', openings: 1, hiringManagerId: 'e14' } });
+
+  // Candidatos contratados → enlazados a su Employee (cierra el bucle del prototipo)
+  const candSofia = await db.candidate.create({ data: { fullName: 'Sofía Navarro Gil', email: 'sofia.navarro.cand@example.com', phone: '+34 633 ··· ···', source: 'LINKEDIN' } });
+  const candRaul  = await db.candidate.create({ data: { fullName: 'Raúl Domínguez Cobo', email: 'raul.dominguez.cand@example.com', phone: '+34 632 ··· ···', source: 'PORTAL' } });
+  const appSofia = await db.application.create({ data: { jobId: jobSofia.id, candidateId: candSofia.id, stageId: stages['Contratado'], status: 'CONTRATADO', rating: 4.7, appliedAt: D('2026-05-12') } });
+  const appRaul  = await db.application.create({ data: { jobId: jobRaul.id, candidateId: candRaul.id, stageId: stages['Contratado'], status: 'CONTRATADO', rating: 4.3, appliedAt: D('2026-05-02') } });
+  await db.auditDecision.create({ data: { applicationId: appSofia.id, type: 'HIRE', automated: false, reason: 'Oferta aceptada' } });
+  await db.auditDecision.create({ data: { applicationId: appRaul.id, type: 'HIRE', automated: false, reason: 'Oferta aceptada' } });
+  // Vincular candidato ↔ empleado (Employee.candidateId)
+  await db.employee.update({ where: { id: 'e4' },  data: { candidateId: candSofia.id } });
+  await db.employee.update({ where: { id: 'e13' }, data: { candidateId: candRaul.id } });
+
+  // Candidatos en pipeline (ofertas abiertas)
+  const PIPELINE = [
+    { job: jobFront.id, name: 'Marta Sáez Ruano',     email: 'marta.saez@example.com',     source: 'LINKEDIN', stage: 'Prueba técnica', rating: 4.2 },
+    { job: jobFront.id, name: 'Hugo Belmonte Cruz',   email: 'hugo.belmonte@example.com',   source: 'PORTAL',   stage: 'Entrevista',     rating: 3.9 },
+    { job: jobFront.id, name: 'Nadia Khattabi',       email: 'nadia.khattabi@example.com', source: 'REFERIDO', stage: 'Cribado',        rating: null },
+    { job: jobData.id,  name: 'Óscar Prieto Lema',    email: 'oscar.prieto@example.com',   source: 'LINKEDIN', stage: 'Entrevista',     rating: 4.0 },
+    { job: jobData.id,  name: 'Lía Ferrer Montes',    email: 'lia.ferrer@example.com',     source: 'AGENCIA',  stage: 'Nuevo',          rating: null },
+    { job: jobCS.id,    name: 'Bruno Cabrera Soler',  email: 'bruno.cabrera@example.com',  source: 'PORTAL',   stage: 'Oferta',         rating: 4.4 },
+    { job: jobCS.id,    name: 'Alicia Vega Ortuño',   email: 'alicia.vega@example.com',    source: 'PORTAL',   stage: 'Cribado',        rating: null },
+  ];
+  for (const c of PIPELINE) {
+    const cand = await db.candidate.create({ data: { fullName: c.name, email: c.email, source: c.source as CandidateSource } });
+    const app = await db.application.create({ data: { jobId: c.job, candidateId: cand.id, stageId: stages[c.stage], status: 'ACTIVO', rating: c.rating ?? undefined } });
+    if (c.stage === 'Nuevo') await db.auditDecision.create({ data: { applicationId: app.id, type: 'AUTO_SCREEN', automated: true, reason: 'Cribado automático: cumple requisitos mínimos' } });
+  }
+
   // Usuarios (login). Contraseña demo para todos: "nucleo123"
   const hash = await bcrypt.hash('nucleo123', 10);
   await db.user.create({ data: { email: 'admin@grupo.com', passwordHash: hash, role: Role.ADMIN, employeeId: 'e1' } });
@@ -208,7 +253,7 @@ async function main() {
   await db.user.create({ data: { email: 'carlos.soto@grupo.com', passwordHash: hash, role: Role.MANAGER, employeeId: 'e3' } });
   await db.user.create({ data: { email: 'diego.ortega@grupo.com', passwordHash: hash, role: Role.EMPLEADO, employeeId: 'e6' } });
 
-  console.log(`✅  Seed completado: ${EMPLOYEES.length} empleados, ${DEPTS.length} departamentos, nómina ${run.period}.`);
+  console.log(`✅  Seed completado: ${EMPLOYEES.length} empleados, ${DEPTS.length} departamentos, nómina ${run.period}, 5 ofertas + pipeline VITAE.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => db.$disconnect());

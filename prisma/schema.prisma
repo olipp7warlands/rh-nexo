@@ -12,19 +12,113 @@ datasource db {
 }
 
 // ──────────────────────────── Enums ────────────────────────────
-enum Role            { ADMIN RRHH MANAGER EMPLEADO }
-enum EmployeeStatus  { ACTIVO ONBOARDING AUSENTE BAJA }
-enum ContractType    { INDEFINIDO TEMPORAL PRACTICAS FREELANCE }
-enum AbsenceType     { VACACIONES ENFERMEDAD PERSONAL MATERNIDAD }
-enum AbsenceStatus   { PENDIENTE APROBADA RECHAZADA }
-enum OnboardingPhase { ANTES DIA1 SEMANA1 MES1 }
-enum CycleStatus     { BORRADOR ACTIVO CERRADO }
-enum PayrollStatus   { BORRADOR PROCESADA PAGADA }
-enum PayslipStatus   { BORRADOR EMITIDA PAGADA }
-enum PayrollItemType { BONUS HORAS_EXTRA DEDUCCION }
-enum DocumentCategory{ CONTRATOS NOMINAS POLITICAS CERTIFICADOS FORMACION }
-enum DocumentStatus  { VIGENTE FIRMADO PENDIENTE EMITIDO }
-enum SignatureStatus { PENDIENTE FIRMADA }
+enum Role {
+  ADMIN
+  RRHH
+  MANAGER
+  EMPLEADO
+}
+
+enum EmployeeStatus {
+  ACTIVO
+  ONBOARDING
+  AUSENTE
+  BAJA
+}
+
+enum ContractType {
+  INDEFINIDO
+  TEMPORAL
+  PRACTICAS
+  FREELANCE
+}
+
+enum AbsenceType {
+  VACACIONES
+  ENFERMEDAD
+  PERSONAL
+  MATERNIDAD
+}
+
+enum AbsenceStatus {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+enum OnboardingPhase {
+  ANTES
+  DIA1
+  SEMANA1
+  MES1
+}
+
+enum CycleStatus {
+  BORRADOR
+  ACTIVO
+  CERRADO
+}
+
+enum PayrollStatus {
+  BORRADOR
+  PROCESADA
+  PAGADA
+}
+
+enum PayslipStatus {
+  BORRADOR
+  EMITIDA
+  PAGADA
+}
+
+enum PayrollItemType {
+  BONUS
+  HORAS_EXTRA
+  DEDUCCION
+}
+
+enum DocumentCategory {
+  CONTRATOS
+  NOMINAS
+  POLITICAS
+  CERTIFICADOS
+  FORMACION
+}
+
+enum DocumentStatus {
+  VIGENTE
+  FIRMADO
+  PENDIENTE
+  EMITIDO
+}
+
+enum SignatureStatus {
+  PENDIENTE
+  FIRMADA
+}
+
+// Reclutamiento (VITAE)
+enum JobStatus {
+  BORRADOR
+  ABIERTA
+  PAUSADA
+  CERRADA
+}
+
+enum ApplicationStatus {
+  ACTIVO
+  RECHAZADO
+  CONTRATADO
+  RETIRADO
+}
+
+enum CandidateSource {
+  PORTAL
+  REFERIDO
+  LINKEDIN
+  AGENCIA
+  OTRO
+}
 
 // ─────────────────────── Identidad / Organización ───────────────────────
 model User {
@@ -38,6 +132,7 @@ model User {
   createdAt     DateTime  @default(now())
   notifications Notification[]
   auditLogs     AuditLog[] @relation("AuditActor")
+  decisions     AuditDecision[] @relation("DecisionActor")
 }
 
 model Department {
@@ -47,6 +142,7 @@ model Department {
   lead    Employee?  @relation("DeptLead", fields: [leadId], references: [id])
   leadId  String?
   members Employee[] @relation("DeptMembers")
+  jobs    Job[]
 }
 
 model Employee {
@@ -92,6 +188,13 @@ model Employee {
   documents         Document[]          @relation("DocOwner")
   signatures        DocumentSignature[]
   timeEntries       TimeEntry[]
+
+  // Reclutamiento (VITAE): de dónde vino y en qué procesos participa
+  candidate         Candidate?          @relation("CandidateHired", fields: [candidateId], references: [id])
+  candidateId       String?             @unique
+  hiringFor         Job[]               @relation("JobHiringManager")
+  interviewsGiven   Interview[]
+  evaluationsGiven  Evaluation[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -294,6 +397,104 @@ model DocumentTemplate {
   name     String
   category DocumentCategory
   fileUrl  String?
+}
+
+// ─────────────────────── Reclutamiento (VITAE) ───────────────────────
+// Módulo interno: cuando una Application pasa a CONTRATADO, su Candidate se
+// convierte en Employee (Employee.candidateId) y arranca su OnboardingProcess.
+model Job {
+  id              String       @id @default(cuid())
+  title           String
+  department      Department?  @relation(fields: [departmentId], references: [id])
+  departmentId    String?
+  location        String
+  remote          Boolean      @default(false)
+  level           String
+  contractType    ContractType @default(INDEFINIDO)
+  status          JobStatus    @default(ABIERTA)
+  openings        Int          @default(1)
+  description     String?
+  hiringManager   Employee?    @relation("JobHiringManager", fields: [hiringManagerId], references: [id])
+  hiringManagerId String?
+  createdAt       DateTime     @default(now())
+  closedAt        DateTime?
+  applications    Application[]
+}
+
+model Candidate {
+  id           String          @id @default(cuid())
+  fullName     String
+  email        String          @unique
+  phone        String?
+  source       CandidateSource @default(PORTAL)
+  linkedinUrl  String?
+  resumeUrl    String?
+  createdAt    DateTime        @default(now())
+  applications Application[]
+  hiredAs      Employee?       @relation("CandidateHired")
+}
+
+model Stage {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  order        Int
+  applications Application[]
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  job         Job               @relation(fields: [jobId], references: [id])
+  jobId       String
+  candidate   Candidate         @relation(fields: [candidateId], references: [id])
+  candidateId String
+  stage       Stage?            @relation(fields: [stageId], references: [id])
+  stageId     String?
+  status      ApplicationStatus @default(ACTIVO)
+  rating      Float?
+  notes       String?
+  appliedAt   DateTime          @default(now())
+  interviews  Interview[]
+  evaluations Evaluation[]
+  decisions   AuditDecision[]
+  @@unique([jobId, candidateId])
+}
+
+model Interview {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id])
+  applicationId String
+  interviewer   Employee?   @relation(fields: [interviewerId], references: [id])
+  interviewerId String?
+  scheduledAt   DateTime?
+  type          String      // telefonica | tecnica | cultural | final
+  status        String      @default("PROGRAMADA")
+  feedback      String?
+}
+
+model Evaluation {
+  id             String      @id @default(cuid())
+  application    Application @relation(fields: [applicationId], references: [id])
+  applicationId  String
+  evaluator      Employee?   @relation(fields: [evaluatorId], references: [id])
+  evaluatorId    String?
+  score          Float?
+  strengths      String?
+  concerns       String?
+  recommendation String?     // contratar | rechazar | dudoso
+  createdAt      DateTime    @default(now())
+}
+
+// Traza de decisiones (incl. automáticas) — soporte para auditoría / EU AI Act
+model AuditDecision {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id])
+  applicationId String
+  type          String      // AUTO_SCREEN | ADVANCE_STAGE | REJECT | MAKE_OFFER | HIRE
+  automated     Boolean     @default(false)
+  reason        String?
+  actor         User?       @relation("DecisionActor", fields: [actorId], references: [id])
+  actorId       String?
+  createdAt     DateTime    @default(now())
 }
 
 // ──────────────────────────── Transversal ────────────────────────────
