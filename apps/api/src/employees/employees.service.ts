@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EmployeeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
@@ -7,11 +8,15 @@ import { AuthUser } from '../auth/decorators/current-user.decorator';
 export class EmployeesService {
   constructor(private readonly db: PrismaService) {}
 
-  async findAll(params: { search?: string; departmentId?: string }, viewer?: AuthUser) {
-    const { search, departmentId } = params;
+  async findAll(
+    params: { search?: string; departmentId?: string; status?: EmployeeStatus },
+    viewer?: AuthUser,
+  ) {
+    const { search, departmentId, status } = params;
     const employees = await this.db.employee.findMany({
       where: {
         departmentId: departmentId || undefined,
+        status: status || undefined,
         OR: search
           ? [
               { fullName: { contains: search, mode: 'insensitive' } },

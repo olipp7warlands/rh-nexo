@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { EmployeeStatus } from '@prisma/client';
 import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -14,8 +15,9 @@ export class EmployeesController {
     @CurrentUser() user: AuthUser,
     @Query('search') search?: string,
     @Query('departmentId') departmentId?: string,
+    @Query('status') status?: EmployeeStatus,
   ) {
-    return this.service.findAll({ search, departmentId }, user);
+    return this.service.findAll({ search, departmentId, status }, user);
   }
 
   @Get(':id')

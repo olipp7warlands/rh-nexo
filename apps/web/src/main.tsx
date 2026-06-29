@@ -8,6 +8,8 @@ import { ProtectedRoute } from './features/auth/ProtectedRoute';
 import { LoginPage } from './features/auth/LoginPage';
 import { AppShell } from './layout/AppShell';
 import { EmpleadosPage } from './features/employees/EmpleadosPage';
+import { EmployeeDetailPage } from './features/employees/EmployeeDetailPage';
+import { OrganigramaPage } from './features/employees/OrganigramaPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
 
@@ -26,20 +28,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             {/* Todo lo demás exige sesión y vive dentro del AppShell. */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
+                <Route path="/empleados/:id" element={<EmployeeDetailPage />} />
                 {NAV.flatMap((section) =>
-                  section.items.map((item) => (
-                    <Route
-                      key={item.key}
-                      path={item.path}
-                      element={
-                        item.path === '/empleados' ? (
-                          <EmpleadosPage />
-                        ) : (
-                          <PlaceholderPage eyebrow={section.section} title={item.label} />
-                        )
-                      }
-                    />
-                  )),
+                  section.items.map((item) => {
+                    const element =
+                      item.path === '/empleados' ? (
+                        <EmpleadosPage />
+                      ) : item.path === '/organigrama' ? (
+                        <OrganigramaPage />
+                      ) : (
+                        <PlaceholderPage eyebrow={section.section} title={item.label} />
+                      );
+                    return <Route key={item.key} path={item.path} element={element} />;
+                  }),
                 )}
               </Route>
             </Route>
