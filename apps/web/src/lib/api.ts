@@ -98,6 +98,26 @@ export async function downloadFile(path: string, filename: string): Promise<void
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Abre un fichero del backend (con Bearer) en una pestaña nueva, sin forzar descarga.
+ * Abre la pestaña en blanco de forma síncrona (antes del fetch) para que el navegador no la
+ * bloquee como pop-up, y la redirige al blob en cuanto llega.
+ */
+export async function viewFile(path: string): Promise<void> {
+  const win = window.open('', '_blank');
+  const res = await fetch(`${BASE}/api${path}`, {
+    headers: tokenStore.access ? { Authorization: `Bearer ${tokenStore.access}` } : {},
+  });
+  if (!res.ok) {
+    win?.close();
+    throw new Error(`No se pudo abrir el documento (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  if (win) win.location.href = url;
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
 // Login: no reintentar con refresh (un 401 aquí = credenciales inválidas, no sesión caducada).
 export const authApi = {
   login: (email: string, password: string) =>

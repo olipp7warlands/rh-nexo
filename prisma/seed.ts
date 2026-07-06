@@ -220,8 +220,22 @@ async function main() {
   await db.payrollRun.update({ where: { id: run.id }, data: { totalGross, totalCost: Math.round(totalGross * 1.30) } });
 
   // Documentos
-  for (const d of DOCS) await db.document.create({ data: { name: d.name, category: d.cat as DocumentCategory, ownerId: d.ownerId, status: d.status as DocumentStatus, createdAt: D(d.date) } });
+  const docIdByName: Record<string, string> = {};
+  for (const d of DOCS) {
+    const doc = await db.document.create({ data: { name: d.name, category: d.cat as DocumentCategory, ownerId: d.ownerId, status: d.status as DocumentStatus, createdAt: D(d.date) } });
+    docIdByName[d.name] = doc.id;
+  }
   for (const t of DOC_TEMPLATES) await db.documentTemplate.create({ data: { name: t.name, category: t.category as DocumentCategory } });
+  // Firmas pendientes (para poder demostrar la firma)
+  const SIGNATURES = [
+    { doc: 'Acuerdo de confidencialidad · Sofía Navarro', employeeId: 'e4' },
+    { doc: 'Política de teletrabajo 2026', employeeId: 'e6' },
+    { doc: 'Política de teletrabajo 2026', employeeId: 'e5' },
+  ];
+  for (const s of SIGNATURES) {
+    const documentId = docIdByName[s.doc];
+    if (documentId) await db.documentSignature.create({ data: { documentId, employeeId: s.employeeId } });
+  }
 
   // ── Reclutamiento (VITAE) ──
   // Pipeline (etapas ordenadas)
