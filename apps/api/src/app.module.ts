@@ -9,6 +9,8 @@ import { HolidaysModule } from './holidays/holidays.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { PerformanceModule } from './performance/performance.module';
 import { ReportsModule } from './reports/reports.module';
+import { PayrollModule } from './payroll/payroll.module';
+import { DocumentsModule } from './documents/documents.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -26,6 +28,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
     OnboardingModule,
     PerformanceModule,
     ReportsModule,
+    PayrollModule,
+    DocumentsModule,
   ],
   // Guards globales: primero exige JWT, luego aplica RBAC (@Roles).
   providers: [

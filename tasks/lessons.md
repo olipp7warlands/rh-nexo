@@ -29,3 +29,14 @@
    Usar `*spec.ts` en `include` para aceptar ambas convenciones.
 8. **NestJS bajo Vitest requiere SWC.** La DI y class-validator dependen de la metadata de
    decoradores; usar `unplugin-swc` en `vitest.config.ts` (esbuild solo no la emite).
+9. **Nunca comparar contra un `count()` en vivo entre specs.** Todos los ficheros
+   `*.e2e-spec.ts` corren en paralelo contra el mismo Postgres; `employees.e2e-spec.ts` crea y
+   borra un empleado de prueba durante su ejecución, así que cualquier otro test que haga
+   `db.employee.count()` en un momento arbitrario puede leer ±1 de más. Comprobar en su lugar
+   invariantes estables (ids conocidos del seed, `sumDept === totalActive` con datos de la misma
+   respuesta) en vez de un número exacto recalculado aparte. Pendiente (fuera de alcance de Fase
+   4): `ReportsService.overview()` lanza 11 queries independientes vía `Promise.all` sin
+   transacción, así que además de la comparación de test, el propio dato puede ser
+   internamente inconsistente si la mutación cae entre dos de esas queries — se manifiesta como
+   flakiness ocasional en `reports.e2e-spec.ts`; arreglarlo de raíz requeriría envolver esas
+   queries en una transacción de Prisma.

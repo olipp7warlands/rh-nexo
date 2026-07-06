@@ -16,6 +16,8 @@ import { CalendarioPage } from './features/absences/CalendarioPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
 import { DesempenoPage } from './features/performance/DesempenoPage';
 import { InformesPage } from './features/reports/InformesPage';
+import { NominaPage } from './features/payroll/NominaPage';
+import { DocumentosPage } from './features/documents/DocumentosPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
 
@@ -28,6 +30,8 @@ const PAGES: Record<string, JSX.Element> = {
   '/onboarding': <OnboardingPage />,
   '/desempeno': <DesempenoPage />,
   '/informes': <InformesPage />,
+  '/nomina': <NominaPage />,
+  '/documentos': <DocumentosPage />,
 };
 
 const qc = new QueryClient({
