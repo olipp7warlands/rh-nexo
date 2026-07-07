@@ -18,6 +18,8 @@ import { DesempenoPage } from './features/performance/DesempenoPage';
 import { InformesPage } from './features/reports/InformesPage';
 import { NominaPage } from './features/payroll/NominaPage';
 import { DocumentosPage } from './features/documents/DocumentosPage';
+import { ReclutamientoPage } from './features/reclutamiento/ReclutamientoPage';
+import { JobDetailPage } from './features/reclutamiento/JobDetailPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
 
@@ -32,6 +34,7 @@ const PAGES: Record<string, JSX.Element> = {
   '/informes': <InformesPage />,
   '/nomina': <NominaPage />,
   '/documentos': <DocumentosPage />,
+  '/reclutamiento': <ReclutamientoPage />,
 };
 
 const qc = new QueryClient({
@@ -50,6 +53,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route path="/empleados/:id" element={<EmployeeDetailPage />} />
+                <Route path="/reclutamiento/:jobId" element={<JobDetailPage />} />
                 {NAV.flatMap((section) =>
                   section.items.map((item) => (
                     <Route
