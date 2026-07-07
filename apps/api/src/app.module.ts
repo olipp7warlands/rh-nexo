@@ -11,6 +11,9 @@ import { PerformanceModule } from './performance/performance.module';
 import { ReportsModule } from './reports/reports.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { DocumentsModule } from './documents/documents.module';
+import { JobsModule } from './jobs/jobs.module';
+import { CandidatesModule } from './candidates/candidates.module';
+import { ApplicationsModule } from './applications/applications.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -30,6 +33,9 @@ import { RolesGuard } from './auth/guards/roles.guard';
     ReportsModule,
     PayrollModule,
     DocumentsModule,
+    JobsModule,
+    CandidatesModule,
+    ApplicationsModule,
   ],
   // Guards globales: primero exige JWT, luego aplica RBAC (@Roles).
   providers: [
