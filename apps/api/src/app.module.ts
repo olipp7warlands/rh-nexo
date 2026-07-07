@@ -14,6 +14,8 @@ import { DocumentsModule } from './documents/documents.module';
 import { JobsModule } from './jobs/jobs.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { ApplicationsModule } from './applications/applications.module';
+import { StorageModule } from './storage/storage.module';
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -23,6 +25,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
     // El .env vive en la raíz del monorepo (la API arranca desde apps/api).
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
     PrismaModule,
+    StorageModule,
+    HealthModule,
     AuthModule,
     EmployeesModule,
     DepartmentsModule,

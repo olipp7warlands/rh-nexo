@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import { api, uploadForm } from '../../lib/api';
 
 export type DocumentCategory = 'CONTRATOS' | 'NOMINAS' | 'POLITICAS' | 'CERTIFICADOS' | 'FORMACION';
 export type DocumentStatus = 'VIGENTE' | 'FIRMADO' | 'PENDIENTE' | 'EMITIDO';
@@ -27,8 +27,14 @@ export interface DocumentItem {
   category: DocumentCategory;
   status: DocumentStatus;
   createdAt: string;
+  fileUrl: string | null;
   owner: { id: string; fullName: string };
   signatures: DocumentSignature[];
+}
+
+/** true si hay un fichero real adjunto (no el mock heredado ni ausencia de fichero). */
+export function hasRealFile(doc: Pick<DocumentItem, 'fileUrl'>): boolean {
+  return !!doc.fileUrl && !doc.fileUrl.startsWith('mock://');
 }
 
 export interface DocumentTemplateItem {
@@ -69,6 +75,32 @@ export function useCreateDocument() {
   return useMutation({
     mutationFn: (data: { name: string; category: DocumentCategory; ownerId?: string; signerIds?: string[] }) =>
       api.post<DocumentItem>('/documents', data),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Igual que useCreateDocument, pero con un fichero real adjunto (multipart). */
+export function useCreateDocumentWithFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      ...data
+    }: {
+      name: string;
+      category: DocumentCategory;
+      ownerId?: string;
+      signerIds?: string[];
+      file: File;
+    }) => {
+      const form = new FormData();
+      form.append('name', data.name);
+      form.append('category', data.category);
+      if (data.ownerId) form.append('ownerId', data.ownerId);
+      for (const id of data.signerIds ?? []) form.append('signerIds', id);
+      form.append('file', file);
+      return uploadForm<DocumentItem>('/documents', form);
+    },
     onSuccess: () => invalidate(qc),
   });
 }

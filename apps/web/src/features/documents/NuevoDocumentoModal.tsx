@@ -5,7 +5,10 @@ import { z } from 'zod';
 import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useEmployees } from '../employees/useEmployees';
-import { useCreateDocument, DOCUMENT_CATEGORY_LABEL, type DocumentCategory } from './useDocuments';
+import { useCreateDocument, useCreateDocumentWithFile, DOCUMENT_CATEGORY_LABEL, type DocumentCategory } from './useDocuments';
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB, en línea con el backend
+const ALLOWED_EXTENSIONS = '.pdf,.doc,.docx,.png,.jpg,.jpeg';
 
 const schema = z.object({
   name: z.string().min(1, 'Obligatorio'),
@@ -20,7 +23,9 @@ const selectClass =
 export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
   const { data: employees } = useEmployees();
   const create = useCreateDocument();
+  const createWithFile = useCreateDocumentWithFile();
   const [signerIds, setSignerIds] = useState<string[]>([]);
+  const [file, setFile] = useState<File | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -28,18 +33,42 @@ export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { category: 'CONTRATOS' } });
 
+  const pending = create.isPending || createWithFile.isPending;
+
   const toggleSigner = (id: string) =>
     setSignerIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0] ?? null;
+    if (picked && picked.size > MAX_FILE_SIZE_BYTES) {
+      setServerError('El fichero supera el tamaño máximo (10 MB).');
+      e.target.value = '';
+      setFile(null);
+      return;
+    }
+    setServerError(null);
+    setFile(picked);
+  };
 
   const onSubmit = handleSubmit(async (data) => {
     setServerError(null);
     try {
-      await create.mutateAsync({
-        name: data.name,
-        category: data.category as DocumentCategory,
-        ownerId: data.ownerId || undefined,
-        signerIds: signerIds.length ? signerIds : undefined,
-      });
+      if (file) {
+        await createWithFile.mutateAsync({
+          name: data.name,
+          category: data.category as DocumentCategory,
+          ownerId: data.ownerId || undefined,
+          signerIds: signerIds.length ? signerIds : undefined,
+          file,
+        });
+      } else {
+        await create.mutateAsync({
+          name: data.name,
+          category: data.category as DocumentCategory,
+          ownerId: data.ownerId || undefined,
+          signerIds: signerIds.length ? signerIds : undefined,
+        });
+      }
       onClose();
     } catch (e) {
       setServerError((e as Error).message);
@@ -56,8 +85,8 @@ export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
           <Button variant="ghost" type="button" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={onSubmit} disabled={create.isPending}>
-            {create.isPending ? 'Guardando…' : 'Subir'}
+          <Button variant="primary" onClick={onSubmit} disabled={pending}>
+            {pending ? 'Guardando…' : 'Subir'}
           </Button>
         </>
       }
@@ -77,6 +106,21 @@ export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label htmlFor="doc-file" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+            Fichero (opcional)
+          </label>
+          <input
+            id="doc-file"
+            type="file"
+            accept={ALLOWED_EXTENSIONS}
+            onChange={onFileChange}
+            className="w-full text-[13px] text-[var(--ink-secondary)] file:mr-3 file:h-9 file:px-3 file:rounded-md file:border-0 file:bg-[var(--bg-hover)] file:text-[13px] file:font-medium file:text-[var(--ink-primary)] file:cursor-pointer"
+          />
+          <p className="text-[11px] text-[var(--ink-tertiary)] mt-1">
+            PDF, Word, PNG o JPG, máx. 10 MB. Sin fichero, el documento queda solo con metadatos.
+          </p>
         </div>
         <div>
           <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Responsable (opcional)</label>

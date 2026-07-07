@@ -9,3 +9,5 @@ coverage
 .DS_Store
 prisma/*.db
 *.tsbuildinfo
+apps/api/storage-local
+storage-local
