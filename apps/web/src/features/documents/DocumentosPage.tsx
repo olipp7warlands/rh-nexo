@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Avatar, Button, Card, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { viewFile } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import {
   useDocuments,
   useDocumentTemplates,
   useSignDocument,
+  hasRealFile,
   DOCUMENT_CATEGORY_LABEL,
   type DocumentCategory,
 } from './useDocuments';
@@ -148,11 +150,18 @@ export function DocumentosPage() {
                         <DocumentStatusBadge status={d.status} />
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        {mySignature && (
-                          <Button variant="secondary" onClick={() => sign.mutate(mySignature.id)} disabled={sign.isPending}>
-                            Firmar
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {hasRealFile(d) && (
+                            <Button variant="secondary" onClick={() => viewFile(`/documents/${d.id}/download`)}>
+                              Descargar
+                            </Button>
+                          )}
+                          {mySignature && (
+                            <Button variant="secondary" onClick={() => sign.mutate(mySignature.id)} disabled={sign.isPending}>
+                              Firmar
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -1,3 +1,6 @@
+# Solo para desarrollo local. En producción no hay Docker: Postgres y Storage son Supabase
+# (ver tasks/DEPLOY.md). El servicio MinIO se retiró — nada en el código lo usaba ya
+# (apps/api/src/storage tiene su propio fallback de disco local, sin Docker, para dev).
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,15 +11,5 @@ services:
     ports: ["5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
 
-  minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-    ports: ["9000:9000", "9001:9001"]
-    volumes: ["miniodata:/data"]
-
 volumes:
   pgdata:
-  miniodata:

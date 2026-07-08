@@ -118,6 +118,34 @@ export async function viewFile(path: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
+/**
+ * Sube un `FormData` (multipart) con el mismo Bearer + refresh automático que `request()`.
+ * No fija `Content-Type`: el navegador añade el boundary correcto al pasar un FormData.
+ */
+async function requestForm<T>(path: string, formData: FormData, retryOn401 = true): Promise<T> {
+  const access = tokenStore.access;
+  const res = await fetch(`${BASE}/api${path}`, {
+    method: 'POST',
+    headers: access ? { Authorization: `Bearer ${access}` } : {},
+    body: formData,
+  });
+
+  if (res.status === 401 && retryOn401) {
+    if (await refreshTokens()) return requestForm<T>(path, formData, false);
+    tokenStore.clear();
+    onLogout();
+    throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Error ${res.status}`);
+  }
+  return res.status === 204 ? (undefined as T) : res.json();
+}
+
+export const uploadForm = requestForm;
+
 // Login: no reintentar con refresh (un 401 aquí = credenciales inválidas, no sesión caducada).
 export const authApi = {
   login: (email: string, password: string) =>

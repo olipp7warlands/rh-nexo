@@ -4,12 +4,29 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { CreateDocumentDto } from './documents.dto';
 import { SIGNATURE_PROVIDER, SignatureProvider } from './signature.provider';
+import { STORAGE_PROVIDER, StorageProvider } from '../storage/storage.provider';
+
+export interface UploadedDocumentFile {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+}
+
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/png',
+  'image/jpeg',
+]);
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly db: PrismaService,
     @Inject(SIGNATURE_PROVIDER) private readonly signer: SignatureProvider,
+    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
 
   findAll(viewer: AuthUser, category?: DocumentCategory) {
@@ -42,20 +59,57 @@ export class DocumentsService {
     });
   }
 
-  async create(dto: CreateDocumentDto, viewer: AuthUser) {
+  async create(dto: CreateDocumentDto, file: UploadedDocumentFile | undefined, viewer: AuthUser) {
+    if (file) {
+      if (file.buffer.length > MAX_FILE_SIZE_BYTES) {
+        throw new BadRequestException('El fichero supera el tamaño máximo (10 MB).');
+      }
+      if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException('Tipo de fichero no admitido (PDF, Word, PNG o JPG).');
+      }
+    }
+
     const doc = await this.db.document.create({
       data: {
         name: dto.name,
         category: dto.category,
         ownerId: dto.ownerId ?? viewer.employeeId ?? '',
-        fileUrl: `mock://documents/${encodeURIComponent(dto.name)}`,
+        fileUrl: file ? null : `mock://documents/${encodeURIComponent(dto.name)}`,
         status: dto.signerIds?.length ? 'PENDIENTE' : 'VIGENTE',
         signatures: dto.signerIds?.length ? { create: dto.signerIds.map((employeeId) => ({ employeeId })) } : undefined,
       },
       include: { signatures: true },
     });
-    await this.audit(viewer.id, 'CREATE', doc.id, null, { name: dto.name, category: dto.category });
+
+    if (file) {
+      const safeName = file.originalname.replace(/[^\w.\-]+/g, '_');
+      const storagePath = `documents/${doc.id}/${safeName}`;
+      await this.storage.upload(storagePath, file.buffer, file.mimetype);
+      await this.db.document.update({ where: { id: doc.id }, data: { fileUrl: storagePath } });
+      doc.fileUrl = storagePath;
+    }
+
+    await this.audit(viewer.id, 'CREATE', doc.id, null, { name: dto.name, category: dto.category, hasFile: !!file });
     return doc;
+  }
+
+  /** Devuelve una URL de descarga temporal si el viewer puede ver este documento. */
+  async download(id: string, viewer: AuthUser): Promise<string> {
+    const doc = await this.db.document.findUnique({ where: { id }, include: { signatures: true } });
+    if (!doc) throw new NotFoundException('Documento no encontrado');
+
+    const privileged = viewer.role === 'ADMIN' || viewer.role === 'RRHH';
+    const isOwner = viewer.employeeId === doc.ownerId;
+    const isSigner = doc.signatures.some((s) => s.employeeId === viewer.employeeId);
+    if (!privileged && !isOwner && !isSigner) {
+      throw new ForbiddenException('No autorizado para descargar este documento.');
+    }
+    if (!doc.fileUrl || doc.fileUrl.startsWith('mock://')) {
+      throw new NotFoundException('Este documento no tiene un fichero adjunto.');
+    }
+
+    await this.audit(viewer.id, 'DOWNLOAD', id, null, { fileUrl: doc.fileUrl });
+    return this.storage.getDownloadUrl(doc.fileUrl);
   }
 
   async sign(signatureId: string, viewer: AuthUser) {

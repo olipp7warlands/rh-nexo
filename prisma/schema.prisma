@@ -6,9 +6,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// DATABASE_URL: pooler de Supabase (Supavisor, puerto 6543, ?pgbouncer=true) — usado en runtime.
+// DIRECT_URL: conexión directa (puerto 5432) — usada solo por `prisma migrate`/`db:seed`/`db:studio`.
+// En local con docker-compose, ambas pueden apuntar a la misma cadena (no hay pooler).
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ──────────────────────────── Enums ────────────────────────────

@@ -2,8 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { LOCAL_STORAGE_ROOT, flattenStorageKey } from '../src/storage/local-storage.provider';
 
 /**
  * Fase 4: documentos y firma. Blanca (RRHH) sube un documento con un firmante (Diego, e6).
@@ -19,6 +22,8 @@ describe('Documentos (integración)', () => {
   let mgrToken: string;
   let documentId: string | undefined;
   let signatureId: string | undefined;
+  let fileDocumentId: string | undefined;
+  let fileStoragePath: string | undefined;
 
   const SIGNER = 'e6'; // Diego Ortega
 
@@ -44,6 +49,15 @@ describe('Documentos (integración)', () => {
       await db.auditLog.deleteMany({ where: { entity: 'Document', entityId: documentId } });
       await db.documentSignature.deleteMany({ where: { documentId } });
       await db.document.delete({ where: { id: documentId } }).catch(() => undefined);
+    }
+    if (fileDocumentId) {
+      await db.auditLog.deleteMany({ where: { entity: 'Document', entityId: fileDocumentId } });
+      await db.document.delete({ where: { id: fileDocumentId } }).catch(() => undefined);
+    }
+    if (fileStoragePath) {
+      const flat = flattenStorageKey(fileStoragePath);
+      await fs.rm(path.join(LOCAL_STORAGE_ROOT, flat), { force: true });
+      await fs.rm(path.join(LOCAL_STORAGE_ROOT, `${flat}.meta.json`), { force: true });
     }
     await app.close();
   });
@@ -101,5 +115,59 @@ describe('Documentos (integración)', () => {
 
   it('firmar de nuevo un documento ya firmado falla (400)', async () => {
     await request(http).patch(`/api/documents/signatures/${signatureId}/sign`).set('Authorization', `Bearer ${empToken}`).expect(400);
+  });
+
+  it('RRHH sube un documento con un fichero real: fileUrl deja de ser mock', async () => {
+    const res = await request(http)
+      .post('/api/documents')
+      .set('Authorization', `Bearer ${rrhhToken}`)
+      .field('name', 'Contrato con fichero e2e')
+      .field('category', 'CONTRATOS')
+      .attach('file', Buffer.from('%PDF-1.4 contenido de prueba e2e'), { filename: 'contrato.pdf', contentType: 'application/pdf' })
+      .expect(201);
+    fileDocumentId = res.body.id;
+    fileStoragePath = res.body.fileUrl;
+
+    expect(res.body.fileUrl).not.toBeNull();
+    expect(res.body.fileUrl).not.toMatch(/^mock:\/\//);
+    expect(res.body.fileUrl).toBe(`documents/${fileDocumentId}/contrato.pdf`);
+  });
+
+  it('el propietario descarga: redirige a una URL que sirve el contenido subido', async () => {
+    const redirect = await request(http)
+      .get(`/api/documents/${fileDocumentId}/download`)
+      .set('Authorization', `Bearer ${rrhhToken}`)
+      .expect(302);
+    expect(redirect.headers.location).toMatch(/^\/api\/storage\/local\//);
+
+    const audit = await db.auditLog.findFirst({ where: { entity: 'Document', entityId: fileDocumentId, action: 'DOWNLOAD' } });
+    expect(audit).not.toBeNull();
+
+    const file = await request(http)
+      .get(redirect.headers.location)
+      .set('Authorization', `Bearer ${rrhhToken}`)
+      .buffer(true)
+      .parse((res, cb) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => cb(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+    expect(file.headers['content-type']).toContain('application/pdf');
+    expect((file.body as Buffer).toString('utf-8')).toContain('contenido de prueba e2e');
+  });
+
+  it('un empleado ajeno (no propietario, no firmante) no puede descargar (403)', async () => {
+    await request(http).get(`/api/documents/${fileDocumentId}/download`).set('Authorization', `Bearer ${empToken}`).expect(403);
+  });
+
+  it('rechaza ficheros de tipo no admitido (400)', async () => {
+    await request(http)
+      .post('/api/documents')
+      .set('Authorization', `Bearer ${rrhhToken}`)
+      .field('name', 'Fichero raro e2e')
+      .field('category', 'CONTRATOS')
+      .attach('file', Buffer.from('#!/bin/sh\necho hola'), { filename: 'script.sh', contentType: 'application/x-sh' })
+      .expect(400);
   });
 });

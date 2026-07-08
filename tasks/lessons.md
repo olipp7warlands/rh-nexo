@@ -55,3 +55,21 @@
     periodo" en `payroll.e2e-spec.ts`, o infla los conteos de empleados). Tras cualquier sesión
     de verificación manual, limpiar explícitamente lo creado antes de volver a correr
     `pnpm --filter @nucleo/api test`.
+12. **Con `.env` apuntando a Supabase real, correr tests locales sin sobreescribir
+    `DATABASE_URL`/`DIRECT_URL`/`STORAGE_PROVIDER` ejecuta contra producción.** Pasó de verdad:
+    un test de subida de documentos escribió un fichero real en el bucket de Supabase porque
+    solo se sobreescribió la BD, no `STORAGE_PROVIDER`. Sobreescribir SIEMPRE las tres juntas
+    inline al correr tests si el `.env` tiene credenciales reales (ver `tasks/DEPLOY.md` §3).
+13. **`@nestjs/serve-static` + Express real: dos versiones de `path-to-regexp` conviven y cada
+    una exige una sintaxis de comodín distinta.** `exclude` lo evalúa el propio paquete con su
+    dependencia de `path-to-regexp` v8 (`'/api/{*splat}'`; `'/api/(.*)'` lanza excepción).
+    `renderPath` lo registra Express con SU `path-to-regexp` v0.1.x bundlada (`'*'`; el default
+    del paquete, `'{*any}'`, no coincide con nada bajo esa versión y el fallback de SPA nunca se
+    dispara, sin ningún error visible). Detalle completo en `tasks/DEPLOY.md` §5.
+14. **Fijar `engines.node` en `package.json` cuando el hosting usa Nixpacks/Railpack.** Sin él,
+    Railway detectó Node 20 para el build aunque el local es 22 — `@supabase/supabase-js` v2
+    instancia un `RealtimeClient` interno (aunque no se use realtime) que exige el `WebSocket`
+    nativo de Node 22+, y la API crasheaba en el arranque real sin que los tests ni la
+    verificación local lo detectaran (mismo Node en ambos sitios oculta el problema). Poner
+    `"engines": {"node": ">=22"}` en el `package.json` raíz (y, por claridad, también en el del
+    servicio desplegado) en cuanto se fije una versión mínima de Node para producción.
