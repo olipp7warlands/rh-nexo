@@ -77,6 +77,11 @@ pnpm db:seed                # carga los datos del prototipo
 pnpm dev                    # arranca web (5173) + api (3000) en paralelo
 pnpm db:studio              # Prisma Studio
 pnpm db:reset               # resetea la BD y vuelve a sembrar
+
+# Tests — SIEMPRE aislados de producción (ver tasks/lessons.md), nunca tocan el .env real
+pnpm db:test:migrate        # migra la BD de test (nucleo_test), solo hace falta una vez
+pnpm db:test:seed           # siembra la BD de test — repetir si el seed cambia
+pnpm --filter @nucleo/api test   # corre la suite contra nucleo_test, ignora el .env real
 ```
 
 ## Diseño — sistema "Clear"
