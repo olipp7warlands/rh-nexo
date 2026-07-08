@@ -66,3 +66,10 @@
     `renderPath` lo registra Express con SU `path-to-regexp` v0.1.x bundlada (`'*'`; el default
     del paquete, `'{*any}'`, no coincide con nada bajo esa versión y el fallback de SPA nunca se
     dispara, sin ningún error visible). Detalle completo en `tasks/DEPLOY.md` §5.
+14. **Fijar `engines.node` en `package.json` cuando el hosting usa Nixpacks/Railpack.** Sin él,
+    Railway detectó Node 20 para el build aunque el local es 22 — `@supabase/supabase-js` v2
+    instancia un `RealtimeClient` interno (aunque no se use realtime) que exige el `WebSocket`
+    nativo de Node 22+, y la API crasheaba en el arranque real sin que los tests ni la
+    verificación local lo detectaran (mismo Node en ambos sitios oculta el problema). Poner
+    `"engines": {"node": ">=22"}` en el `package.json` raíz (y, por claridad, también en el del
+    servicio desplegado) en cuanto se fije una versión mínima de Node para producción.
