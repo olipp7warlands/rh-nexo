@@ -55,3 +55,14 @@
     periodo" en `payroll.e2e-spec.ts`, o infla los conteos de empleados). Tras cualquier sesión
     de verificación manual, limpiar explícitamente lo creado antes de volver a correr
     `pnpm --filter @nucleo/api test`.
+12. **Con `.env` apuntando a Supabase real, correr tests locales sin sobreescribir
+    `DATABASE_URL`/`DIRECT_URL`/`STORAGE_PROVIDER` ejecuta contra producción.** Pasó de verdad:
+    un test de subida de documentos escribió un fichero real en el bucket de Supabase porque
+    solo se sobreescribió la BD, no `STORAGE_PROVIDER`. Sobreescribir SIEMPRE las tres juntas
+    inline al correr tests si el `.env` tiene credenciales reales (ver `tasks/DEPLOY.md` §3).
+13. **`@nestjs/serve-static` + Express real: dos versiones de `path-to-regexp` conviven y cada
+    una exige una sintaxis de comodín distinta.** `exclude` lo evalúa el propio paquete con su
+    dependencia de `path-to-regexp` v8 (`'/api/{*splat}'`; `'/api/(.*)'` lanza excepción).
+    `renderPath` lo registra Express con SU `path-to-regexp` v0.1.x bundlada (`'*'`; el default
+    del paquete, `'{*any}'`, no coincide con nada bajo esa versión y el fallback de SPA nunca se
+    dispara, sin ningún error visible). Detalle completo en `tasks/DEPLOY.md` §5.

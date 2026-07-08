@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
-  // WEB_ORIGIN admite una lista separada por comas (producción + previews de Vercel, etc.).
+  // WEB_ORIGIN admite una lista separada por comas (producción + previews, etc.).
   const origins = (process.env.WEB_ORIGIN ?? 'http://localhost:5173').split(',').map((s) => s.trim());
   app.enableCors({ origin: origins, credentials: true });
   // Valida y recorta todo DTO entrante (whitelist) — base de la "Definición de Hecho"

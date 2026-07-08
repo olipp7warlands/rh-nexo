@@ -1,6 +1,8 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { PrismaModule } from './prisma/prisma.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DepartmentsModule } from './departments/departments.module';
@@ -24,6 +26,19 @@ import { RolesGuard } from './auth/guards/roles.guard';
   imports: [
     // El .env vive en la raíz del monorepo (la API arranca desde apps/api).
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
+    // Sirve el build de apps/web (un solo servicio en Railway: API + frontend en la misma URL).
+    // Ruta relativa desde el compilado apps/api/dist/main.js hasta apps/web/dist.
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'web', 'dist'),
+      // `exclude` lo evalúa @nestjs/serve-static con SU PROPIA dependencia de path-to-regexp
+      // (v8, sintaxis de wildcard con nombre) — '/api/(.*)' (sintaxis vieja) lanza "Unexpected
+      // (" y rompe el fallback en silencio.
+      exclude: ['/api/{*splat}'],
+      // `renderPath` lo registra Express con SU PROPIA path-to-regexp (0.1.x, bundlada con
+      // express@4, sintaxis clásica) — el default del paquete ('{*any}', sintaxis v8) no
+      // coincide con nada bajo esa versión y el fallback a index.html nunca se dispara.
+      renderPath: '*',
+    }),
     PrismaModule,
     StorageModule,
     HealthModule,
