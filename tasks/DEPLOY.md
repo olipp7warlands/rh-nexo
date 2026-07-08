@@ -22,14 +22,19 @@ contraseña de la base de datos que definas ahí.
 ### 1.2 Cadenas de conexión (Prisma)
 *Project Settings → Database → Connection string*:
 - **`DATABASE_URL`** = la cadena de **"Connection pooling"**, modo **Transaction**, puerto
-  **6543**. Añádele `&pgbouncer=true&connection_limit=1` al final si Supabase no lo incluye ya.
-  Es la que usa la API en cada request.
-- **`DIRECT_URL`** = la cadena de **conexión directa**, puerto **5432** (sin pooler). Solo la
-  usan `prisma migrate deploy`, `db:seed` y `db:studio` — necesitan una conexión directa para
-  bloqueos de esquema que el pooler no soporta.
+  **6543**, con `?pgbouncer=true&connection_limit=1`. Es la que usa la API en cada request.
+- **`DIRECT_URL`** = **verificado en despliegue real**: la conexión directa clásica
+  (`db.<ref>.supabase.co:5432`) es **IPv6-only** y falla con `P1001` desde redes sin salida
+  IPv6 (el caso más común). La alternativa oficial de Supabase: usar el mismo host del
+  *pooler* pero en **modo Session** (puerto **5432**, sin `pgbouncer=true`) — sí soporta los
+  bloqueos de esquema que necesitan `prisma migrate deploy`/`db:seed`/`db:studio`, y es
+  accesible por IPv4. Es decir: `DATABASE_URL` y `DIRECT_URL` acaban compartiendo el mismo
+  host del pooler, solo cambia el puerto (6543 transacción / 5432 sesión) y el parámetro
+  `pgbouncer`.
 
-Ambas comparten usuario/contraseña/nombre de base de datos; solo cambia el host/puerto y los
-parámetros de query.
+Ambas comparten usuario/contraseña/nombre de base de datos; solo cambia el puerto y los
+parámetros de query. Si tu red sí tiene salida IPv6, la conexión directa clásica también
+funciona para `DIRECT_URL` — pero no lo asumas sin comprobarlo primero.
 
 ### 1.3 Bucket de Storage (documentos)
 *Storage → New bucket* → nómbralo (p. ej. `nucleo-docs`) y **NO lo marques como público** —
