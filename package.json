@@ -2,6 +2,9 @@
   "name": "nucleo",
   "private": true,
   "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "turbo run dev --parallel",
