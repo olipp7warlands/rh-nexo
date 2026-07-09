@@ -133,7 +133,7 @@ h1{font-size:20px;margin:0} .muted{color:#6B7280;font-size:13px} table{width:100
 td{padding:10px 0;border-bottom:1px solid #E5E7EB;font-size:14px} .net td{border-top:2px solid #0F1419;border-bottom:none;font-size:16px}
 .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0F1419;padding-bottom:16px}</style></head>
 <body onload="window.print&&0">
-<div class="head"><div><h1>Nexo · Recibo de nómina</h1><div class="muted">Periodo ${ps.run.period} · ${ps.status}</div></div>
+<div class="head"><div><h1>humanX · Recibo de nómina</h1><div class="muted">Periodo ${ps.run.period} · ${ps.status}</div></div>
 <div style="text-align:right"><strong>${ps.employee.fullName}</strong><div class="muted">${ps.employee.jobTitle}<br>DNI ${ps.employee.dni ?? '—'}</div></div></div>
 <table>
 ${row('Salario bruto', euro(ps.gross))}
@@ -141,7 +141,7 @@ ${row('Retención IRPF', '− ' + euro(ps.irpf))}
 ${row('Seguridad Social', '− ' + euro(ps.ss))}
 <tr class="net">${`<td><strong>Líquido a percibir</strong></td><td style="text-align:right;font-family:monospace;font-weight:700">${euro(ps.net)}</td>`}</tr>
 </table>
-<p class="muted" style="margin-top:32px">Documento generado por Nexo. Recibo simplificado (no sustituye al recibo oficial).</p>
+<p class="muted" style="margin-top:32px">Documento generado por humanX. Recibo simplificado (no sustituye al recibo oficial).</p>
 </body></html>`;
   }
 

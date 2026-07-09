@@ -1,12 +1,14 @@
-# Nexo — Guía para Claude Code
+# humanX — Guía para Claude Code
 
 > Lee este archivo al inicio de cada sesión. Define qué es el producto, cómo está
-> montado el repo y las reglas que NO se negocian. Para el detalle por fases, ver `PLAN.md`.
+> montado el repo y las reglas que NO se negocian. Para el detalle por fases, ver `PLAN.md`
+> y `PLAN-humanX.md` (transformación Nexo → humanX, en curso).
 
-## Qué es Nexo
+## Qué es humanX
 
-Nexo es el **Core de Recursos Humanos** de un grupo de empresas (estilo Personio/Factorial):
-empleados, organigrama, ausencias, fichaje, onboarding, desempeño, nómina, documentos e informes.
+humanX (antes Nexo, en transformación según `PLAN-humanX.md`) es el **Core de Recursos
+Humanos** de un grupo de empresas (estilo Personio/Factorial): empleados, organigrama,
+ausencias, fichaje, onboarding, desempeño, nómina, documentos e informes.
 **VITAE** es su módulo de reclutamiento (ATS), ya prototipado.
 
 Estamos pasando de **prototipo visual** a **producto funcional**. Los mockups
@@ -94,9 +96,10 @@ Superficies  canvas #F5F6F8 · surface #FFFFFF · subtle #FAFBFC · hover #EDEFF
 Sidebar      slate #DCE2E8 · hover #CCD4DD
 Tinta        primary #0F1419 · secondary #4B5563 · tertiary #9CA3AF · disabled #D1D5DB
 Líneas       #E5E7EB / strong #D1D5DB / subtle #F1F3F5
-Acento cian  #1FB6E8 · hover #19A3D0 · pressed #1390BA · soft #E1F4FB · ink #0C6B8A
+Acento mono  #0F1419 · hover #000000 · pressed #000000 · soft #F0F1F3 · ink #0F1419 (humanX: monocromo, ya no cian)
 Estados      success #16A34A/#DCFCE7 · warning #D97706/#FEF3C7 · danger #DC2626/#FEE2E2 · info #2563EB/#DBEAFE
-Tipografía   Inter (texto) + JetBrains Mono (datos numéricos → clase .mono)
+Tipografía   Inter (texto) + JetBrains Mono (datos numéricos → clase .mono) + Playfair Display
+             (titulares y números destacados → clase .stat-value / font-serif, var(--font-serif))
 Radios       sm 6 · md 8 · lg 12 · xl 16
 ```
 Patrones: KPIs con `.stat-card` (valores alineados), dashboards en **columna principal + raíl derecho**,

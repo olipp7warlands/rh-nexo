@@ -6,8 +6,11 @@
   --bg-canvas:#F5F6F8; --bg-surface:#FFFFFF; --bg-subtle:#FAFBFC; --bg-sidebar:#DCE2E8; --bg-sidebar-hover:#CCD4DD; --bg-hover:#EDEFF2;
   --ink-primary:#0F1419; --ink-secondary:#4B5563; --ink-tertiary:#9CA3AF; --ink-disabled:#D1D5DB; --ink-inverse:#FFFFFF;
   --line:#E5E7EB; --line-strong:#D1D5DB; --line-subtle:#F1F3F5;
-  --accent:#1FB6E8; --accent-hover:#19A3D0; --accent-pressed:#1390BA; --accent-soft:#E1F4FB; --accent-ink:#0C6B8A;
+  /* Monocromo (humanX): antes cian de marca. success/warning/danger/info no cambian. */
+  --accent:#0F1419; --accent-hover:#000000; --accent-pressed:#000000; --accent-soft:#F0F1F3; --accent-ink:#0F1419;
   --success:#16A34A; --success-soft:#DCFCE7; --warning:#D97706; --warning-soft:#FEF3C7; --danger:#DC2626; --danger-soft:#FEE2E2; --info:#2563EB; --info-soft:#DBEAFE;
+  /* humanX: serif de marca en titulares y números destacados. Inter sigue en el cuerpo. */
+  --font-serif:'Playfair Display',Georgia,serif;
 }
 * { box-sizing:border-box; }
 html, body { margin:0; padding:0; }
@@ -24,7 +27,7 @@ body {
 .stat-card.primary { background:var(--accent); border-color:var(--accent); color:white; }
 .stat-label { font-size:13px; font-weight:500; line-height:1.35; min-height:calc(13px*1.35*2); display:flex; align-items:flex-start; color:var(--ink-secondary); }
 .stat-card.primary .stat-label { color:rgba(255,255,255,0.95); }
-.stat-value { font-size:32px; font-weight:700; letter-spacing:-0.02em; line-height:1; align-self:end; font-variant-numeric:tabular-nums; }
+.stat-value { font-family:var(--font-serif); font-size:32px; font-weight:700; letter-spacing:-0.02em; line-height:1; align-self:end; font-variant-numeric:tabular-nums; }
 .stat-meta { font-size:12px; color:var(--ink-tertiary); line-height:1.4; min-height:16px; display:flex; align-items:center; }
 .stat-card.primary .stat-meta { color:rgba(255,255,255,0.85); }
 .stat-delta { display:inline-flex; align-items:center; gap:4px; height:20px; padding:0 8px; border-radius:9999px; font-size:11px; font-weight:500; }

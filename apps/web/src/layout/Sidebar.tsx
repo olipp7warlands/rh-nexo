@@ -54,7 +54,7 @@ export function Sidebar() {
         <div className="w-7 h-7 rounded-lg bg-[var(--ink-primary)] flex items-center justify-center">
           <div className="w-2.5 h-2.5 bg-[var(--accent)] rounded-sm" />
         </div>
-        <span className="font-bold text-[17px] tracking-[-0.02em]">Nexo</span>
+        <span className="font-serif font-bold text-[17px] tracking-[-0.02em]">humanX</span>
         <span className="mono text-[10px] text-[var(--ink-tertiary)] ml-auto">RRHH</span>
       </div>
       <div className="px-5 pb-3 pl-[52px] -mt-1 text-[11px] text-[var(--ink-tertiary)]">Core de personas</div>
