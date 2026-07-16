@@ -38,7 +38,7 @@ export function JobDetailPage() {
   if (!roleCanView) {
     return (
       <div className="max-w-[1400px] mx-auto px-10 py-10">
-        <PageHeader eyebrow="Talento" title="Reclutamiento" />
+        <PageHeader eyebrow="Talento" title="Selección" />
         <Card>
           <p className="text-[13px] text-[var(--ink-secondary)]">
             El reclutamiento contiene datos de candidatos y solo está disponible para managers, RRHH y Administración.
@@ -51,8 +51,8 @@ export function JobDetailPage() {
   if (jobError) {
     return (
       <div className="max-w-[1400px] mx-auto px-10 py-10">
-        <Link to="/reclutamiento" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-4">
-          ← Reclutamiento
+        <Link to="/seleccion" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-4">
+          ← Selección
         </Link>
         <Card>
           <p className="text-[13px] text-[var(--ink-secondary)]">No tienes acceso a esta oferta.</p>
@@ -90,8 +90,8 @@ export function JobDetailPage() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-10 py-10">
-      <Link to="/reclutamiento" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-4">
-        ← Reclutamiento
+      <Link to="/seleccion" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-4">
+        ← Selección
       </Link>
       <PageHeader
         eyebrow={job.department?.name ?? 'Talento'}
@@ -127,7 +127,7 @@ export function JobDetailPage() {
           return (
             <div key={stage.id} className="flex-shrink-0 w-72">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[13px] font-semibold flex items-center gap-1.5">
+                <h3 className="font-serif text-[13px] font-medium flex items-center gap-1.5">
                   {stage.name}
                   <span className="mono text-[11px] text-[var(--ink-tertiary)]">{cards.length}</span>
                 </h3>
@@ -202,7 +202,7 @@ export function JobDetailPage() {
 
       {discarded.length > 0 && (
         <div className="mt-8">
-          <h3 className="text-[13px] font-semibold mb-3">Descartados / retirados</h3>
+          <h3 className="font-serif text-[13px] font-medium mb-3">Descartados / retirados</h3>
           <Card padding="p-0">
             <div className="divide-y divide-[var(--line-subtle)]">
               {discarded.map((app) => (

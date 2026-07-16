@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { assertNotAccidentalProduction } from './assert-not-accidental-production';
 
 async function bootstrap() {
+  assertNotAccidentalProduction();
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   // WEB_ORIGIN admite una lista separada por comas (producción + previews, etc.).

@@ -52,7 +52,7 @@ export function CalendarioPage() {
             <Button variant="secondary" size="sm" onClick={() => move(-1)} aria-label="Mes anterior">
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-[14px] font-semibold min-w-[140px] text-center">
+            <span className="font-serif text-[14px] font-medium min-w-[140px] text-center">
               {MONTHS[cursor.m]} {cursor.y}
             </span>
             <Button variant="secondary" size="sm" onClick={() => move(1)} aria-label="Mes siguiente">

@@ -79,7 +79,7 @@ export function OnboardingPage() {
                 <div className="flex items-center gap-3 mb-5">
                   <Avatar name={detail.employee.fullName} size="md" />
                   <div className="flex-1">
-                    <h3 className="text-[15px] font-semibold">{detail.employee.fullName}</h3>
+                    <h3 className="font-serif text-[15px] font-medium">{detail.employee.fullName}</h3>
                     <div className="flex items-center gap-2 text-[12px] text-[var(--ink-secondary)]">
                       {detail.employee.jobTitle}
                       {detail.employee.department && <DeptChip name={detail.employee.department.name} color={detail.employee.department.color} />}

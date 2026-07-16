@@ -37,6 +37,12 @@ enum ContractType {
   FREELANCE
 }
 
+// humanX: vínculo de la persona con el grupo (plantilla propia vs. proveedor externo)
+enum Vinculo {
+  PLANTILLA
+  EXTERNO
+}
+
 enum AbsenceType {
   VACACIONES
   ENFERMEDAD
@@ -149,6 +155,27 @@ model Department {
   jobs    Job[]
 }
 
+// ──────────────────────── Estructura (humanX) ────────────────────────
+model Pais {
+  id         String     @id @default(cuid())
+  nombre     String     @unique
+  sociedades Sociedad[]
+}
+
+model Sociedad {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  pais      Pais       @relation(fields: [paisId], references: [id])
+  paisId    String
+  empleados Employee[]
+}
+
+model Localizacion {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  empleados Employee[]
+}
+
 model Employee {
   id              String         @id @default(cuid())
   fullName        String
@@ -168,6 +195,17 @@ model Employee {
   iban            String?
   emergency       String?
   fromRecruitment Boolean        @default(false)
+
+  // humanX: expediente — código interno, vínculo, sociedad/localización y alertas de contrato
+  codigo              String?
+  vinculo             Vinculo       @default(PLANTILLA)
+  sociedad            Sociedad?     @relation(fields: [sociedadId], references: [id])
+  sociedadId          String?
+  localizacion        Localizacion? @relation(fields: [localizacionId], references: [id])
+  localizacionId      String?
+  finPeriodoPrueba    DateTime?
+  vencimientoContrato DateTime?
+  descripcionPuesto   String?
 
   department      Department?    @relation("DeptMembers", fields: [departmentId], references: [id])
   departmentId    String?

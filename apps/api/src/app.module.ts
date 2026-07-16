@@ -6,6 +6,9 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { PrismaModule } from './prisma/prisma.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { PaisesModule } from './paises/paises.module';
+import { SociedadesModule } from './sociedades/sociedades.module';
+import { LocalizacionesModule } from './localizaciones/localizaciones.module';
 import { AbsencesModule } from './absences/absences.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
@@ -45,6 +48,9 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AuthModule,
     EmployeesModule,
     DepartmentsModule,
+    PaisesModule,
+    SociedadesModule,
+    LocalizacionesModule,
     AbsencesModule,
     HolidaysModule,
     OnboardingModule,

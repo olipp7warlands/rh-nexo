@@ -98,3 +98,20 @@
     Pasó de verdad con `DATABASE_URL`/`DIRECT_URL` reales de Supabase. Para comprobar que un
     `.env` no cambió, usar `git status --short .env` (vacío = no trackeado = correcto) o
     `git check-ignore -v .env`, nunca `cat`/`diff` directo sobre el fichero real.
+17. **Turborepo (modo `strict`, default desde Turbo 2.x) NO propaga las variables de entorno
+    del proceso padre a las tareas hijas.** `dotenv -e .env.local -- turbo run dev` puede
+    arrancar la API contra el `.env` real (producción) EN SILENCIO — Nest cae a su propio
+    fallback de `ConfigModule` sin ningún error visible hasta que una query falla con "table
+    does not exist". Pasó de verdad (ver incidente de producción documentado en el historial).
+    Arreglo: `--env-mode=loose` en la invocación de turbo cuando se quiere que herede el env
+    del padre. Además, nunca fiarse solo del wrapper: `apps/api/src/main.ts` tiene una guarda
+    en el propio proceso (`assertNotAccidentalProduction`, independiente de cómo se arrancó)
+    que aborta si `DATABASE_URL` es de producción y `NODE_ENV !== 'production'`.
+18. **No asumir puertos fijos en local — otro proyecto de la máquina puede ocuparlos.** El
+    puerto 3000 de la API chocó con otro proyecto (`stackly`, Next.js) ya corriendo en esta
+    máquina: la API no pudo hacer bind (`EADDRINUSE`), y el proxy de Vite a `/api`, con el
+    puerto hardcodeado, siguió reenviando en silencio al servidor equivocado (404 en cualquier
+    llamada a la API, sin pista clara del motivo). Arreglo: `vite.config.ts` lee `PORT` de
+    `process.env` (con fallback a 3000) en vez de hardcodearlo, y `.env.local` usa 3001. Antes
+    de asumir que un fallo "en dev" es de código, comprobar `Get-NetTCPConnection -State
+    Listen` (PowerShell) por si el puerto ya está ocupado por otra cosa.

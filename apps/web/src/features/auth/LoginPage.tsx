@@ -44,11 +44,11 @@ export function LoginPage() {
           <div className="w-8 h-8 rounded-lg bg-[var(--ink-primary)] flex items-center justify-center">
             <div className="w-3 h-3 bg-[var(--accent)] rounded-sm" />
           </div>
-          <span className="font-serif font-bold text-[20px] tracking-[-0.02em]">humanX</span>
+          <span className="font-serif font-medium text-[20px] tracking-[-0.02em]">humanX</span>
         </div>
 
         <div className="bg-[var(--bg-surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-md)] p-7">
-          <h1 className="text-[18px] font-bold tracking-[-0.01em] mb-1">Inicia sesión</h1>
+          <h1 className="font-serif text-[18px] font-medium tracking-[-0.01em] mb-1">Inicia sesión</h1>
           <p className="text-[13px] text-[var(--ink-secondary)] mb-6">Accede al Core de RRHH del grupo.</p>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>

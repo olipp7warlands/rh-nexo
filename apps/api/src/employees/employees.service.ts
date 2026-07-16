@@ -1,22 +1,37 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EmployeeStatus } from '@prisma/client';
+import { EmployeeStatus, Vinculo } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+
+const WITH_ESTRUCTURA = {
+  department: true,
+  manager: { select: { id: true, fullName: true } },
+  sociedad: { include: { pais: true } },
+  localizacion: true,
+};
 
 @Injectable()
 export class EmployeesService {
   constructor(private readonly db: PrismaService) {}
 
   async findAll(
-    params: { search?: string; departmentId?: string; status?: EmployeeStatus },
+    params: {
+      search?: string;
+      departmentId?: string;
+      status?: EmployeeStatus;
+      vinculo?: Vinculo;
+      paisId?: string;
+    },
     viewer?: AuthUser,
   ) {
-    const { search, departmentId, status } = params;
+    const { search, departmentId, status, vinculo, paisId } = params;
     const employees = await this.db.employee.findMany({
       where: {
         departmentId: departmentId || undefined,
         status: status || undefined,
+        vinculo: vinculo || undefined,
+        sociedad: paisId ? { paisId } : undefined,
         OR: search
           ? [
               { fullName: { contains: search, mode: 'insensitive' } },
@@ -24,7 +39,7 @@ export class EmployeesService {
             ]
           : undefined,
       },
-      include: { department: true, manager: { select: { id: true, fullName: true } } },
+      include: WITH_ESTRUCTURA,
       orderBy: { fullName: 'asc' },
     });
     return employees.map((e) => this.maskSensitive(e, viewer));
@@ -33,7 +48,7 @@ export class EmployeesService {
   async findOne(id: string, viewer?: AuthUser) {
     const emp = await this.db.employee.findUnique({
       where: { id },
-      include: { department: true, manager: true, reports: true, balances: true },
+      include: { ...WITH_ESTRUCTURA, reports: true, balances: true },
     });
     if (!emp) throw new NotFoundException('Empleado no encontrado');
     return this.maskSensitive(emp, viewer);
@@ -55,7 +70,12 @@ export class EmployeesService {
 
   async create(dto: CreateEmployeeDto, actorUserId?: string) {
     const emp = await this.db.employee.create({
-      data: { ...dto, startDate: new Date(dto.startDate) },
+      data: {
+        ...dto,
+        startDate: new Date(dto.startDate),
+        finPeriodoPrueba: dto.finPeriodoPrueba ? new Date(dto.finPeriodoPrueba) : undefined,
+        vencimientoContrato: dto.vencimientoContrato ? new Date(dto.vencimientoContrato) : undefined,
+      },
     });
     await this.audit(actorUserId, 'CREATE', emp.id, null, emp);
     return emp;
@@ -66,7 +86,12 @@ export class EmployeesService {
     const before = await this.findOne(id);
     const after = await this.db.employee.update({
       where: { id },
-      data: { ...dto, ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}) },
+      data: {
+        ...dto,
+        ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
+        ...(dto.finPeriodoPrueba ? { finPeriodoPrueba: new Date(dto.finPeriodoPrueba) } : {}),
+        ...(dto.vencimientoContrato ? { vencimientoContrato: new Date(dto.vencimientoContrato) } : {}),
+      },
     });
     await this.audit(actorUserId, 'UPDATE', id, before, after);
     return after;

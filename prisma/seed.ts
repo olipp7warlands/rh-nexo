@@ -5,7 +5,7 @@
  * Usa ids explícitos (e1..e17, d-*) para poder enlazar manager/departamento
  * sin segundas pasadas. Las contraseñas se hashean con bcrypt.
  */
-import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, OnboardingPhase, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus, CandidateSource } from '@prisma/client';
+import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, OnboardingPhase, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus, CandidateSource, Vinculo } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const db = new PrismaClient();
@@ -22,6 +22,70 @@ const DEPTS = [
   { id: 'd-people',    name: 'People',     color: '#10B981', leadId: 'e2'  },
   { id: 'd-finance',   name: 'Finanzas',   color: '#0F1419', leadId: 'e16' },
 ];
+
+// ── Estructura humanX: países, sociedades, localizaciones ──
+// wowinX es un grupo con matriz en España (dos sociedades: tecnología/producto y
+// servicios corporativos) y catálogo ampliable a otros países donde el grupo opera.
+const PAISES = [
+  { id: 'p-es', nombre: 'España' },
+  { id: 'p-ae', nombre: 'Dubái' },
+  { id: 'p-in', nombre: 'India' },
+  { id: 'p-co', nombre: 'Colombia' },
+  { id: 'p-mx', nombre: 'México' },
+];
+
+const SOCIEDADES = [
+  { id: 'sc-tech-es',      nombre: 'wowinX Tech España, S.L.',       paisId: 'p-es' },
+  { id: 'sc-servicios-es', nombre: 'wowinX Servicios España, S.L.',  paisId: 'p-es' },
+  { id: 'sc-dubai',        nombre: 'wowinX Middle East FZ-LLC',      paisId: 'p-ae' },
+  { id: 'sc-india',        nombre: 'wowinX India Private Limited',   paisId: 'p-in' },
+  { id: 'sc-colombia',     nombre: 'wowinX Colombia SAS',            paisId: 'p-co' },
+  { id: 'sc-mexico',       nombre: 'wowinX México, S.A. de C.V.',    paisId: 'p-mx' },
+];
+
+const LOCALIZACIONES = [
+  { id: 'loc-madrid',    nombre: 'Madrid' },
+  { id: 'loc-barcelona', nombre: 'Barcelona' },
+  { id: 'loc-bilbao',    nombre: 'Bilbao' },
+  { id: 'loc-malaga',    nombre: 'Málaga' },
+  { id: 'loc-valencia',  nombre: 'Valencia' },
+];
+const LOC_ID_POR_NOMBRE = Object.fromEntries(LOCALIZACIONES.map((l) => [l.nombre, l.id]));
+
+// Dirección, CEO y RRHH/Finanzas cuelgan de la sociedad de servicios corporativos;
+// el resto (Ingeniería, Diseño, Datos, Producto, Marketing, Customer) de la de tecnología.
+const SOCIEDAD_SERVICIOS = new Set(['e1', 'e2', 'e16', 'e17']);
+
+// Dos perfiles externos (freelance) de ejemplo; el resto son plantilla.
+const VINCULO_EXTERNO = new Set(['e9', 'e13']);
+
+const FIN_PERIODO_PRUEBA: Record<string, string> = {
+  e4: '2026-09-23', // Sofía Navarro, ONBOARDING desde 2026-06-23 (+3 meses)
+  e13: '2026-09-12', // Raúl Domínguez, ONBOARDING desde 2026-06-12 (+3 meses)
+};
+const VENCIMIENTO_CONTRATO: Record<string, string> = {
+  e9: '2026-10-15', // María Fernández, colaboración externa
+  e13: '2026-12-12', // Raúl Domínguez, colaboración externa de 6 meses
+};
+const DESCRIPCION_PUESTO: Record<string, string> = {
+  e1: 'Dirección general del grupo: estrategia, expansión y relación con inversores.',
+  e2: 'Lidera la función de personas: cultura, talento, compensación y cumplimiento laboral.',
+  e3: 'Responsable de la organización de ingeniería y la hoja de ruta técnica del producto.',
+  e4: 'Diseño de arquitectura y mentoría técnica en el equipo de plataforma.',
+  e5: 'Lidera el equipo de backend del producto principal y sus entregas técnicas.',
+  e6: 'Desarrollo de servicios backend y APIs del producto principal.',
+  e7: 'Dirección del equipo de diseño: sistema de diseño y experiencia de producto.',
+  e8: 'Diseño de producto senior para los flujos core de la plataforma.',
+  e9: 'Diseño de producto para iniciativas de marketing y páginas de captación.',
+  e10: 'Lidera el equipo de datos: analítica, cuadros de mando e infraestructura de datos.',
+  e11: 'Análisis de datos de negocio y soporte a decisiones de producto.',
+  e12: 'Dirección de marketing: posicionamiento, demanda y comunicación de marca.',
+  e13: 'Producción de contenido y campañas de marketing digital.',
+  e14: 'Lidera el equipo de éxito de cliente y la retención de cuentas.',
+  e15: 'Gestión de cartera de clientes y resolución de incidencias.',
+  e16: 'Responsable de finanzas del grupo: contabilidad, tesorería y reporting.',
+  e17: 'Selección y captación de talento para todo el grupo.',
+};
 
 // ── Empleados (orden: managers antes que reports) ──
 type E = { id: string; fullName: string; jobTitle: string; dept: string; managerId: string | null; level: string; location: string; remote: boolean; email: string; phone: string; startDate: string; status: EmployeeStatus; salary: number | null; birthday: string; dni: string; address: string; iban: string; emergency: string; fromRecruitment?: boolean };
@@ -154,19 +218,32 @@ async function main() {
     db.onboardingTask.deleteMany(), db.onboardingProcess.deleteMany(), db.onboardingTemplateTask.deleteMany(), db.onboardingTemplate.deleteMany(),
     db.timeEntry.deleteMany(), db.leaveBalance.deleteMany(), db.absence.deleteMany(), db.holiday.deleteMany(),
     db.user.deleteMany(), db.employee.deleteMany(), db.department.deleteMany(),
+    db.sociedad.deleteMany(), db.localizacion.deleteMany(), db.pais.deleteMany(),
   ]);
+
+  // Estructura: países → sociedades, y localizaciones (catálogos independientes)
+  for (const p of PAISES) await db.pais.create({ data: { id: p.id, nombre: p.nombre } });
+  for (const s of SOCIEDADES) await db.sociedad.create({ data: { id: s.id, nombre: s.nombre, paisId: s.paisId } });
+  for (const l of LOCALIZACIONES) await db.localizacion.create({ data: { id: l.id, nombre: l.nombre } });
 
   // Departamentos (sin lead todavía)
   for (const d of DEPTS) await db.department.create({ data: { id: d.id, name: d.name, color: d.color } });
 
   // Empleados (en orden → managers existen antes que reports)
-  for (const e of EMPLOYEES) {
+  for (const [i, e] of EMPLOYEES.entries()) {
     await db.employee.create({ data: {
       id: e.id, fullName: e.fullName, email: e.email, phone: e.phone, jobTitle: e.jobTitle,
       level: e.level, location: e.location, remote: e.remote, startDate: D(e.startDate),
       status: e.status, salary: e.salary ?? undefined, birthday: e.birthday, dni: e.dni,
       address: e.address, iban: e.iban, emergency: e.emergency, fromRecruitment: e.fromRecruitment ?? false,
       departmentId: e.dept, managerId: e.managerId ?? undefined,
+      codigo: `EMP-${String(i + 1).padStart(4, '0')}`,
+      vinculo: VINCULO_EXTERNO.has(e.id) ? Vinculo.EXTERNO : Vinculo.PLANTILLA,
+      sociedadId: SOCIEDAD_SERVICIOS.has(e.id) ? 'sc-servicios-es' : 'sc-tech-es',
+      localizacionId: LOC_ID_POR_NOMBRE[e.location],
+      finPeriodoPrueba: FIN_PERIODO_PRUEBA[e.id] ? D(FIN_PERIODO_PRUEBA[e.id]) : undefined,
+      vencimientoContrato: VENCIMIENTO_CONTRATO[e.id] ? D(VENCIMIENTO_CONTRATO[e.id]) : undefined,
+      descripcionPuesto: DESCRIPCION_PUESTO[e.id],
     }});
   }
   // Asignar leads de departamento

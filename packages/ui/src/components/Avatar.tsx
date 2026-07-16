@@ -1,6 +1,7 @@
 import { cn } from '../cn';
 
-const COLORS = ['#1FB6E8', '#6366F1', '#14B8A6', '#F59E0B', '#EC4899', '#0F1419', '#8B5CF6', '#10B981'];
+// Editorial (monocromo): grises oscuros, todos con contraste suficiente para texto blanco.
+const COLORS = ['#0A0A0A', '#1A1A1A', '#2B2B2B', '#3D3D3D', '#333333', '#4A4A4A', '#5C5C5C', '#6B6B6B'];
 export function avatarColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;

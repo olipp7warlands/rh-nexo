@@ -105,7 +105,7 @@ export function CandidatePanel({
           </div>
 
           <div>
-            <h3 className="text-[13px] font-semibold mb-2">Entrevistas</h3>
+            <h3 className="font-serif text-[13px] font-medium mb-2">Entrevistas</h3>
             <div className="flex flex-col gap-2 mb-3">
               {application.interviews.length === 0 && (
                 <p className="text-[12px] text-[var(--ink-tertiary)]">Sin entrevistas programadas.</p>
@@ -159,7 +159,7 @@ export function CandidatePanel({
           </div>
 
           <div>
-            <h3 className="text-[13px] font-semibold mb-2">Evaluaciones</h3>
+            <h3 className="font-serif text-[13px] font-medium mb-2">Evaluaciones</h3>
             <div className="flex flex-col gap-2 mb-3">
               {application.evaluations.length === 0 && (
                 <p className="text-[12px] text-[var(--ink-tertiary)]">Sin evaluaciones registradas.</p>
@@ -208,7 +208,7 @@ export function CandidatePanel({
 
           {application.decisions.length > 0 && (
             <div>
-              <h3 className="text-[13px] font-semibold mb-2">Traza de decisiones</h3>
+              <h3 className="font-serif text-[13px] font-medium mb-2">Traza de decisiones</h3>
               <div className="flex flex-col gap-1.5">
                 {application.decisions.map((d) => (
                   <div key={d.id} className="text-[12px] text-[var(--ink-secondary)] flex items-center gap-2">

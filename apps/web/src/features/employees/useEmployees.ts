@@ -3,6 +3,7 @@ import { api } from '../../lib/api';
 
 export type EmployeeStatus = 'ACTIVO' | 'ONBOARDING' | 'AUSENTE' | 'BAJA';
 export type ContractType = 'INDEFINIDO' | 'TEMPORAL' | 'PRACTICAS' | 'FREELANCE';
+export type Vinculo = 'PLANTILLA' | 'EXTERNO';
 
 export interface Department {
   id: string;
@@ -21,6 +22,20 @@ export interface LeaveBalance {
   total: number;
   used: number;
   pending: number;
+}
+export interface Pais {
+  id: string;
+  nombre: string;
+}
+export interface SociedadRef {
+  id: string;
+  nombre: string;
+  paisId: string;
+  pais: Pais;
+}
+export interface LocalizacionRef {
+  id: string;
+  nombre: string;
 }
 
 export interface Employee {
@@ -49,12 +64,24 @@ export interface Employee {
   manager?: EmployeeRef | null;
   reports?: Employee[];
   balances?: LeaveBalance[];
+  // humanX: expediente
+  codigo: string | null;
+  vinculo: Vinculo;
+  sociedadId: string | null;
+  localizacionId: string | null;
+  finPeriodoPrueba: string | null;
+  vencimientoContrato: string | null;
+  descripcionPuesto: string | null;
+  sociedad?: SociedadRef | null;
+  localizacion?: LocalizacionRef | null;
 }
 
 export interface EmployeeFilters {
   search?: string;
   departmentId?: string;
   status?: EmployeeStatus;
+  vinculo?: Vinculo;
+  paisId?: string;
 }
 
 export function useEmployees(params: EmployeeFilters = {}) {
@@ -62,6 +89,8 @@ export function useEmployees(params: EmployeeFilters = {}) {
   if (params.search) qs.set('search', params.search);
   if (params.departmentId) qs.set('departmentId', params.departmentId);
   if (params.status) qs.set('status', params.status);
+  if (params.vinculo) qs.set('vinculo', params.vinculo);
+  if (params.paisId) qs.set('paisId', params.paisId);
   return useQuery({
     queryKey: ['employees', params],
     queryFn: () => api.get<Employee[]>(`/employees?${qs.toString()}`),

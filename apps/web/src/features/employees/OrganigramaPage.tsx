@@ -4,7 +4,7 @@ import { useEmployees, type Employee } from './useEmployees';
 
 function OrgCard({ emp, lead = false }: { emp: Employee; lead?: boolean }) {
   return (
-    <Link to={`/empleados/${emp.id}`} className={`org-card${lead ? ' org-card-lead' : ''}`} title={emp.fullName}>
+    <Link to={`/personas/${emp.id}`} className={`org-card${lead ? ' org-card-lead' : ''}`} title={emp.fullName}>
       <Avatar name={emp.fullName} size="sm" />
       <div className="min-w-0">
         <div className={`${lead ? 'text-[13px]' : 'text-[12px]'} font-semibold leading-tight truncate`}>{emp.fullName}</div>

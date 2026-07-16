@@ -43,7 +43,7 @@ export function EmployeeDetailPage() {
   if (error || !emp) {
     return (
       <div className="max-w-[1400px] mx-auto px-10 py-10">
-        <Link to="/empleados" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-4">
+        <Link to="/personas" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-4">
           <ArrowLeft className="w-4 h-4" /> Volver al directorio
         </Link>
         <Card>
@@ -57,7 +57,7 @@ export function EmployeeDetailPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-10 py-10">
-      <Link to="/empleados" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-5">
+      <Link to="/personas" className="text-[13px] text-[var(--accent-ink)] inline-flex items-center gap-1.5 mb-5">
         <ArrowLeft className="w-4 h-4" /> Volver al directorio
       </Link>
 
@@ -67,7 +67,7 @@ export function EmployeeDetailPage() {
           <Avatar name={emp.fullName} size="xl" />
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-[26px] font-bold tracking-[-0.02em] leading-tight">{emp.fullName}</h1>
+              <h1 className="font-serif text-[26px] font-medium tracking-[-0.02em] leading-tight">{emp.fullName}</h1>
               <EmpStatus status={emp.status} />
               {emp.fromRecruitment && <Badge variant="accent">Contratado vía VITAE</Badge>}
             </div>
@@ -138,7 +138,7 @@ export function EmployeeDetailPage() {
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2 flex flex-col gap-5">
             <Card>
-              <h3 className="text-[14px] font-semibold mb-4">Información general</h3>
+              <h3 className="font-serif text-[14px] font-medium mb-4">Información general</h3>
               <div className="grid grid-cols-3 gap-x-6 gap-y-5">
                 <Field label="Puesto" value={emp.jobTitle} />
                 <Field label="Departamento" value={emp.department?.name ?? '—'} />
@@ -153,12 +153,12 @@ export function EmployeeDetailPage() {
             </Card>
             {emp.reports && emp.reports.length > 0 && (
               <Card>
-                <h3 className="text-[14px] font-semibold mb-4">Equipo directo · {emp.reports.length}</h3>
+                <h3 className="font-serif text-[14px] font-medium mb-4">Equipo directo · {emp.reports.length}</h3>
                 <div className="flex flex-col gap-1">
                   {emp.reports.map((r) => (
                     <Link
                       key={r.id}
-                      to={`/empleados/${r.id}`}
+                      to={`/personas/${r.id}`}
                       className="flex items-center gap-3 p-2 rounded-md hover:bg-[var(--bg-subtle)]"
                     >
                       <Avatar name={r.fullName} size="sm" />
@@ -175,7 +175,7 @@ export function EmployeeDetailPage() {
           </div>
           <div className="flex flex-col gap-5">
             <Card>
-              <h3 className="text-[14px] font-semibold mb-1">Saldo de vacaciones</h3>
+              <h3 className="font-serif text-[14px] font-medium mb-1">Saldo de vacaciones</h3>
               {balance ? (
                 <>
                   <div className="mono text-[28px] font-bold leading-tight mt-2">
@@ -195,7 +195,7 @@ export function EmployeeDetailPage() {
               )}
             </Card>
             <Card>
-              <h3 className="text-[14px] font-semibold mb-1">Antigüedad</h3>
+              <h3 className="font-serif text-[14px] font-medium mb-1">Antigüedad</h3>
               <p className="text-[15px] font-medium mt-2">{seniority(emp.startDate)}</p>
               <p className="text-[12px] text-[var(--ink-tertiary)] mt-1">Desde {formatDate(emp.startDate)}</p>
             </Card>
@@ -206,7 +206,7 @@ export function EmployeeDetailPage() {
       {tab === 'Información personal' && (
         <div className="grid grid-cols-2 gap-5">
           <Card>
-            <h3 className="text-[14px] font-semibold mb-4">Datos personales</h3>
+            <h3 className="font-serif text-[14px] font-medium mb-4">Datos personales</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
               <Field label="Nombre completo" value={emp.fullName} />
               <Field label="DNI / NIE" value={emp.dni ?? '—'} mono />
@@ -216,12 +216,12 @@ export function EmployeeDetailPage() {
           </Card>
           <div className="flex flex-col gap-5">
             <Card>
-              <h3 className="text-[14px] font-semibold mb-4">Contacto de emergencia</h3>
+              <h3 className="font-serif text-[14px] font-medium mb-4">Contacto de emergencia</h3>
               <p className="text-[13px]">{emp.emergency ?? '—'}</p>
             </Card>
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <h3 className="text-[14px] font-semibold">Datos bancarios</h3>
+                <h3 className="font-serif text-[14px] font-medium">Datos bancarios</h3>
                 <Badge variant="neutral">Cifrado</Badge>
               </div>
               <Field label="IBAN" value={emp.iban ?? (canManage ? '—' : 'Restringido')} mono />
@@ -234,23 +234,33 @@ export function EmployeeDetailPage() {
       {tab === 'Puesto y contrato' && (
         <div className="grid grid-cols-2 gap-5">
           <Card>
-            <h3 className="text-[14px] font-semibold mb-4">Puesto</h3>
+            <h3 className="font-serif text-[14px] font-medium mb-4">Puesto</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+              <Field label="Código" value={emp.codigo ?? '—'} mono />
               <Field label="Cargo" value={emp.jobTitle} />
               <Field label="Departamento" value={emp.department?.name ?? '—'} />
               <Field label="Nivel" value={LEVEL_LABEL[emp.level] ?? emp.level} />
               <Field label="Manager" value={emp.manager?.fullName ?? '—'} />
               <Field label="Personas a cargo" value={String(emp.reports?.length ?? 0)} />
-              <Field label="Ubicación" value={`${emp.location}${emp.remote ? ' · Remoto' : ''}`} />
+              <Field label="Sociedad" value={emp.sociedad ? `${emp.sociedad.nombre} (${emp.sociedad.pais.nombre})` : '—'} />
+              <Field label="Localización" value={emp.localizacion?.nombre ?? emp.location} />
+              <Field label="Modalidad" value={emp.remote ? 'Remoto' : 'Presencial'} />
+              {emp.descripcionPuesto && (
+                <div className="col-span-2">
+                  <Field label="Descripción del puesto" value={emp.descripcionPuesto} />
+                </div>
+              )}
             </div>
           </Card>
           <Card>
-            <h3 className="text-[14px] font-semibold mb-4">Contrato</h3>
+            <h3 className="font-serif text-[14px] font-medium mb-4">Contrato</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+              <Field label="Vínculo" value={emp.vinculo === 'EXTERNO' ? 'Externo' : 'Plantilla'} />
               <Field label="Tipo" value={CONTRACT_LABEL[emp.contractType] ?? emp.contractType} />
               <Field label="Fecha de alta" value={formatDate(emp.startDate)} mono />
               <Field label="Antigüedad" value={seniority(emp.startDate)} />
-              <Field label="Modalidad" value={emp.remote ? 'Remoto' : 'Presencial'} />
+              <Field label="Fin de periodo de prueba" value={emp.finPeriodoPrueba ? formatDate(emp.finPeriodoPrueba) : '—'} mono />
+              <Field label="Vencimiento de contrato" value={emp.vencimientoContrato ? formatDate(emp.vencimientoContrato) : '—'} mono />
             </div>
           </Card>
         </div>
@@ -260,7 +270,7 @@ export function EmployeeDetailPage() {
         <div className="grid grid-cols-3 gap-5">
           <Card className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-[14px] font-semibold">Retribución actual</h3>
+              <h3 className="font-serif text-[14px] font-medium">Retribución actual</h3>
               <Badge variant="warning">Confidencial</Badge>
             </div>
             {emp.salary !== null && emp.salary !== undefined ? (
@@ -275,7 +285,7 @@ export function EmployeeDetailPage() {
             )}
           </Card>
           <Card>
-            <h3 className="text-[14px] font-semibold mb-3">Datos bancarios</h3>
+            <h3 className="font-serif text-[14px] font-medium mb-3">Datos bancarios</h3>
             <Field label="IBAN" value={emp.iban ?? (canManage ? '—' : 'Restringido')} mono />
           </Card>
         </div>
@@ -283,7 +293,7 @@ export function EmployeeDetailPage() {
 
       {tab === 'Ausencias' && (
         <Card>
-          <h3 className="text-[14px] font-semibold mb-3">Saldo {balance?.year ?? new Date().getFullYear()}</h3>
+          <h3 className="font-serif text-[14px] font-medium mb-3">Saldo {balance?.year ?? new Date().getFullYear()}</h3>
           {balance ? (
             <p className="text-[13px] text-[var(--ink-secondary)]">
               {balance.total - balance.used} días disponibles · {balance.used} usados · {balance.pending} pendientes.

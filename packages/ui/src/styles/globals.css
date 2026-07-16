@@ -3,13 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --bg-canvas:#F5F6F8; --bg-surface:#FFFFFF; --bg-subtle:#FAFBFC; --bg-sidebar:#DCE2E8; --bg-sidebar-hover:#CCD4DD; --bg-hover:#EDEFF2;
-  --ink-primary:#0F1419; --ink-secondary:#4B5563; --ink-tertiary:#9CA3AF; --ink-disabled:#D1D5DB; --ink-inverse:#FFFFFF;
-  --line:#E5E7EB; --line-strong:#D1D5DB; --line-subtle:#F1F3F5;
-  /* Monocromo (humanX): antes cian de marca. success/warning/danger/info no cambian. */
-  --accent:#0F1419; --accent-hover:#000000; --accent-pressed:#000000; --accent-soft:#F0F1F3; --accent-ink:#0F1419;
-  --success:#16A34A; --success-soft:#DCFCE7; --warning:#D97706; --warning-soft:#FEF3C7; --danger:#DC2626; --danger-soft:#FEE2E2; --info:#2563EB; --info-soft:#DBEAFE;
-  /* humanX: serif de marca en titulares y números destacados. Inter sigue en el cuerpo. */
+  /* humanX — dirección "Editorial": blanco/negro puro, sin color de marca. */
+  --bg-canvas:#FFFFFF; --bg-surface:#FFFFFF; --bg-subtle:#FAFAFA; --bg-sidebar:#FAFAFA; --bg-sidebar-hover:#F0F0F0; --bg-hover:#F0F0F0;
+  /* ink-secondary/ink-tertiary son texto LEGIBLE (AA ≥ 4.5:1 sobre blanco: 5.3:1 y 4.6:1
+     respectivamente) — nunca bajar de ~#757575 aquí. Para grises más claros de puro adorno
+     (puntos decorativos, no texto) usar --ink-disabled, que no lleva ninguna garantía de
+     contraste de texto. */
+  --ink-primary:#0A0A0A; --ink-secondary:#6B6B6B; --ink-tertiary:#757575; --ink-disabled:#D6D6D6; --ink-inverse:#FFFFFF;
+  --line:#EAEAEA; --line-strong:#D6D6D6; --line-subtle:#F2F2F2;
+  --accent:#0A0A0A; --accent-hover:#000000; --accent-pressed:#000000; --accent-soft:#F0F0F0; --accent-ink:#0A0A0A;
+  /* Estados: monocromos por diseño (ver Badge.tsx para cómo se distinguen sin matiz —
+     relleno/contorno/píldora invertida). Estos tokens dan un valor de gris razonable a los
+     pocos usos que no pasan por Badge (texto de error, barras de progreso…). */
+  --success:#0A0A0A; --success-soft:#F0F0F0; --warning:#6B6B6B; --warning-soft:#F5F5F5; --danger:#0A0A0A; --danger-soft:#F0F0F0; --info:#6B6B6B; --info-soft:#F5F5F5;
+  /* El único color no monocromo permitido en la app son las categorías de Anotaciones (Fase D):
+     tonos apagados/sobrios, nunca saturados, para no romper el blanco y negro. */
   --font-serif:'Playfair Display',Georgia,serif;
 }
 * { box-sizing:border-box; }
@@ -19,7 +27,7 @@ body {
   font-size:14px; line-height:1.5; color:var(--ink-primary); background:var(--bg-canvas);
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; font-feature-settings:'cv11','ss01','ss03';
 }
-.mono { font-family:'JetBrains Mono',ui-monospace,monospace; }
+.mono { font-family:'IBM Plex Mono',ui-monospace,monospace; }
 .mono-tabular { font-variant-numeric:tabular-nums; }
 
 /* KPI cards (alineación de valores con grid-rows auto/1fr/auto) */
@@ -27,7 +35,7 @@ body {
 .stat-card.primary { background:var(--accent); border-color:var(--accent); color:white; }
 .stat-label { font-size:13px; font-weight:500; line-height:1.35; min-height:calc(13px*1.35*2); display:flex; align-items:flex-start; color:var(--ink-secondary); }
 .stat-card.primary .stat-label { color:rgba(255,255,255,0.95); }
-.stat-value { font-family:var(--font-serif); font-size:32px; font-weight:700; letter-spacing:-0.02em; line-height:1; align-self:end; font-variant-numeric:tabular-nums; }
+.stat-value { font-family:var(--font-serif); font-size:32px; font-weight:500; letter-spacing:-0.02em; line-height:1; align-self:end; font-variant-numeric:tabular-nums; }
 .stat-meta { font-size:12px; color:var(--ink-tertiary); line-height:1.4; min-height:16px; display:flex; align-items:center; }
 .stat-card.primary .stat-meta { color:rgba(255,255,255,0.85); }
 .stat-delta { display:inline-flex; align-items:center; gap:4px; height:20px; padding:0 8px; border-radius:9999px; font-size:11px; font-weight:500; }
@@ -38,7 +46,7 @@ body {
 .org-root { display:inline-flex; flex-direction:column; align-items:center; min-width:100%; }
 .org-card { display:flex; align-items:center; gap:9px; padding:9px 12px; background:var(--bg-surface); border:1px solid var(--line-strong); border-radius:10px; width:172px; transition:all .15s; cursor:pointer; }
 .org-card-lead { width:184px; border-color:var(--ink-primary); }
-.org-card:hover { border-color:var(--accent); box-shadow:0 2px 8px rgba(15,20,25,.08); transform:translateY(-1px); }
+.org-card:hover { border-color:var(--accent); box-shadow:0 2px 8px rgba(10,10,10,.08); transform:translateY(-1px); }
 .org-bus { display:flex; gap:20px; position:relative; margin-top:46px; align-items:flex-start; }
 .org-bus::before { content:''; position:absolute; top:-24px; left:50%; transform:translateX(-1px); width:2px; height:24px; background:var(--line-strong); }
 .org-col { display:flex; flex-direction:column; align-items:flex-start; position:relative; }
