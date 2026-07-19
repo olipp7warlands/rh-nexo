@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { EmployeeStatus, Vinculo } from '@prisma/client';
 import { EmployeesService } from './employees.service';
-import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
+import { BajaEmployeeDto, CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 
@@ -27,6 +27,16 @@ export class EmployeesController {
     return this.service.findOne(id, user);
   }
 
+  @Get(':id/historico-puestos')
+  historicoPuestos(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.historicoPuestos(id, user);
+  }
+
+  @Get(':id/historico-salarial')
+  historicoSalarial(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.historicoSalarial(id, user);
+  }
+
   @Roles('ADMIN', 'RRHH')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateEmployeeDto) {
@@ -40,8 +50,8 @@ export class EmployeesController {
   }
 
   @Roles('ADMIN', 'RRHH')
-  @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.service.remove(id, user.id);
+  @Post(':id/baja')
+  baja(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: BajaEmployeeDto) {
+    return this.service.baja(id, dto.fecha, user);
   }
 }

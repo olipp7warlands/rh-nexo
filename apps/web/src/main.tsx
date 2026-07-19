@@ -13,13 +13,14 @@ import { OrganigramaPage } from './features/employees/OrganigramaPage';
 import { InicioPage } from './features/absences/InicioPage';
 import { AusenciasPage } from './features/absences/AusenciasPage';
 import { CalendarioPage } from './features/absences/CalendarioPage';
-import { OnboardingPage } from './features/onboarding/OnboardingPage';
+import { ProcesosPage } from './features/procesos/ProcesosPage';
 import { DesempenoPage } from './features/performance/DesempenoPage';
 import { InformesPage } from './features/reports/InformesPage';
 import { NominaPage } from './features/payroll/NominaPage';
 import { DocumentosPage } from './features/documents/DocumentosPage';
 import { ReclutamientoPage } from './features/reclutamiento/ReclutamientoPage';
 import { JobDetailPage } from './features/reclutamiento/JobDetailPage';
+import { AnotacionesPage } from './features/anotaciones/AnotacionesPage';
 import { SociedadesPage } from './features/estructura/SociedadesPage';
 import { LocalizacionesPage } from './features/estructura/LocalizacionesPage';
 import { DepartamentosPage } from './features/estructura/DepartamentosPage';
@@ -32,7 +33,8 @@ const PAGES: Record<string, JSX.Element> = {
   '/organigrama': <OrganigramaPage />,
   '/ausencias': <AusenciasPage />,
   '/agenda': <CalendarioPage />,
-  '/procesos': <OnboardingPage />,
+  '/anotaciones': <AnotacionesPage />,
+  '/procesos': <ProcesosPage />,
   '/desempeno': <DesempenoPage />,
   '/informes': <InformesPage />,
   '/nomina': <NominaPage />,

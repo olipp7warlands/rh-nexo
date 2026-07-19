@@ -105,6 +105,42 @@ export function useEmployee(id: string) {
   });
 }
 
+export interface RegistroPuesto {
+  id: string;
+  fechaInicio: string;
+  fechaFin: string | null;
+  titulo: string;
+  sociedad?: SociedadRef | null;
+  departamento?: Department | null;
+}
+
+export interface RegistroSalarial {
+  id: string;
+  fecha: string;
+  concepto: string;
+  brutoAnual: number;
+}
+
+/** El backend ya aplica el mismo criterio (ADMIN/RRHH/propio empleado); `enabled` evita
+ *  disparar la petición y comerse un 403 en silencio para quien no tiene acceso. */
+export function useHistoricoPuestos(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['historico-puestos', id],
+    queryFn: () => api.get<RegistroPuesto[]>(`/employees/${id}/historico-puestos`),
+    enabled: enabled && !!id,
+  });
+}
+
+/** El backend ya aplica el mismo criterio (ADMIN/RRHH/propio empleado); `enabled` evita
+ *  disparar la petición y comerse un 403 en silencio para quien no tiene acceso. */
+export function useHistoricoSalarial(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['historico-salarial', id],
+    queryFn: () => api.get<RegistroSalarial[]>(`/employees/${id}/historico-salarial`),
+    enabled: enabled && !!id,
+  });
+}
+
 /** Alta de empleado: persiste e invalida el directorio. */
 export function useCreateEmployee() {
   const qc = useQueryClient();
@@ -126,14 +162,16 @@ export function useUpdateEmployee(id: string) {
   });
 }
 
-/** Baja lógica del empleado (status → BAJA), auditada en el backend. */
-export function useDeleteEmployee(id: string) {
+/** Baja del empleado: estado → BAJA + apertura del proceso de Offboarding, atómico en el
+ *  backend (una sola llamada, no dos mutaciones independientes). Auditado. */
+export function useBajaEmployee(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.del<Employee>(`/employees/${id}`),
-    onSuccess: (updated) => {
-      qc.setQueryData(['employee', id], updated);
+    mutationFn: (fecha: string) => api.post<{ employee: Employee }>(`/employees/${id}/baja`, { fecha }),
+    onSuccess: ({ employee }) => {
+      qc.setQueryData(['employee', id], employee);
       qc.invalidateQueries({ queryKey: ['employees'] });
+      qc.invalidateQueries({ queryKey: ['procesos'] });
     },
   });
 }

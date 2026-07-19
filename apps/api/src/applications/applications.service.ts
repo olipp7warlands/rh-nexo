@@ -175,7 +175,7 @@ export class ApplicationsService {
 
   /**
    * La automatización clave de la Fase 6: al contratar, crea el Employee (enlazado por
-   * candidateId) y arranca su OnboardingProcess con la plantilla estándar, todo atómico.
+   * candidateId) y arranca su Proceso de tipo ONBOARDING con la plantilla activa, todo atómico.
    * Solo RRHH/ADMIN (el controller ya lo restringe vía @Roles).
    */
   async hire(applicationId: string, dto: HireDto, viewer: AuthUser) {
@@ -212,20 +212,21 @@ export class ApplicationsService {
         },
       });
 
-      // Misma copia de plantilla que OnboardingService.create() (onboarding.service.ts:73-94),
+      // Misma copia de plantilla que ProcesosService.create() (procesos.service.ts),
       // reimplementada aquí para que quede dentro de la misma transacción.
-      const template = await tx.onboardingTemplate.findFirst({ include: { tasks: true } });
-      const onboarding = await tx.onboardingProcess.create({
+      const plantilla = await tx.plantillaProceso.findFirst({ where: { tipo: 'ONBOARDING', activa: true }, include: { tareas: { orderBy: { orden: 'asc' } } } });
+      const onboarding = await tx.proceso.create({
         data: {
           employeeId: employee.id,
+          tipo: 'ONBOARDING',
           buddyId: dto.buddyId,
-          templateId: template?.id,
-          startDate: new Date(dto.startDate),
-          tasks: template
-            ? { create: template.tasks.map((t) => ({ label: t.label, phase: t.phase, owner: t.owner })) }
+          plantillaId: plantilla?.id,
+          fechaInicio: new Date(dto.startDate),
+          tareas: plantilla
+            ? { create: plantilla.tareas.map((t) => ({ label: t.label, fase: t.fase, responsable: t.responsable })) }
             : undefined,
         },
-        include: { tasks: true },
+        include: { tareas: true },
       });
 
       const application = await tx.application.update({

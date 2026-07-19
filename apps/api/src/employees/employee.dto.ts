@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { ContractType, EmployeeStatus, Vinculo } from '@prisma/client';
 
 export class CreateEmployeeDto {
@@ -28,6 +28,10 @@ export class CreateEmployeeDto {
   @IsOptional() @IsString() finPeriodoPrueba?: string; // ISO
   @IsOptional() @IsString() vencimientoContrato?: string; // ISO
   @IsOptional() @IsString() descripcionPuesto?: string;
+}
+
+export class BajaEmployeeDto {
+  @IsDateString() fecha!: string; // ISO
 }
 
 // Edición parcial: todos los campos opcionales (es lo que hace funcionar "Editar")

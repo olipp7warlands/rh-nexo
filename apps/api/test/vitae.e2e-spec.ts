@@ -10,7 +10,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
  * "Senior Frontend Engineer" (hiring manager: Carlos, e3) — uno sin CV y otro con CV — y
  * ejecuta el cribado automático; el sin-CV se descarta, el con-CV avanza a "Cribado". Carlos
  * (MANAGER, dueño de esa oferta) puede ver/gestionar su pipeline pero no el de otras ofertas
- * ni contratar. Blanca contrata al candidato con CV: se crea su Employee + OnboardingProcess
+ * ni contratar. Blanca contrata al candidato con CV: se crea su Employee + Proceso (ONBOARDING)
  * con la plantilla estándar, todo auditado. Limpia los datos creados al terminar.
  */
 describe('VITAE — Reclutamiento (integración)', () => {
@@ -56,8 +56,8 @@ describe('VITAE — Reclutamiento (integración)', () => {
     // El cribado automático audita sobre el Job real del seed (no se borra, solo su rastro de test).
     await db.auditLog.deleteMany({ where: { entity: 'Job', entityId: jobFrontId, action: 'AUTO_SCREEN' } });
     if (onboardingProcessId) {
-      await db.onboardingTask.deleteMany({ where: { processId: onboardingProcessId } });
-      await db.onboardingProcess.delete({ where: { id: onboardingProcessId } }).catch(() => undefined);
+      await db.procesoTarea.deleteMany({ where: { procesoId: onboardingProcessId } });
+      await db.proceso.delete({ where: { id: onboardingProcessId } }).catch(() => undefined);
     }
     if (hiredEmployeeId) {
       await db.auditLog.deleteMany({ where: { entity: 'Employee', entityId: hiredEmployeeId } });
@@ -208,7 +208,7 @@ describe('VITAE — Reclutamiento (integración)', () => {
     expect(evaluation.body.recommendation).toBe('contratar');
   });
 
-  it('RRHH contrata al candidato con CV: crea Employee + OnboardingProcess con la plantilla estándar', async () => {
+  it('RRHH contrata al candidato con CV: crea Employee + Proceso (ONBOARDING) con la plantilla estándar', async () => {
     const res = await request(http)
       .post(`/api/applications/${appConCvId}/hire`)
       .set('Authorization', `Bearer ${rrhhToken}`)
@@ -221,7 +221,7 @@ describe('VITAE — Reclutamiento (integración)', () => {
     expect(res.body.employee.candidateId).toBe(candidateConCvId);
     expect(res.body.employee.status).toBe('ONBOARDING');
     expect(res.body.employee.jobTitle).toBe('Senior Frontend Engineer');
-    expect(res.body.onboarding.tasks.length).toBeGreaterThan(0);
+    expect(res.body.onboarding.tareas.length).toBeGreaterThan(0);
     expect(res.body.application.status).toBe('CONTRATADO');
 
     const auditLog = await db.auditLog.findFirst({
