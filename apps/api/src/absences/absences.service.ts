@@ -30,10 +30,13 @@ export class AbsencesService {
     },
   };
 
-  findAll(viewer: AuthUser, status?: AbsenceStatus) {
+  /** `employeeId` se aplica DENTRO del alcance por rol (AND, no lo sustituye): pedir el de
+   *  otra persona fuera del propio alcance da lista vacía, nunca datos ajenos. */
+  findAll(viewer: AuthUser, status?: AbsenceStatus, employeeId?: string) {
     return this.db.absence.findMany({
-      where: { ...this.scopeWhere(viewer), status: status || undefined },
+      where: { ...this.scopeWhere(viewer), status: status || undefined, employeeId: employeeId || undefined },
       include: { employee: this.employeeSelect },
+      relationLoadStrategy: 'join',
       orderBy: { startDate: 'desc' },
     });
   }
@@ -48,6 +51,7 @@ export class AbsencesService {
         endDate: { gte: new Date(from) },
       },
       include: { employee: { select: { id: true, fullName: true } } },
+      relationLoadStrategy: 'join',
       orderBy: { startDate: 'asc' },
     });
   }

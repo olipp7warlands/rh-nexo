@@ -45,6 +45,7 @@ export class DocumentsService {
         owner: { select: { id: true, fullName: true } },
         signatures: { include: { employee: { select: { id: true, fullName: true } } } },
       },
+      relationLoadStrategy: 'join',
       orderBy: { createdAt: 'desc' },
     });
   }

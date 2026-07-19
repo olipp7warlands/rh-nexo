@@ -3,7 +3,12 @@
 // precisión contable, migrar campos monetarios a Decimal.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Auditoría de rendimiento: convierte los `include` con relaciones en un JOIN real (1 query)
+  // en vez de una query por relación (batched vía "WHERE id IN (...)"). Bajo el pooler de
+  // Supabase, cada query de más cuesta una tanda extra de BEGIN/DEALLOCATE ALL/COMMIT — este
+  // cambio es el de mayor impacto agregado porque toca todos los `include` pesados a la vez.
+  previewFeatures = ["relationJoins"]
 }
 
 // DATABASE_URL: pooler de Supabase (Supavisor, puerto 6543, ?pgbouncer=true) — usado en runtime.
@@ -154,18 +159,18 @@ enum CandidateSource {
 
 // ─────────────────────── Identidad / Organización ───────────────────────
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String          @id @default(cuid())
+  email         String          @unique
   passwordHash  String
-  role          Role      @default(EMPLEADO)
-  employee      Employee? @relation(fields: [employeeId], references: [id])
-  employeeId    String?   @unique
+  role          Role            @default(EMPLEADO)
+  employee      Employee?       @relation(fields: [employeeId], references: [id])
+  employeeId    String?         @unique
   lastLogin     DateTime?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime        @default(now())
   notifications Notification[]
-  auditLogs     AuditLog[] @relation("AuditActor")
+  auditLogs     AuditLog[]      @relation("AuditActor")
   decisions     AuditDecision[] @relation("DecisionActor")
-  anotaciones   Anotacion[] @relation("AnotacionAutor")
+  anotaciones   Anotacion[]     @relation("AnotacionAutor")
 }
 
 model Department {
@@ -207,13 +212,13 @@ model Employee {
   email           String         @unique
   phone           String?
   jobTitle        String
-  level           String         // exec | lead | senior | mid | junior
+  level           String // exec | lead | senior | mid | junior
   location        String
   remote          Boolean        @default(false)
   startDate       DateTime
   contractType    ContractType   @default(INDEFINIDO)
   status          EmployeeStatus @default(ACTIVO)
-  salary          Int?           // bruto anual en euros
+  salary          Int? // bruto anual en euros
   birthday        String?
   dni             String?
   address         String?
@@ -232,63 +237,72 @@ model Employee {
   vencimientoContrato DateTime?
   descripcionPuesto   String?
 
-  department      Department?    @relation("DeptMembers", fields: [departmentId], references: [id])
-  departmentId    String?
-  leadingDepts    Department[]   @relation("DeptLead")
+  department   Department?  @relation("DeptMembers", fields: [departmentId], references: [id])
+  departmentId String?
+  leadingDepts Department[] @relation("DeptLead")
 
-  manager         Employee?      @relation("Reports", fields: [managerId], references: [id])
-  managerId       String?
-  reports         Employee[]     @relation("Reports")
+  manager   Employee?  @relation("Reports", fields: [managerId], references: [id])
+  managerId String?
+  reports   Employee[] @relation("Reports")
 
-  user            User?
+  user User?
 
-  absences          Absence[]           @relation("EmployeeAbsences")
-  approvedAbsences  Absence[]           @relation("AbsenceApprover")
-  balances          LeaveBalance[]
-  procesos          Proceso[]           @relation("OnbEmployee")
-  buddyOf           Proceso[]           @relation("OnbBuddy")
-  reviews           Review[]            @relation("ReviewEmployee")
-  reviewing         Review[]            @relation("ReviewReviewer")
-  objectives        Objective[]
-  payslips          Payslip[]
-  payrollItems      PayrollItem[]
-  documents         Document[]          @relation("DocOwner")
-  signatures        DocumentSignature[]
-  timeEntries       TimeEntry[]
+  absences         Absence[]           @relation("EmployeeAbsences")
+  approvedAbsences Absence[]           @relation("AbsenceApprover")
+  balances         LeaveBalance[]
+  procesos         Proceso[]           @relation("OnbEmployee")
+  buddyOf          Proceso[]           @relation("OnbBuddy")
+  reviews          Review[]            @relation("ReviewEmployee")
+  reviewing        Review[]            @relation("ReviewReviewer")
+  objectives       Objective[]
+  payslips         Payslip[]
+  payrollItems     PayrollItem[]
+  documents        Document[]          @relation("DocOwner")
+  signatures       DocumentSignature[]
+  timeEntries      TimeEntry[]
 
   // humanX: memoria — anotaciones sobre esta persona
-  anotaciones       Anotacion[]
+  anotaciones Anotacion[]
 
   // humanX: expediente — histórico de puesto y salarial
   registrosPuesto     RegistroPuesto[]
   registrosSalariales RegistroSalarial[]
 
   // Reclutamiento (VITAE): de dónde vino y en qué procesos participa
-  candidate         Candidate?          @relation("CandidateHired", fields: [candidateId], references: [id])
-  candidateId       String?             @unique
-  hiringFor         Job[]               @relation("JobHiringManager")
-  interviewsGiven   Interview[]
-  evaluationsGiven  Evaluation[]
+  candidate        Candidate?   @relation("CandidateHired", fields: [candidateId], references: [id])
+  candidateId      String?      @unique
+  hiringFor        Job[]        @relation("JobHiringManager")
+  interviewsGiven  Interview[]
+  evaluationsGiven Evaluation[]
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@index([managerId])
+  @@index([sociedadId])
+  @@index([localizacionId])
+  @@index([status])
+  @@index([vinculo])
 }
 
 // ──────────────────────────── Expediente (humanX) ────────────────────────────
 // El puesto/sociedad/departamento ACTUALES siguen viviendo en Employee (fuente de verdad
 // para filtros y listas); estos históricos son de solo lectura hacia atrás en el tiempo.
 model RegistroPuesto {
-  id             String       @id @default(cuid())
-  empleado       Employee     @relation(fields: [empleadoId], references: [id])
+  id             String      @id @default(cuid())
+  empleado       Employee    @relation(fields: [empleadoId], references: [id])
   empleadoId     String
   fechaInicio    DateTime
   fechaFin       DateTime? // null = puesto actual
   titulo         String
-  sociedad       Sociedad?    @relation(fields: [sociedadId], references: [id])
+  sociedad       Sociedad?   @relation(fields: [sociedadId], references: [id])
   sociedadId     String?
-  departamento   Department?  @relation(fields: [departamentoId], references: [id])
+  departamento   Department? @relation(fields: [departamentoId], references: [id])
   departamentoId String?
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime    @default(now())
+
+  @@index([empleadoId])
 }
 
 // El Δ respecto al registro anterior se calcula en la vista, no se guarda.
@@ -300,6 +314,8 @@ model RegistroSalarial {
   concepto   String
   brutoAnual Int
   createdAt  DateTime @default(now())
+
+  @@index([empleadoId])
 }
 
 // ──────────────────────────── Memoria (humanX) ────────────────────────────
@@ -324,6 +340,11 @@ model Anotacion {
   estado      EstadoAnotacion @default(PENDIENTE)
   hechaAt     DateTime?
   createdAt   DateTime        @default(now())
+
+  @@index([empleadoId])
+  @@index([categoriaId])
+  @@index([estado])
+  @@index([fecha])
 }
 
 // ──────────────────────────── Tiempo ────────────────────────────
@@ -341,6 +362,11 @@ model Absence {
   approverId String?
   decidedAt  DateTime?
   createdAt  DateTime      @default(now())
+
+  @@index([employeeId])
+  @@index([status])
+  // calendar() filtra por solape de rango (startDate <= to AND endDate >= from).
+  @@index([startDate, endDate])
 }
 
 model LeaveBalance {
@@ -351,6 +377,7 @@ model LeaveBalance {
   total      Int
   used       Int      @default(0)
   pending    Int      @default(0)
+
   @@unique([employeeId, year])
 }
 
@@ -358,7 +385,7 @@ model Holiday {
   id       String   @id @default(cuid())
   date     DateTime
   name     String
-  location String?  // null = festivo nacional
+  location String? // null = festivo nacional
 }
 
 model TimeEntry {
@@ -367,59 +394,66 @@ model TimeEntry {
   employeeId String
   clockIn    DateTime
   clockOut   DateTime?
-  source     String?   // id de dispositivo / app
+  source     String? // id de dispositivo / app
 }
 
 // ──────────────────────────── Talento ────────────────────────────
 // Plantilla maestra (Fase G): versionable — duplicar crea una copia editable, archivar
 // (activa:false) la retira de "Iniciar" sin borrar los procesos que ya la usaron.
 model PlantillaProceso {
-  id        String                 @id @default(cuid())
-  nombre    String
-  tipo      TipoProceso            @default(ONBOARDING)
-  activa    Boolean                @default(true)
-  tareas    PlantillaProcesoTarea[]
-  procesos  Proceso[]
+  id       String                  @id @default(cuid())
+  nombre   String
+  tipo     TipoProceso             @default(ONBOARDING)
+  activa   Boolean                 @default(true)
+  tareas   PlantillaProcesoTarea[]
+  procesos Proceso[]
 }
 
 model PlantillaProcesoTarea {
-  id           String           @id @default(cuid())
-  plantilla    PlantillaProceso @relation(fields: [plantillaId], references: [id])
-  plantillaId  String
-  label        String
-  fase         String // texto libre (ordenado por `orden`), ya no un enum fijo
-  responsable  String
-  orden        Int              @default(0)
+  id          String           @id @default(cuid())
+  plantilla   PlantillaProceso @relation(fields: [plantillaId], references: [id])
+  plantillaId String
+  label       String
+  fase        String // texto libre (ordenado por `orden`), ya no un enum fijo
+  responsable String
+  orden       Int              @default(0)
 }
 
 // El puesto actual = Employee; este es el proceso de incorporación o salida asociado.
 // Al iniciar, se COPIAN las tareas de la plantilla activa (no se referencian) — así un
 // cambio posterior en la plantilla no altera procesos ya en marcha.
 model Proceso {
-  id             String           @id @default(cuid())
-  tipo           TipoProceso      @default(ONBOARDING)
-  nombre         String?
-  employee       Employee         @relation("OnbEmployee", fields: [employeeId], references: [id])
-  employeeId     String
-  buddy          Employee?        @relation("OnbBuddy", fields: [buddyId], references: [id])
-  buddyId        String?
-  plantilla      PlantillaProceso? @relation(fields: [plantillaId], references: [id])
-  plantillaId    String?
-  fechaInicio    DateTime
-  fechaObjetivo  DateTime?
-  estado         EstadoProceso    @default(EN_CURSO)
-  tareas         ProcesoTarea[]
+  id            String            @id @default(cuid())
+  tipo          TipoProceso       @default(ONBOARDING)
+  nombre        String?
+  employee      Employee          @relation("OnbEmployee", fields: [employeeId], references: [id])
+  employeeId    String
+  buddy         Employee?         @relation("OnbBuddy", fields: [buddyId], references: [id])
+  buddyId       String?
+  plantilla     PlantillaProceso? @relation(fields: [plantillaId], references: [id])
+  plantillaId   String?
+  fechaInicio   DateTime
+  fechaObjetivo DateTime?
+  estado        EstadoProceso     @default(EN_CURSO)
+  tareas        ProcesoTarea[]
+
+  @@index([employeeId])
+  @@index([buddyId])
+  @@index([plantillaId])
+  @@index([tipo])
 }
 
 model ProcesoTarea {
-  id            String      @id @default(cuid())
-  proceso       Proceso     @relation(fields: [procesoId], references: [id])
-  procesoId     String
-  label         String
-  fase          String
-  responsable   String
-  estado        EstadoTarea @default(PENDIENTE)
-  completadaAt  DateTime?
+  id           String      @id @default(cuid())
+  proceso      Proceso     @relation(fields: [procesoId], references: [id])
+  procesoId    String
+  label        String
+  fase         String
+  responsable  String
+  estado       EstadoTarea @default(PENDIENTE)
+  completadaAt DateTime?
+
+  @@index([procesoId])
 }
 
 model PerformanceCycle {
@@ -444,6 +478,7 @@ model Review {
   managerDone Boolean          @default(false)
   o2oDone     Boolean          @default(false)
   rating      Float?
+
   @@unique([cycleId, employeeId])
 }
 
@@ -451,7 +486,7 @@ model Objective {
   id         String            @id @default(cuid())
   cycle      PerformanceCycle? @relation(fields: [cycleId], references: [id])
   cycleId    String?
-  scope      String            // "Empresa" | nombre de área
+  scope      String // "Empresa" | nombre de área
   owner      Employee          @relation(fields: [ownerId], references: [id])
   ownerId    String
   title      String
@@ -491,7 +526,11 @@ model Payslip {
   net        Int
   status     PayslipStatus @default(BORRADOR)
   pdfUrl     String?
+
   @@unique([runId, employeeId])
+  // El índice único cubre runId solo (prefijo izquierdo); mine() (payroll.service.ts) filtra
+  // por employeeId solo, sin runId — necesita su propio índice.
+  @@index([employeeId])
 }
 
 model PayrollItem {
@@ -502,7 +541,10 @@ model PayrollItem {
   employeeId String
   type       PayrollItemType
   concept    String
-  amount     Int             // euros; negativo = deducción
+  amount     Int // euros; negativo = deducción
+
+  // Siempre se consultan juntos: findMany({ where: { runId, employeeId } }).
+  @@index([runId, employeeId])
 }
 
 model Document {
@@ -515,6 +557,10 @@ model Document {
   status     DocumentStatus      @default(VIGENTE)
   createdAt  DateTime            @default(now())
   signatures DocumentSignature[]
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([status])
 }
 
 model DocumentSignature {
@@ -525,7 +571,12 @@ model DocumentSignature {
   employeeId String
   status     SignatureStatus @default(PENDIENTE)
   signedAt   DateTime?
+
   @@unique([documentId, employeeId])
+  // El índice único ya cubre búsquedas por documentId (prefijo izquierdo); "mis firmas"
+  // (mine(), documents.service.ts) filtra por employeeId solo, sin documentId — necesita su
+  // propio índice.
+  @@index([employeeId])
 }
 
 model DocumentTemplate {
@@ -539,20 +590,20 @@ model DocumentTemplate {
 // Módulo interno: cuando una Application pasa a CONTRATADO, su Candidate se
 // convierte en Employee (Employee.candidateId) y arranca su Proceso de tipo ONBOARDING.
 model Job {
-  id              String       @id @default(cuid())
+  id              String        @id @default(cuid())
   title           String
-  department      Department?  @relation(fields: [departmentId], references: [id])
+  department      Department?   @relation(fields: [departmentId], references: [id])
   departmentId    String?
   location        String
-  remote          Boolean      @default(false)
+  remote          Boolean       @default(false)
   level           String
-  contractType    ContractType @default(INDEFINIDO)
-  status          JobStatus    @default(ABIERTA)
-  openings        Int          @default(1)
+  contractType    ContractType  @default(INDEFINIDO)
+  status          JobStatus     @default(ABIERTA)
+  openings        Int           @default(1)
   description     String?
-  hiringManager   Employee?    @relation("JobHiringManager", fields: [hiringManagerId], references: [id])
+  hiringManager   Employee?     @relation("JobHiringManager", fields: [hiringManagerId], references: [id])
   hiringManagerId String?
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime      @default(now())
   closedAt        DateTime?
   applications    Application[]
 }
@@ -592,6 +643,7 @@ model Application {
   interviews  Interview[]
   evaluations Evaluation[]
   decisions   AuditDecision[]
+
   @@unique([jobId, candidateId])
 }
 
@@ -602,7 +654,7 @@ model Interview {
   interviewer   Employee?   @relation(fields: [interviewerId], references: [id])
   interviewerId String?
   scheduledAt   DateTime?
-  type          String      // telefonica | tecnica | cultural | final
+  type          String // telefonica | tecnica | cultural | final
   status        String      @default("PROGRAMADA")
   feedback      String?
 }
@@ -616,7 +668,7 @@ model Evaluation {
   score          Float?
   strengths      String?
   concerns       String?
-  recommendation String?     // contratar | rechazar | dudoso
+  recommendation String? // contratar | rechazar | dudoso
   createdAt      DateTime    @default(now())
 }
 
@@ -625,7 +677,7 @@ model AuditDecision {
   id            String      @id @default(cuid())
   application   Application @relation(fields: [applicationId], references: [id])
   applicationId String
-  type          String      // AUTO_SCREEN | ADVANCE_STAGE | REJECT | MAKE_OFFER | HIRE
+  type          String // AUTO_SCREEN | ADVANCE_STAGE | REJECT | MAKE_OFFER | HIRE
   automated     Boolean     @default(false)
   reason        String?
   actor         User?       @relation("DecisionActor", fields: [actorId], references: [id])
@@ -638,12 +690,18 @@ model AuditLog {
   id        String   @id @default(cuid())
   actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
   actorId   String?
-  action    String   // CREATE | UPDATE | DELETE | APPROVE | REJECT | SIGN | PROCESS_PAYROLL ...
-  entity    String   // Employee | Absence | Payslip ...
+  action    String // CREATE | UPDATE | DELETE | APPROVE | REJECT | SIGN | PROCESS_PAYROLL ...
+  entity    String // Employee | Absence | Payslip ...
   entityId  String?
   before    Json?
   after     Json?
   createdAt DateTime @default(now())
+
+  // Sin consumidor todavía (no hay "Registro de accesos" en Informes aún), pero
+  // PLAN-humanX.md §5.10 ya lo promete y esta tabla crece con cada apertura de ficha (VIEW) —
+  // se adelanta el índice por el que se consultará (entidad+id, orden cronológico).
+  @@index([entity, entityId])
+  @@index([actorId])
 }
 
 model Notification {

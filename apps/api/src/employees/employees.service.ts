@@ -11,9 +11,23 @@ const WITH_ESTRUCTURA = {
   localizacion: true,
 };
 
+// Tope de seguridad cuando no se pide una página concreta — sin esto, el listado crece sin
+// límite con la plantilla. No es paginación real todavía (la UI sigue mostrando "todos"); es
+// una red de seguridad para que una tabla grande no pueda tirar de miles de filas de golpe.
+const DEFAULT_TAKE = 200;
+
 @Injectable()
 export class EmployeesService {
   constructor(private readonly db: PrismaService) {}
+
+  /** Contadores para las tarjetas de Inicio — sin traer ni una fila de Employee (antes,
+   *  Inicio pedía el listado completo con sus 4 relaciones solo para contar dos grupos). */
+  async kpis() {
+    const groups = await this.db.employee.groupBy({ by: ['vinculo'], _count: { _all: true } });
+    const plantilla = groups.find((g) => g.vinculo === 'PLANTILLA')?._count._all ?? 0;
+    const externos = groups.find((g) => g.vinculo === 'EXTERNO')?._count._all ?? 0;
+    return { plantilla, externos, total: plantilla + externos };
+  }
 
   async findAll(
     params: {
@@ -22,10 +36,12 @@ export class EmployeesService {
       status?: EmployeeStatus;
       vinculo?: Vinculo;
       paisId?: string;
+      take?: number;
+      skip?: number;
     },
     viewer?: AuthUser,
   ) {
-    const { search, departmentId, status, vinculo, paisId } = params;
+    const { search, departmentId, status, vinculo, paisId, take, skip } = params;
     const employees = await this.db.employee.findMany({
       where: {
         departmentId: departmentId || undefined,
@@ -40,20 +56,42 @@ export class EmployeesService {
           : undefined,
       },
       include: WITH_ESTRUCTURA,
+      relationLoadStrategy: 'join',
       orderBy: { fullName: 'asc' },
+      take: take ?? DEFAULT_TAKE,
+      skip,
     });
     return employees.map((e) => this.maskSensitive(e, viewer));
   }
 
   async findOne(id: string, viewer?: AuthUser) {
-    const emp = await this.db.employee.findUnique({
-      where: { id },
-      include: { ...WITH_ESTRUCTURA, reports: true, balances: true },
+    // El SELECT (con sus relaciones) y el INSERT de auditoría van en la MISMA transacción
+    // interactiva: bajo el pooler de Supabase (pgbouncer=true) cada llamada a Prisma se
+    // envuelve en su propio BEGIN/DEALLOCATE ALL/COMMIT, así que dos llamadas sueltas costaban
+    // dos tandas de round-trips en vez de una. Con `$transaction(async (tx) => ...)` solo hay
+    // un BEGIN/COMMIT para las dos operaciones, y el INSERT sigue siendo condicional (nada de
+    // auditar una ficha que no existe).
+    const emp = await this.db.$transaction(async (tx) => {
+      const found = await tx.employee.findUnique({
+        where: { id },
+        include: {
+          ...WITH_ESTRUCTURA,
+          // Solo lo que la ficha pinta del equipo directo (nombre, puesto, estado) — no la
+          // ficha completa de cada persona a cargo.
+          reports: { select: { id: true, fullName: true, jobTitle: true, status: true } },
+          balances: true,
+        },
+        relationLoadStrategy: 'join',
+      });
+      // Registro de accesos: solo en la apertura real de la ficha (con viewer) y solo si
+      // existe, nunca en las llamadas internas de update()/baja() (que no pasan viewer para
+      // el snapshot "before").
+      if (found && viewer) {
+        await tx.auditLog.create({ data: { actorId: viewer.id, action: 'VIEW', entity: 'Employee', entityId: id } });
+      }
+      return found;
     });
     if (!emp) throw new NotFoundException('Empleado no encontrado');
-    // Registro de accesos: solo en la apertura real de la ficha (con viewer), nunca en las
-    // llamadas internas de update()/remove() (que no pasan viewer para el snapshot "before").
-    if (viewer) await this.auditView(viewer.id, id);
     return this.maskSensitive(emp, viewer);
   }
 
@@ -64,6 +102,7 @@ export class EmployeesService {
     return this.db.registroPuesto.findMany({
       where: { empleadoId: id },
       include: { sociedad: { include: { pais: true } }, departamento: true },
+      relationLoadStrategy: 'join',
       orderBy: { fechaInicio: 'desc' },
     });
   }
@@ -182,7 +221,4 @@ export class EmployeesService {
     });
   }
 
-  private auditView(actorId: string, entityId: string) {
-    return this.db.auditLog.create({ data: { actorId, action: 'VIEW', entity: 'Employee', entityId } });
-  }
 }

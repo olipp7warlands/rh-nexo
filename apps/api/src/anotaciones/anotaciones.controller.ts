@@ -18,8 +18,18 @@ export class AnotacionesController {
     @Query('estado') estado?: EstadoAnotacion,
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
   ) {
-    return this.service.findAll({ empleadoId, categoriaId, estado, desde, hasta });
+    return this.service.findAll({
+      empleadoId,
+      categoriaId,
+      estado,
+      desde,
+      hasta,
+      take: take ? Number(take) : undefined,
+      skip: skip ? Number(skip) : undefined,
+    });
   }
 
   @Post()

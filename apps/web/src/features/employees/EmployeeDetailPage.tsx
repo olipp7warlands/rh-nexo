@@ -83,7 +83,7 @@ export function EmployeeDetailPage() {
   const { data: historicoSalarial } = useHistoricoSalarial(id, canSeeSalary);
   const { data: anotaciones } = useAnotaciones({ empleadoId: id }, canManage);
   const { data: documentos } = useDocuments(undefined, id);
-  const { data: absences } = useAbsences();
+  const { data: absences } = useAbsences(undefined, id);
   const { data: cycles } = useCycles();
   const { data: cycleActual } = useCycle(cycles?.[0]?.id ?? '');
 
@@ -457,9 +457,8 @@ export function EmployeeDetailPage() {
               </Link>
             </div>
             {(() => {
-              const propias = (absences ?? [])
-                .filter((a) => a.employeeId === id)
-                .sort((a, b) => b.startDate.localeCompare(a.startDate));
+              // El backend ya filtra por employeeId (useAbsences(undefined, id)); solo ordenar.
+              const propias = [...(absences ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate));
               return propias.length > 0 ? (
                 <div className="divide-y divide-[var(--line-subtle)]">
                   {propias.map((a) => (

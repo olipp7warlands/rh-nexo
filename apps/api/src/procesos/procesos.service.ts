@@ -25,7 +25,11 @@ export class ProcesosService {
     select: { id: true, fullName: true, jobTitle: true, department: { select: { name: true, color: true } } },
   };
 
-  async findAll(viewer: AuthUser, tipo?: TipoProceso) {
+  // Mismo criterio que en employees.service.ts/anotaciones.service.ts: tope de seguridad, no
+  // paginación real todavía.
+  private readonly DEFAULT_TAKE = 200;
+
+  async findAll(viewer: AuthUser, tipo?: TipoProceso, take?: number, skip?: number) {
     const procesos = await this.db.proceso.findMany({
       where: { ...this.scopeWhere(viewer), ...(tipo ? { tipo } : {}) },
       include: {
@@ -33,7 +37,10 @@ export class ProcesosService {
         buddy: { select: { id: true, fullName: true } },
         tareas: { select: { estado: true } },
       },
+      relationLoadStrategy: 'join',
       orderBy: { fechaInicio: 'desc' },
+      take: take ?? this.DEFAULT_TAKE,
+      skip,
     });
     return procesos.map(({ tareas, ...p }) => ({
       ...p,
@@ -52,6 +59,7 @@ export class ProcesosService {
         // propia, el id (cuid, monótono en el momento de creación) reconstruye ese orden.
         tareas: { orderBy: { id: 'asc' } },
       },
+      relationLoadStrategy: 'join',
     });
     if (!proceso) throw new NotFoundException('Proceso no encontrado');
     return proceso;

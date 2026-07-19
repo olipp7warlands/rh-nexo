@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Avatar, Card, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
-import { useEmployees } from '../employees/useEmployees';
+import { useEmployeeKpis } from '../employees/useEmployees';
 import { useSociedades, usePaises } from '../estructura/useEstructura';
 import { useAlertas, TIPO_ALERTA_LABEL } from '../agenda/useAgenda';
 import { useAnotaciones } from '../anotaciones/useAnotaciones';
@@ -12,14 +12,14 @@ export function InicioPage() {
   const canManage = user?.role === 'ADMIN' || user?.role === 'RRHH';
   const name = user?.employee?.fullName?.split(' ')[0] ?? '';
 
-  const { data: employees } = useEmployees({});
+  const { data: kpis } = useEmployeeKpis();
   const { data: sociedades } = useSociedades();
   const { data: paises } = usePaises();
   const { data: alertas } = useAlertas();
   const { data: anotaciones } = useAnotaciones({ estado: 'PENDIENTE' }, canManage);
 
-  const plantilla = (employees ?? []).filter((e) => e.vinculo === 'PLANTILLA').length;
-  const externos = (employees ?? []).filter((e) => e.vinculo === 'EXTERNO').length;
+  const plantilla = kpis?.plantilla ?? 0;
+  const externos = kpis?.externos ?? 0;
 
   return (
     <div className="max-w-[1400px] mx-auto px-10 py-10">
@@ -31,7 +31,7 @@ export function InicioPage() {
           <div className="mono text-[28px] font-bold leading-none">
             {plantilla} <span className="text-[var(--ink-tertiary)]">/</span> {externos}
           </div>
-          <div className="text-[11px] text-[var(--ink-tertiary)]">{(employees ?? []).length} personas en total</div>
+          <div className="text-[11px] text-[var(--ink-tertiary)]">{kpis?.total ?? 0} personas en total</div>
         </div>
         <div className="stat-card">
           <div className="text-[12px] font-medium text-[var(--ink-secondary)]">Sociedades · Países</div>

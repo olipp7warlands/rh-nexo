@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AbsenceType, EmployeeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -14,25 +14,45 @@ export class ReportsService {
       ...(departmentId ? { employee: { departmentId } } : {}),
     };
 
-    const departments = await this.db.department.findMany({ select: { id: true, name: true, color: true } });
-    const dmap = new Map(departments.map((d) => [d.id, d]));
-    const deptLabel = (id: string | null) => (id ? dmap.get(id)?.name ?? id : 'Sin asignar');
-    const deptColor = (id: string | null) => (id ? dmap.get(id)?.color ?? '#9CA3AF' : '#9CA3AF');
-
-    const [byStatus, byDept, costByDept, totalActive, totalAll, bajas, absAgg, absByType, reviews, byLocation, remoteCount] =
-      await Promise.all([
-        this.db.employee.groupBy({ by: ['status'], _count: { _all: true }, where: empWhere }),
-        this.db.employee.groupBy({ by: ['departmentId'], _count: { _all: true }, where: activeWhere }),
-        this.db.employee.groupBy({ by: ['departmentId'], _sum: { salary: true }, _count: { _all: true }, where: activeWhere }),
+    // Las 12 queries de este informe son de solo lectura e independientes entre sí — antes se
+    // lanzaban con Promise.all() como 12 llamadas sueltas a Prisma. Bajo el pooler de Supabase
+    // (pgbouncer=true) cada llamada suelta se envuelve en su propio BEGIN/DEALLOCATE ALL/COMMIT
+    // (4 round-trips), así que 12 queries "sueltas" costaban 48 round-trips de red. Agrupadas
+    // en una única $transaction (modo batch, no interactivo) comparten un solo BEGIN/COMMIT.
+    // `groupBy` dentro del array de $transaction pierde la forma exacta de `_count`/`_sum` en el
+    // tipado (limitación conocida de Prisma con la inferencia de tuplas heterogéneas) — el dato
+    // en tiempo de ejecución es correcto, así que se recupera el tipo con un `as` explícito en
+    // vez de perder la seguridad de tipos con `any`.
+    const [departmentsRaw, byStatusRaw, byDeptRaw, costByDeptRaw, totalActive, totalAll, bajas, absAgg, absByTypeRaw, reviews, byLocationRaw, remoteCount] =
+      await this.db.$transaction([
+        this.db.department.findMany({ select: { id: true, name: true, color: true } }),
+        this.db.employee.groupBy({ by: ['status'], _count: { _all: true }, where: empWhere, orderBy: { status: 'asc' } }),
+        this.db.employee.groupBy({ by: ['departmentId'], _count: { _all: true }, where: activeWhere, orderBy: { departmentId: 'asc' } }),
+        this.db.employee.groupBy({
+          by: ['departmentId'],
+          _sum: { salary: true },
+          _count: { _all: true },
+          where: activeWhere,
+          orderBy: { departmentId: 'asc' },
+        }),
         this.db.employee.count({ where: activeWhere }),
         this.db.employee.count({ where: empWhere }),
         this.db.employee.count({ where: { ...empWhere, status: 'BAJA' } }),
         this.db.absence.aggregate({ _sum: { days: true }, where: absWhere }),
-        this.db.absence.groupBy({ by: ['type'], _sum: { days: true }, where: absWhere }),
+        this.db.absence.groupBy({ by: ['type'], _sum: { days: true }, where: absWhere, orderBy: { type: 'asc' } }),
         this.db.review.findMany({ where: { rating: { not: null }, ...(departmentId ? { employee: { departmentId } } : {}) }, select: { rating: true } }),
-        this.db.employee.groupBy({ by: ['location'], _count: { _all: true }, where: activeWhere }),
+        this.db.employee.groupBy({ by: ['location'], _count: { _all: true }, where: activeWhere, orderBy: { location: 'asc' } }),
         this.db.employee.count({ where: { ...activeWhere, remote: true } }),
       ]);
+    const departments = departmentsRaw as { id: string; name: string; color: string }[];
+    const byStatus = byStatusRaw as { status: EmployeeStatus; _count: { _all: number } }[];
+    const byDept = byDeptRaw as { departmentId: string | null; _count: { _all: number } }[];
+    const costByDept = costByDeptRaw as { departmentId: string | null; _sum: { salary: number | null }; _count: { _all: number } }[];
+    const absByType = absByTypeRaw as { type: AbsenceType; _sum: { days: number | null } }[];
+    const byLocation = byLocationRaw as { location: string; _count: { _all: number } }[];
+    const dmap = new Map(departments.map((d) => [d.id, d]));
+    const deptLabel = (id: string | null) => (id ? dmap.get(id)?.name ?? id : 'Sin asignar');
+    const deptColor = (id: string | null) => (id ? dmap.get(id)?.color ?? '#9CA3AF' : '#9CA3AF');
 
     // Distribución de desempeño (buckets de rating)
     const buckets = { '4.5 – 5': 0, '4.0 – 4.4': 0, '3.0 – 3.9': 0, '< 3': 0 };

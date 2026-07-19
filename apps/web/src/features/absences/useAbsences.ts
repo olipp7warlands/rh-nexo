@@ -46,9 +46,15 @@ function invalidate(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['employees'] });
 }
 
-export function useAbsences(status?: AbsenceStatus) {
-  const qs = status ? `?status=${status}` : '';
-  return useQuery({ queryKey: ['absences', status ?? 'all'], queryFn: () => api.get<Absence[]>(`/absences${qs}`) });
+export function useAbsences(status?: AbsenceStatus, employeeId?: string) {
+  const qs = new URLSearchParams();
+  if (status) qs.set('status', status);
+  if (employeeId) qs.set('employeeId', employeeId);
+  const search = qs.toString();
+  return useQuery({
+    queryKey: ['absences', status ?? 'all', employeeId ?? 'all'],
+    queryFn: () => api.get<Absence[]>(`/absences${search ? `?${search}` : ''}`),
+  });
 }
 
 export function useCalendar(from: string, to: string) {

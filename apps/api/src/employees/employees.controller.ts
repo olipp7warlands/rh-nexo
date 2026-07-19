@@ -18,8 +18,19 @@ export class EmployeesController {
     @Query('status') status?: EmployeeStatus,
     @Query('vinculo') vinculo?: Vinculo,
     @Query('paisId') paisId?: string,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
   ) {
-    return this.service.findAll({ search, departmentId, status, vinculo, paisId }, user);
+    return this.service.findAll(
+      { search, departmentId, status, vinculo, paisId, take: take ? Number(take) : undefined, skip: skip ? Number(skip) : undefined },
+      user,
+    );
+  }
+
+  // Declarada antes de ':id' para que "kpis" no se interprete como un id.
+  @Get('kpis')
+  kpis() {
+    return this.service.kpis();
   }
 
   @Get(':id')

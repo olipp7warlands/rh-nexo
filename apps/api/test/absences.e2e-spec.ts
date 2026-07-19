@@ -122,4 +122,16 @@ describe('Ausencias (integración)', () => {
     // limpieza
     await db.absence.delete({ where: { id: created.body.id } }).catch(() => undefined);
   });
+
+  // Optimización de rendimiento: la ficha ahora filtra por employeeId en vez de traer toda la
+  // tabla. El filtro se aplica DENTRO del alcance por rol (AND), nunca lo sustituye.
+  it('employeeId filtra dentro del alcance del rol, nunca lo amplía', async () => {
+    const propias = await request(http).get(`/api/absences?employeeId=${EMP}`).set('Authorization', `Bearer ${empToken}`).expect(200);
+    expect(propias.body.every((a: { employeeId: string }) => a.employeeId === EMP)).toBe(true);
+
+    // Diego (EMPLEADO) pidiendo el employeeId de otra persona (e1, ajena a su equipo): lista
+    // vacía, nunca los datos de e1.
+    const ajenas = await request(http).get('/api/absences?employeeId=e1').set('Authorization', `Bearer ${empToken}`).expect(200);
+    expect(ajenas.body).toEqual([]);
+  });
 });

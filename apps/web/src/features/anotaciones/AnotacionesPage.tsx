@@ -129,7 +129,6 @@ export function AnotacionesPage() {
   const { data: employees } = useEmployees({});
   const { data: categorias } = useCategorias(canView);
   const { data: anotaciones, isLoading, error } = useAnotaciones({ empleadoId, estado, categoriaId, desde, hasta }, canView);
-  const { data: allAnotaciones } = useAnotaciones({}, canView);
 
   if (!canView) {
     return (
@@ -144,7 +143,9 @@ export function AnotacionesPage() {
     );
   }
 
-  const countFor = (catId: string) => (allAnotaciones ?? []).filter((a) => a.categoriaId === catId).length;
+  // GET /categorias ya trae _count.anotaciones por categoría (sin filtros) — no hace falta
+  // un segundo fetch de todas las anotaciones solo para contar por categoría.
+  const countFor = (catId: string) => categorias?.find((c) => c.id === catId)?._count.anotaciones ?? 0;
 
   return (
     <div className="max-w-[1400px] mx-auto px-10 py-10">

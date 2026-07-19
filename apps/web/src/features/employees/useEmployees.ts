@@ -62,7 +62,7 @@ export interface Employee {
   candidateId?: string | null;
   department?: Department | null;
   manager?: EmployeeRef | null;
-  reports?: Employee[];
+  reports?: EmployeeRef[];
   balances?: LeaveBalance[];
   // humanX: expediente
   codigo: string | null;
@@ -94,6 +94,20 @@ export function useEmployees(params: EmployeeFilters = {}) {
   return useQuery({
     queryKey: ['employees', params],
     queryFn: () => api.get<Employee[]>(`/employees?${qs.toString()}`),
+  });
+}
+
+export interface EmployeeKpis {
+  plantilla: number;
+  externos: number;
+  total: number;
+}
+
+/** Contadores para las tarjetas de Inicio, sin traer el listado completo de empleados. */
+export function useEmployeeKpis() {
+  return useQuery({
+    queryKey: ['employees', 'kpis'],
+    queryFn: () => api.get<EmployeeKpis>('/employees/kpis'),
   });
 }
 

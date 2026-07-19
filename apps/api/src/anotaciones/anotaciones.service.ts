@@ -9,12 +9,23 @@ const WITH_RELATIONS = {
   autor: { select: { id: true, email: true, employee: { select: { fullName: true } } } },
 };
 
+// Mismo criterio que en employees.service.ts: tope de seguridad, no paginación real todavía.
+const DEFAULT_TAKE = 200;
+
 @Injectable()
 export class AnotacionesService {
   constructor(private readonly db: PrismaService) {}
 
-  findAll(params: { empleadoId?: string; categoriaId?: string; estado?: EstadoAnotacion; desde?: string; hasta?: string }) {
-    const { empleadoId, categoriaId, estado, desde, hasta } = params;
+  findAll(params: {
+    empleadoId?: string;
+    categoriaId?: string;
+    estado?: EstadoAnotacion;
+    desde?: string;
+    hasta?: string;
+    take?: number;
+    skip?: number;
+  }) {
+    const { empleadoId, categoriaId, estado, desde, hasta, take, skip } = params;
     return this.db.anotacion.findMany({
       where: {
         empleadoId: empleadoId || undefined,
@@ -23,7 +34,10 @@ export class AnotacionesService {
         fecha: desde || hasta ? { gte: desde ? new Date(desde) : undefined, lte: hasta ? new Date(hasta) : undefined } : undefined,
       },
       include: WITH_RELATIONS,
+      relationLoadStrategy: 'join',
       orderBy: { fecha: 'desc' },
+      take: take ?? DEFAULT_TAKE,
+      skip,
     });
   }
 
@@ -37,6 +51,7 @@ export class AnotacionesService {
         autorId: actorUserId,
       },
       include: WITH_RELATIONS,
+      relationLoadStrategy: 'join',
     });
     await this.audit(actorUserId, 'CREATE', anotacion.id, null, anotacion);
     return anotacion;
@@ -52,6 +67,7 @@ export class AnotacionesService {
         ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId || null } : {}),
       },
       include: WITH_RELATIONS,
+      relationLoadStrategy: 'join',
     });
     await this.audit(actorUserId, 'UPDATE', id, before, after);
     return after;
@@ -63,6 +79,7 @@ export class AnotacionesService {
       where: { id },
       data: { estado: 'HECHA', hechaAt: new Date() },
       include: WITH_RELATIONS,
+      relationLoadStrategy: 'join',
     });
     await this.audit(actorUserId, 'UPDATE', id, before, after);
     return after;
@@ -74,6 +91,7 @@ export class AnotacionesService {
       where: { id },
       data: { estado: 'PENDIENTE', hechaAt: null },
       include: WITH_RELATIONS,
+      relationLoadStrategy: 'join',
     });
     await this.audit(actorUserId, 'UPDATE', id, before, after);
     return after;
@@ -87,7 +105,11 @@ export class AnotacionesService {
   }
 
   private async findOneOrThrow(id: string) {
-    const anotacion = await this.db.anotacion.findUnique({ where: { id }, include: WITH_RELATIONS });
+    const anotacion = await this.db.anotacion.findUnique({
+      where: { id },
+      include: WITH_RELATIONS,
+      relationLoadStrategy: 'join',
+    });
     if (!anotacion) throw new NotFoundException('Anotación no encontrada');
     return anotacion;
   }

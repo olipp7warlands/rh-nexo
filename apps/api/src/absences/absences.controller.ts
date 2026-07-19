@@ -10,8 +10,8 @@ export class AbsencesController {
   constructor(private readonly service: AbsencesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query('status') status?: AbsenceStatus) {
-    return this.service.findAll(user, status);
+  findAll(@CurrentUser() user: AuthUser, @Query('status') status?: AbsenceStatus, @Query('employeeId') employeeId?: string) {
+    return this.service.findAll(user, status, employeeId);
   }
 
   @Get('calendar')

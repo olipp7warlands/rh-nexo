@@ -70,8 +70,13 @@ export class ProcesosController {
   // --- Procesos ---
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query('tipo') tipo?: TipoProceso) {
-    return this.service.findAll(user, tipo);
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('tipo') tipo?: TipoProceso,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.service.findAll(user, tipo, take ? Number(take) : undefined, skip ? Number(skip) : undefined);
   }
 
   @Get(':id')
