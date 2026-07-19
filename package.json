@@ -15,8 +15,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "db:test:migrate": "dotenv -e .env.test -- prisma migrate deploy",
-    "db:test:seed": "dotenv -e .env.test -- tsx prisma/seed.ts",
+    "db:test:migrate": "dotenv -e .env.test.local -e .env.test -- prisma migrate deploy",
+    "db:test:seed": "dotenv -e .env.test.local -e .env.test -- tsx prisma/seed.ts",
     "db:dev:migrate": "node scripts/assert-dev-env.js && dotenv -e .env.local -- prisma migrate dev --skip-seed",
     "db:dev:seed": "node scripts/assert-dev-env.js && dotenv -e .env.local -- tsx prisma/seed.ts",
     "dev:local": "node scripts/assert-dev-env.js && dotenv -e .env.local -- turbo run dev --parallel --env-mode=loose"

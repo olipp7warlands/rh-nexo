@@ -19,16 +19,42 @@ describe('assertSafeTestEnv', () => {
     expect(() => assertSafeTestEnv(env)).not.toThrow();
   });
 
-  it('lanza si DATABASE_URL apunta a un host de Supabase', () => {
+  it('lanza si DATABASE_URL apunta a un proyecto Supabase no reconocido', () => {
     const env = validEnv();
     env.DATABASE_URL =
-      'postgresql://postgres:pass@aws-0-eu-west-3.pooler.supabase.com:6543/postgres?pgbouncer=true';
+      'postgresql://postgres.otroproyecto1234@aws-0-eu-west-3.pooler.supabase.com:6543/postgres?pgbouncer=true';
     expect(() => assertSafeTestEnv(env)).toThrow(/DATABASE_URL/);
   });
 
-  it('lanza si DIRECT_URL apunta a un host de Supabase', () => {
+  it('lanza si DIRECT_URL apunta a un proyecto Supabase no reconocido', () => {
     const env = validEnv();
-    env.DIRECT_URL = 'postgresql://postgres:pass@aws-0-eu-west-3.pooler.supabase.com:5432/postgres';
+    env.DIRECT_URL = 'postgresql://postgres:pass@db.otroproyecto1234.supabase.co:5432/postgres';
+    expect(() => assertSafeTestEnv(env)).toThrow(/DIRECT_URL/);
+  });
+
+  it('acepta el proyecto Supabase dedicado a test (humanx-test), vía pooler', () => {
+    const env = validEnv();
+    env.DATABASE_URL =
+      'postgresql://postgres.cviovilivlvaebpcqbhj:pass@aws-0-eu-west-3.pooler.supabase.com:5432/postgres';
+    env.DIRECT_URL = env.DATABASE_URL;
+    expect(() => assertSafeTestEnv(env)).not.toThrow();
+  });
+
+  it('acepta el proyecto Supabase dedicado a test (humanx-test), vía conexión directa', () => {
+    const env = validEnv();
+    env.DIRECT_URL = 'postgresql://postgres:pass@db.cviovilivlvaebpcqbhj.supabase.co:6543/postgres';
+    expect(() => assertSafeTestEnv(env)).not.toThrow();
+  });
+
+  it('bloquea el proyecto de PRODUCCIÓN aunque llegue con forma de pooler de test', () => {
+    const env = validEnv();
+    env.DATABASE_URL = 'postgresql://postgres.qkeadkgdzwzsvjvfczhv:pass@aws-0-eu-west-3.pooler.supabase.com:6543/postgres';
+    expect(() => assertSafeTestEnv(env)).toThrow(/DATABASE_URL/);
+  });
+
+  it('bloquea el proyecto de PRODUCCIÓN por conexión directa', () => {
+    const env = validEnv();
+    env.DIRECT_URL = 'postgresql://postgres:pass@db.qkeadkgdzwzsvjvfczhv.supabase.co:5432/postgres';
     expect(() => assertSafeTestEnv(env)).toThrow(/DIRECT_URL/);
   });
 
