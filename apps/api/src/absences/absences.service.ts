@@ -3,6 +3,7 @@ import { AbsenceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { CreateAbsenceDto } from './absence.dto';
+import { csvSafe } from '../lib/csv-safe';
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -140,9 +141,8 @@ export class AbsencesService {
   async exportCsv(viewer: AuthUser, status?: AbsenceStatus): Promise<string> {
     const rows = await this.findAll(viewer, status);
     const header = ['Empleado', 'Tipo', 'Inicio', 'Fin', 'Días', 'Estado', 'Motivo'];
-    const safe = (s: string) => s.replace(/[\n;]/g, ' ');
     const lines = rows.map((r) =>
-      [safe(r.employee.fullName), r.type, iso(r.startDate), iso(r.endDate), String(r.days), r.status, safe(r.reason ?? '')].join(';'),
+      [csvSafe(r.employee.fullName), r.type, iso(r.startDate), iso(r.endDate), String(r.days), r.status, csvSafe(r.reason ?? '')].join(';'),
     );
     return [header.join(';'), ...lines].join('\n');
   }

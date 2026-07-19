@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { CreateCycleDto, CreateObjectiveDto, UpdateReviewDto } from './performance.dto';
@@ -6,6 +7,22 @@ import { CreateCycleDto, CreateObjectiveDto, UpdateReviewDto } from './performan
 @Injectable()
 export class PerformanceService {
   constructor(private readonly db: PrismaService) {}
+
+  // Igual criterio que el resto del producto: ADMIN/RRHH ven todo, MANAGER su equipo
+  // (propia evaluación/OKRs + las de sus reports directos), EMPLEADO solo lo suyo.
+  private reviewScopeWhere(viewer: AuthUser): Prisma.ReviewWhereInput {
+    const own = viewer.employeeId ?? '__none__';
+    if (viewer.role === 'ADMIN' || viewer.role === 'RRHH') return {};
+    if (viewer.role === 'MANAGER') return { OR: [{ employeeId: own }, { employee: { managerId: own } }] };
+    return { employeeId: own };
+  }
+
+  private objectiveScopeWhere(viewer: AuthUser): Prisma.ObjectiveWhereInput {
+    const own = viewer.employeeId ?? '__none__';
+    if (viewer.role === 'ADMIN' || viewer.role === 'RRHH') return {};
+    if (viewer.role === 'MANAGER') return { OR: [{ ownerId: own }, { owner: { managerId: own } }] };
+    return { ownerId: own };
+  }
 
   cycles() {
     return this.db.performanceCycle.findMany({
@@ -23,11 +40,12 @@ export class PerformanceService {
       });
   }
 
-  async cycle(id: string) {
+  async cycle(id: string, viewer: AuthUser) {
     const cycle = await this.db.performanceCycle.findUnique({
       where: { id },
       include: {
         reviews: {
+          where: this.reviewScopeWhere(viewer),
           include: {
             employee: { select: { id: true, fullName: true, jobTitle: true, managerId: true, department: { select: { name: true, color: true } } } },
             reviewer: { select: { id: true, fullName: true } },
@@ -35,6 +53,7 @@ export class PerformanceService {
           orderBy: { employee: { fullName: 'asc' } },
         },
         objectives: {
+          where: this.objectiveScopeWhere(viewer),
           include: { owner: { select: { id: true, fullName: true } }, keyResults: { orderBy: { id: 'asc' } } },
           orderBy: { scope: 'asc' },
         },

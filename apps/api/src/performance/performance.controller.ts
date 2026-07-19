@@ -20,8 +20,8 @@ export class PerformanceController {
   }
 
   @Get('cycles/:id')
-  cycle(@Param('id') id: string) {
-    return this.service.cycle(id);
+  cycle(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.cycle(id, user);
   }
 
   // Permiso por propiedad (self/manager/RRHH/ADMIN) dentro del servicio.

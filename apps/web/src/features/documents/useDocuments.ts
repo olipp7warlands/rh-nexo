@@ -54,11 +54,14 @@ function invalidate(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['documents'] });
 }
 
-export function useDocuments(category?: DocumentCategory) {
-  const qs = category ? `?category=${category}` : '';
+export function useDocuments(category?: DocumentCategory, ownerId?: string) {
+  const qs = new URLSearchParams();
+  if (category) qs.set('category', category);
+  if (ownerId) qs.set('ownerId', ownerId);
+  const search = qs.toString();
   return useQuery({
-    queryKey: ['documents', category ?? 'all'],
-    queryFn: () => api.get<DocumentItem[]>(`/documents${qs}`),
+    queryKey: ['documents', category ?? 'all', ownerId ?? 'any'],
+    queryFn: () => api.get<DocumentItem[]>(`/documents${search ? `?${search}` : ''}`),
   });
 }
 

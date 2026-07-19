@@ -62,9 +62,12 @@ describe('Nómina (integración)', () => {
     expect(res.body.status).toBe('BORRADOR');
     expect(res.body.period).toBe(PERIOD);
     const ids: string[] = res.body.payslips.map((p: { employeeId: string }) => p.employeeId);
-    const seededSalaried = Array.from({ length: 16 }, (_, i) => `e${i + 2}`); // e2..e17
+    // e2..e17 con salario, salvo e15 (Carmen Iglesias): en el seed humanX está BAJA (caso de
+    // ejemplo de Offboarding) y generate() excluye explícitamente `status: { not: 'BAJA' }'.
+    const seededSalaried = Array.from({ length: 16 }, (_, i) => `e${i + 2}`).filter((id) => id !== 'e15');
     expect(seededSalaried.every((id) => ids.includes(id))).toBe(true);
     expect(ids).not.toContain('e1'); // CEO, sin salario en el seed
+    expect(ids).not.toContain('e15'); // BAJA en el seed, no genera nómina
   });
 
   it('el empleado NO puede generar, listar ni procesar nóminas (403)', async () => {
@@ -123,6 +126,21 @@ describe('Nómina (integración)', () => {
     expect(res.text).toContain('Diego Ortega Marín');
   });
 
+  // Auditoría M3: un IBAN con payload de fórmula se interpreta como fórmula al abrir el CSV
+  // de transferencias en Excel/LibreOffice — debe llegar neutralizado, nunca crudo.
+  it('M3: un IBAN con payload de fórmula llega neutralizado en el CSV de transferencias', async () => {
+    const original = await db.employee.findUniqueOrThrow({ where: { id: EMP } });
+    const payload = '=HYPERLINK("http://evil.example","click")';
+    await db.employee.update({ where: { id: EMP }, data: { iban: payload } });
+
+    const res = await request(http).get(`/api/payroll/runs/${runId}/export`).set('Authorization', `Bearer ${rrhhToken}`).expect(200);
+    // Igual que en absences.e2e-spec.ts: el payload sigue siendo subcadena del texto
+    // neutralizado (apóstrofo antepuesto), así que la comprobación real es esa, no su ausencia.
+    expect(res.text).toContain(`'${payload}`);
+
+    await db.employee.update({ where: { id: EMP }, data: { iban: original.iban } });
+  });
+
   it('"mis nóminas" del empleado solo devuelve las suyas, incluida la nueva', async () => {
     const res = await request(http).get('/api/payroll/mine').set('Authorization', `Bearer ${empToken}`).expect(200);
     expect(res.body.length).toBeGreaterThan(0);
@@ -146,5 +164,28 @@ describe('Nómina (integración)', () => {
       .get(`/api/payroll/payslips/${otherPayslip.id}/document`)
       .set('Authorization', `Bearer ${empToken}`)
       .expect(403);
+  });
+
+  // Auditoría A5: el recibo interpolaba jobTitle/fullName/dni sin escapar en un documento
+  // text/html — un puesto como <img src=x onerror=...> se ejecutaba tal cual.
+  it('el recibo HTML escapa el jobTitle: un payload no se ejecuta como marcado', async () => {
+    const original = await db.employee.findUniqueOrThrow({ where: { id: EMP } });
+    const payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
+    await db.employee.update({ where: { id: EMP }, data: { jobTitle: payload } });
+
+    const run = await request(http).get(`/api/payroll/runs/${runId}`).set('Authorization', `Bearer ${rrhhToken}`).expect(200);
+    const myPayslip = run.body.payslips.find((p: { employeeId: string }) => p.employeeId === EMP);
+
+    const doc = await request(http)
+      .get(`/api/payroll/payslips/${myPayslip.id}/document`)
+      .set('Authorization', `Bearer ${empToken}`)
+      .expect(200);
+
+    expect(doc.text).not.toContain('<img src=x onerror');
+    expect(doc.text).not.toContain('<script>alert(2)</script>');
+    expect(doc.text).toContain('&lt;img src=x onerror=&quot;alert(1)&quot;&gt;');
+    expect(doc.text).toContain('&lt;script&gt;alert(2)&lt;/script&gt;');
+
+    await db.employee.update({ where: { id: EMP }, data: { jobTitle: original.jobTitle } });
   });
 });

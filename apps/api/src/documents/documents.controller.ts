@@ -14,8 +14,8 @@ export class DocumentsController {
   constructor(private readonly service: DocumentsService) {}
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query('category') category?: DocumentCategory) {
-    return this.service.findAll(user, category);
+  findAll(@CurrentUser() user: AuthUser, @Query('category') category?: DocumentCategory, @Query('ownerId') ownerId?: string) {
+    return this.service.findAll(user, category, ownerId);
   }
 
   @Get('templates')

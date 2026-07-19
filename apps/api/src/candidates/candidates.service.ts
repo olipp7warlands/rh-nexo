@@ -15,6 +15,19 @@ export class CandidatesService {
     return { applications: { some: { job: { hiringManagerId: own } } } };
   }
 
+  /**
+   * Auditoría A4: el filtro anterior solo decidía si el viewer podía ver AL candidato (le
+   * bastaba con compartir UNA candidatura con una oferta propia), pero luego devolvía TODAS
+   * sus candidaturas — incluidas las de pipelines de otros managers, con entrevistas,
+   * evaluaciones y decisiones ajenas. Este segundo filtro se aplica a la relación
+   * `applications` en sí, no solo a la existencia del candidato.
+   */
+  private applicationsWhere(viewer: AuthUser): Prisma.ApplicationWhereInput {
+    if (viewer.role === 'ADMIN' || viewer.role === 'RRHH') return {};
+    const own = viewer.employeeId ?? '__none__';
+    return { job: { hiringManagerId: own } };
+  }
+
   findAll(viewer: AuthUser, search?: string) {
     return this.db.candidate.findMany({
       where: {
@@ -23,6 +36,7 @@ export class CandidatesService {
       },
       include: {
         applications: {
+          where: this.applicationsWhere(viewer),
           select: { id: true, status: true, job: { select: { id: true, title: true } }, stage: { select: { name: true } } },
         },
       },
@@ -35,6 +49,7 @@ export class CandidatesService {
       where: { id, ...this.scopeWhere(viewer) },
       include: {
         applications: {
+          where: this.applicationsWhere(viewer),
           include: {
             job: { select: { id: true, title: true } },
             stage: true,
