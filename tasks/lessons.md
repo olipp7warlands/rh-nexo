@@ -115,3 +115,15 @@
     `process.env` (con fallback a 3000) en vez de hardcodearlo, y `.env.local` usa 3001. Antes
     de asumir que un fallo "en dev" es de código, comprobar `Get-NetTCPConnection -State
     Listen` (PowerShell) por si el puerto ya está ocupado por otra cosa.
+19. **`pnpm db:seed` NUNCA se ejecuta contra producción — la excepción del 2026-07-21 fue
+    puntual y no sienta precedente.** `prisma/seed.ts` hace `deleteMany()` de todas las tablas
+    de negocio antes de reinsertar; es un reset completo, no un upsert idempotente. El
+    2026-07-21 se sembró la producción real de humanX (`qkeadkgdzwzsvjvfczhv`) tras verificar
+    explícitamente por consulta directa (recuentos, nombres/emails de empleados, fechas
+    `createdAt`, bucket de Storage) que la base **solo contenía datos del seed inicial sin
+    ninguna edición ni actividad real desde el despliegue** — cero riesgo de borrar algo de
+    valor. Backup físico confirmado (Supabase, <24h) antes de tocar nada. Esto NO cambia la
+    regla permanente: en cuanto producción tenga una sola persona, ausencia, documento o
+    nómina reales, sembrar (o cualquier operación que borre y reinserte) queda terminantemente
+    prohibido sin excepción. Antes de repetir algo parecido, volver a verificar desde cero que
+    sigue sin haber datos reales; no asumir que la conclusión de esta fecha sigue vigente.
