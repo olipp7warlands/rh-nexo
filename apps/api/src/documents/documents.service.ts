@@ -29,11 +29,14 @@ export class DocumentsService {
     @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
 
-  findAll(viewer: AuthUser, category?: DocumentCategory) {
+  findAll(viewer: AuthUser, category?: DocumentCategory, ownerId?: string) {
     const privileged = viewer.role === 'ADMIN' || viewer.role === 'RRHH';
     const own = viewer.employeeId ?? '__none__';
     const where: Prisma.DocumentWhereInput = {
       ...(category ? { category } : {}),
+      ...(ownerId ? { ownerId } : {}),
+      // Sin privilegios, el filtro de propiedad/firma se aplica igual aunque se pida un
+      // ownerId ajeno: como mucho da una lista vacía, nunca expone documentos de otra persona.
       ...(privileged ? {} : { OR: [{ ownerId: own }, { signatures: { some: { employeeId: own } } }] }),
     };
     return this.db.document.findMany({
@@ -42,6 +45,7 @@ export class DocumentsService {
         owner: { select: { id: true, fullName: true } },
         signatures: { include: { employee: { select: { id: true, fullName: true } } } },
       },
+      relationLoadStrategy: 'join',
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -67,6 +71,7 @@ export class DocumentsService {
       if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
         throw new BadRequestException('Tipo de fichero no admitido (PDF, Word, PNG o JPG).');
       }
+      this.assertRealFileType(file.buffer, file.mimetype);
     }
 
     const doc = await this.db.document.create({
@@ -137,5 +142,32 @@ export class DocumentsService {
 
   private audit(actorId: string, action: string, entityId: string, before: unknown, after: unknown) {
     return this.db.auditLog.create({ data: { actorId, action, entity: 'Document', entityId, before: before as object, after: after as object } });
+  }
+
+  /**
+   * Auditoría M2: `file.mimetype` lo rellena Multer a partir del Content-Type que manda el
+   * cliente — trivialmente falseable (`curl -F "file=@payload.html;type=image/png"`). Aquí se
+   * comprueban los bytes reales del fichero (magic bytes) contra el tipo declarado, a mano:
+   * el paquete `file-type` es ESM-only y no es cargable en el `module: commonjs` de este
+   * proyecto (TypeScript reduce `import()` dinámico a `require()`, que revienta con un
+   * paquete ESM-only) — para los 5 tipos fijos que admitimos, comprobar la cabecera basta y
+   * evita esa incompatibilidad.
+   */
+  private assertRealFileType(buffer: Buffer, declaredMime: string): void {
+    const matches = (sig: number[]) => sig.every((byte, i) => buffer[i] === byte);
+    // application/msword (.doc) usa el contenedor OLE/CFB, el mismo que .xls/.ppt — no hay
+    // forma de distinguir "es un .doc" de "es otro formato de Office pre-2007" solo por
+    // cabecera; comprobar el contenedor ya descarta que sea, p. ej., un HTML/script disfrazado.
+    const SIGNATURES: Record<string, number[][]> = {
+      'application/pdf': [[0x25, 0x50, 0x44, 0x46, 0x2d]], // %PDF-
+      'image/png': [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
+      'image/jpeg': [[0xff, 0xd8, 0xff]],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [[0x50, 0x4b, 0x03, 0x04]], // ZIP
+      'application/msword': [[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]], // OLE/CFB
+    };
+    const signatures = SIGNATURES[declaredMime];
+    if (!signatures || !signatures.some(matches)) {
+      throw new BadRequestException('El contenido del fichero no coincide con el tipo declarado.');
+    }
   }
 }

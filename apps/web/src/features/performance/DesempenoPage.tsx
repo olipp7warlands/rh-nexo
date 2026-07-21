@@ -144,7 +144,7 @@ export function DesempenoPage() {
             {/* Reviews */}
             <Card padding="p-0" className="col-span-2">
               <div className="px-5 py-4 border-b border-[var(--line)]">
-                <h3 className="text-[14px] font-semibold">Evaluaciones</h3>
+                <h3 className="font-serif text-[14px] font-medium">Evaluaciones</h3>
               </div>
               <div className="divide-y divide-[var(--line-subtle)]">
                 {cycle.reviews.map((r) => (
@@ -160,7 +160,7 @@ export function DesempenoPage() {
                 return (
                   <Card key={o.id}>
                     <div className="text-[10px] uppercase tracking-wider text-[var(--ink-tertiary)] mb-1">{o.scope}</div>
-                    <h4 className="text-[13px] font-semibold mb-3">{o.title}</h4>
+                    <h4 className="font-serif text-[13px] font-medium mb-3">{o.title}</h4>
                     <div className="divide-y divide-[var(--line-subtle)]">
                       {o.keyResults.map((kr) => (
                         <KRRow key={kr.id} kr={kr} cycleId={cycle.id} canEdit={canEdit} />

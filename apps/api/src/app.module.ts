@@ -2,13 +2,20 @@ import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { PrismaModule } from './prisma/prisma.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { PaisesModule } from './paises/paises.module';
+import { SociedadesModule } from './sociedades/sociedades.module';
+import { LocalizacionesModule } from './localizaciones/localizaciones.module';
+import { CategoriasModule } from './categorias/categorias.module';
+import { AnotacionesModule } from './anotaciones/anotaciones.module';
+import { AgendaModule } from './agenda/agenda.module';
 import { AbsencesModule } from './absences/absences.module';
 import { HolidaysModule } from './holidays/holidays.module';
-import { OnboardingModule } from './onboarding/onboarding.module';
+import { ProcesosModule } from './procesos/procesos.module';
 import { PerformanceModule } from './performance/performance.module';
 import { ReportsModule } from './reports/reports.module';
 import { PayrollModule } from './payroll/payroll.module';
@@ -26,6 +33,10 @@ import { RolesGuard } from './auth/guards/roles.guard';
   imports: [
     // El .env vive en la raíz del monorepo (la API arranca desde apps/api).
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
+    // Límite base por IP para toda la API (100 req/min); /auth/login y /auth/refresh llevan
+    // un límite más estricto con @Throttle() (auditoría A1 — sin esto, el login no tenía
+    // ninguna protección contra fuerza bruta / credential stuffing).
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
     // Sirve el build de apps/web (un solo servicio en Railway: API + frontend en la misma URL).
     // Ruta relativa desde el compilado apps/api/dist/main.js hasta apps/web/dist.
     ServeStaticModule.forRoot({
@@ -45,9 +56,15 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AuthModule,
     EmployeesModule,
     DepartmentsModule,
+    PaisesModule,
+    SociedadesModule,
+    LocalizacionesModule,
+    CategoriasModule,
+    AnotacionesModule,
+    AgendaModule,
     AbsencesModule,
     HolidaysModule,
-    OnboardingModule,
+    ProcesosModule,
     PerformanceModule,
     ReportsModule,
     PayrollModule,
@@ -56,8 +73,10 @@ import { RolesGuard } from './auth/guards/roles.guard';
     CandidatesModule,
     ApplicationsModule,
   ],
-  // Guards globales: primero exige JWT, luego aplica RBAC (@Roles).
+  // Guards globales: primero rate limiting, luego exige JWT, luego aplica RBAC (@Roles).
+  // ThrottlerGuard corre en TODAS las rutas (incluidas las @Public()) — no depende del JWT.
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

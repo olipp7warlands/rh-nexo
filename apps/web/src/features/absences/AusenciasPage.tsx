@@ -50,7 +50,7 @@ export function AusenciasPage() {
       <div className="grid grid-cols-3 gap-5">
         {/* Mi saldo */}
         <Card>
-          <h3 className="text-[14px] font-semibold mb-1">Mi saldo {balance?.year ?? new Date().getFullYear()}</h3>
+          <h3 className="font-serif text-[14px] font-medium mb-1">Mi saldo {balance?.year ?? new Date().getFullYear()}</h3>
           {balance ? (
             <>
               <div className="mono text-[28px] font-bold leading-tight mt-2">
@@ -75,7 +75,7 @@ export function AusenciasPage() {
         {/* Mis solicitudes */}
         <Card padding="p-0" className="col-span-2">
           <div className="px-5 py-4 border-b border-[var(--line)]">
-            <h3 className="text-[14px] font-semibold">Mis solicitudes</h3>
+            <h3 className="font-serif text-[14px] font-medium">Mis solicitudes</h3>
           </div>
           {isLoading && <p className="px-5 py-6 text-[13px] text-[var(--ink-tertiary)]">Cargando…</p>}
           {absences && mine.length === 0 && (

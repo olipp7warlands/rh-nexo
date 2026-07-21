@@ -30,10 +30,11 @@ describe('Informes (integración)', () => {
     const res = await request(http).get('/api/reports/overview').set('Authorization', `Bearer ${token}`).expect(200);
     // No comparamos contra un count() en vivo: employees.e2e-spec.ts crea/borra un empleado de
     // prueba en paralelo y contaminaría el número exacto. En su lugar comprobamos que al menos
-    // la plantilla estable del seed (17 empleados, ninguno BAJA) está contada, y que las
-    // distintas secciones del informe son internamente consistentes entre sí.
+    // la plantilla estable del seed (17 empleados, uno BAJA — e15, caso de ejemplo de
+    // Offboarding) está contada, y que las distintas secciones del informe son internamente
+    // consistentes entre sí.
     const { totalActive, totalAll } = res.body.headcount;
-    expect(totalActive).toBeGreaterThanOrEqual(17);
+    expect(totalActive).toBeGreaterThanOrEqual(16);
     expect(totalAll).toBeGreaterThanOrEqual(totalActive);
     // La suma por departamento de plantilla activa cuadra con el total activo.
     const sumDept = res.body.headcount.byDept.reduce((s: number, d: { count: number }) => s + d.count, 0);

@@ -161,6 +161,19 @@ describe('Documentos (integración)', () => {
     await request(http).get(`/api/documents/${fileDocumentId}/download`).set('Authorization', `Bearer ${empToken}`).expect(403);
   });
 
+  // Auditoría M1: antes, conocer/adivinar la clave de almacenamiento bastaba para descargar
+  // el fichero de otra persona sin pasar por la comprobación de propietario/firmante de
+  // DocumentsService.download() — golpeamos /storage/local directamente, sin el redirect.
+  it('M1: un empleado ajeno no puede descargar el fichero yendo directo a /storage/local (403)', async () => {
+    const flatKey = flattenStorageKey(fileStoragePath!);
+    await request(http).get(`/api/storage/local/${flatKey}`).set('Authorization', `Bearer ${empToken}`).expect(403);
+  });
+
+  it('M1: el propietario sí puede descargarlo directamente por /storage/local', async () => {
+    const flatKey = flattenStorageKey(fileStoragePath!);
+    await request(http).get(`/api/storage/local/${flatKey}`).set('Authorization', `Bearer ${rrhhToken}`).expect(200);
+  });
+
   it('rechaza ficheros de tipo no admitido (400)', async () => {
     await request(http)
       .post('/api/documents')
@@ -168,6 +181,18 @@ describe('Documentos (integración)', () => {
       .field('name', 'Fichero raro e2e')
       .field('category', 'CONTRATOS')
       .attach('file', Buffer.from('#!/bin/sh\necho hola'), { filename: 'script.sh', contentType: 'application/x-sh' })
+      .expect(400);
+  });
+
+  // Auditoría M2: el Content-Type que manda el cliente es falseable — un HTML declarado como
+  // "image/png" debe rechazarse aunque la extensión/MIME declarados estén en la lista blanca.
+  it('M2: rechaza un fichero cuyo contenido real no coincide con el tipo declarado', async () => {
+    await request(http)
+      .post('/api/documents')
+      .set('Authorization', `Bearer ${rrhhToken}`)
+      .field('name', 'Disfrazado de PNG e2e')
+      .field('category', 'CONTRATOS')
+      .attach('file', Buffer.from('<script>alert(1)</script>'), { filename: 'foto.png', contentType: 'image/png' })
       .expect(400);
   });
 });

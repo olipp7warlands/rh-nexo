@@ -3,6 +3,7 @@ import { api } from '../../lib/api';
 
 export type EmployeeStatus = 'ACTIVO' | 'ONBOARDING' | 'AUSENTE' | 'BAJA';
 export type ContractType = 'INDEFINIDO' | 'TEMPORAL' | 'PRACTICAS' | 'FREELANCE';
+export type Vinculo = 'PLANTILLA' | 'EXTERNO';
 
 export interface Department {
   id: string;
@@ -21,6 +22,20 @@ export interface LeaveBalance {
   total: number;
   used: number;
   pending: number;
+}
+export interface Pais {
+  id: string;
+  nombre: string;
+}
+export interface SociedadRef {
+  id: string;
+  nombre: string;
+  paisId: string;
+  pais: Pais;
+}
+export interface LocalizacionRef {
+  id: string;
+  nombre: string;
 }
 
 export interface Employee {
@@ -47,14 +62,26 @@ export interface Employee {
   candidateId?: string | null;
   department?: Department | null;
   manager?: EmployeeRef | null;
-  reports?: Employee[];
+  reports?: EmployeeRef[];
   balances?: LeaveBalance[];
+  // humanX: expediente
+  codigo: string | null;
+  vinculo: Vinculo;
+  sociedadId: string | null;
+  localizacionId: string | null;
+  finPeriodoPrueba: string | null;
+  vencimientoContrato: string | null;
+  descripcionPuesto: string | null;
+  sociedad?: SociedadRef | null;
+  localizacion?: LocalizacionRef | null;
 }
 
 export interface EmployeeFilters {
   search?: string;
   departmentId?: string;
   status?: EmployeeStatus;
+  vinculo?: Vinculo;
+  paisId?: string;
 }
 
 export function useEmployees(params: EmployeeFilters = {}) {
@@ -62,9 +89,25 @@ export function useEmployees(params: EmployeeFilters = {}) {
   if (params.search) qs.set('search', params.search);
   if (params.departmentId) qs.set('departmentId', params.departmentId);
   if (params.status) qs.set('status', params.status);
+  if (params.vinculo) qs.set('vinculo', params.vinculo);
+  if (params.paisId) qs.set('paisId', params.paisId);
   return useQuery({
     queryKey: ['employees', params],
     queryFn: () => api.get<Employee[]>(`/employees?${qs.toString()}`),
+  });
+}
+
+export interface EmployeeKpis {
+  plantilla: number;
+  externos: number;
+  total: number;
+}
+
+/** Contadores para las tarjetas de Inicio, sin traer el listado completo de empleados. */
+export function useEmployeeKpis() {
+  return useQuery({
+    queryKey: ['employees', 'kpis'],
+    queryFn: () => api.get<EmployeeKpis>('/employees/kpis'),
   });
 }
 
@@ -73,6 +116,42 @@ export function useEmployee(id: string) {
     queryKey: ['employee', id],
     queryFn: () => api.get<Employee>(`/employees/${id}`),
     enabled: !!id,
+  });
+}
+
+export interface RegistroPuesto {
+  id: string;
+  fechaInicio: string;
+  fechaFin: string | null;
+  titulo: string;
+  sociedad?: SociedadRef | null;
+  departamento?: Department | null;
+}
+
+export interface RegistroSalarial {
+  id: string;
+  fecha: string;
+  concepto: string;
+  brutoAnual: number;
+}
+
+/** El backend ya aplica el mismo criterio (ADMIN/RRHH/propio empleado); `enabled` evita
+ *  disparar la petición y comerse un 403 en silencio para quien no tiene acceso. */
+export function useHistoricoPuestos(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['historico-puestos', id],
+    queryFn: () => api.get<RegistroPuesto[]>(`/employees/${id}/historico-puestos`),
+    enabled: enabled && !!id,
+  });
+}
+
+/** El backend ya aplica el mismo criterio (ADMIN/RRHH/propio empleado); `enabled` evita
+ *  disparar la petición y comerse un 403 en silencio para quien no tiene acceso. */
+export function useHistoricoSalarial(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['historico-salarial', id],
+    queryFn: () => api.get<RegistroSalarial[]>(`/employees/${id}/historico-salarial`),
+    enabled: enabled && !!id,
   });
 }
 
@@ -97,14 +176,16 @@ export function useUpdateEmployee(id: string) {
   });
 }
 
-/** Baja lógica del empleado (status → BAJA), auditada en el backend. */
-export function useDeleteEmployee(id: string) {
+/** Baja del empleado: estado → BAJA + apertura del proceso de Offboarding, atómico en el
+ *  backend (una sola llamada, no dos mutaciones independientes). Auditado. */
+export function useBajaEmployee(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.del<Employee>(`/employees/${id}`),
-    onSuccess: (updated) => {
-      qc.setQueryData(['employee', id], updated);
+    mutationFn: (fecha: string) => api.post<{ employee: Employee }>(`/employees/${id}/baja`, { fecha }),
+    onSuccess: ({ employee }) => {
+      qc.setQueryData(['employee', id], employee);
       qc.invalidateQueries({ queryKey: ['employees'] });
+      qc.invalidateQueries({ queryKey: ['procesos'] });
     },
   });
 }

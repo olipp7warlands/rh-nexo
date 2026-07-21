@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import '@nucleo/ui/styles.css';
 import { AuthProvider } from './features/auth/AuthContext';
 import { ProtectedRoute } from './features/auth/ProtectedRoute';
@@ -13,29 +13,43 @@ import { OrganigramaPage } from './features/employees/OrganigramaPage';
 import { InicioPage } from './features/absences/InicioPage';
 import { AusenciasPage } from './features/absences/AusenciasPage';
 import { CalendarioPage } from './features/absences/CalendarioPage';
-import { OnboardingPage } from './features/onboarding/OnboardingPage';
+import { ProcesosPage } from './features/procesos/ProcesosPage';
 import { DesempenoPage } from './features/performance/DesempenoPage';
 import { InformesPage } from './features/reports/InformesPage';
 import { NominaPage } from './features/payroll/NominaPage';
 import { DocumentosPage } from './features/documents/DocumentosPage';
 import { ReclutamientoPage } from './features/reclutamiento/ReclutamientoPage';
 import { JobDetailPage } from './features/reclutamiento/JobDetailPage';
+import { AnotacionesPage } from './features/anotaciones/AnotacionesPage';
+import { SociedadesPage } from './features/estructura/SociedadesPage';
+import { LocalizacionesPage } from './features/estructura/LocalizacionesPage';
+import { DepartamentosPage } from './features/estructura/DepartamentosPage';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
 import { NAV } from './lib/nav';
 
 const PAGES: Record<string, JSX.Element> = {
   '/': <InicioPage />,
-  '/empleados': <EmpleadosPage />,
+  '/personas': <EmpleadosPage />,
   '/organigrama': <OrganigramaPage />,
   '/ausencias': <AusenciasPage />,
-  '/calendario': <CalendarioPage />,
-  '/onboarding': <OnboardingPage />,
+  '/agenda': <CalendarioPage />,
+  '/anotaciones': <AnotacionesPage />,
+  '/procesos': <ProcesosPage />,
   '/desempeno': <DesempenoPage />,
   '/informes': <InformesPage />,
   '/nomina': <NominaPage />,
   '/documentos': <DocumentosPage />,
-  '/reclutamiento': <ReclutamientoPage />,
+  '/seleccion': <ReclutamientoPage />,
+  '/estructura/sociedades': <SociedadesPage />,
+  '/estructura/localizaciones': <LocalizacionesPage />,
+  '/estructura/departamentos': <DepartamentosPage />,
 };
+
+/** Redirección que conserva el parámetro de ruta (p. ej. /empleados/:id → /personas/:id). */
+function RedirectWithParam({ to }: { to: (id: string) => string }) {
+  const { id = '' } = useParams();
+  return <Navigate to={to(id)} replace />;
+}
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -52,8 +66,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             {/* Todo lo demás exige sesión y vive dentro del AppShell. */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
-                <Route path="/empleados/:id" element={<EmployeeDetailPage />} />
-                <Route path="/reclutamiento/:jobId" element={<JobDetailPage />} />
+                <Route path="/personas/:id" element={<EmployeeDetailPage />} />
+                <Route path="/seleccion/:jobId" element={<JobDetailPage />} />
                 {NAV.flatMap((section) =>
                   section.items.map((item) => (
                     <Route
@@ -63,6 +77,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                     />
                   )),
                 )}
+
+                {/* Rutas antiguas (pre-humanX): redirección para enlaces/marcadores guardados. */}
+                <Route path="/empleados" element={<Navigate to="/personas" replace />} />
+                <Route path="/empleados/:id" element={<RedirectWithParam to={(id) => `/personas/${id}`} />} />
+                <Route path="/onboarding" element={<Navigate to="/procesos" replace />} />
+                <Route path="/calendario" element={<Navigate to="/agenda" replace />} />
+                <Route path="/reclutamiento" element={<Navigate to="/seleccion" replace />} />
+                <Route path="/reclutamiento/:jobId" element={<RedirectWithParam to={(id) => `/seleccion/${id}`} />} />
               </Route>
             </Route>
 

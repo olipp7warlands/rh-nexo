@@ -5,7 +5,7 @@
  * Usa ids explícitos (e1..e17, d-*) para poder enlazar manager/departamento
  * sin segundas pasadas. Las contraseñas se hashean con bcrypt.
  */
-import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, OnboardingPhase, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus, CandidateSource } from '@prisma/client';
+import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus, CandidateSource, Vinculo, EstadoAnotacion } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const db = new PrismaClient();
@@ -22,6 +22,72 @@ const DEPTS = [
   { id: 'd-people',    name: 'People',     color: '#10B981', leadId: 'e2'  },
   { id: 'd-finance',   name: 'Finanzas',   color: '#0F1419', leadId: 'e16' },
 ];
+
+// ── Estructura humanX: países, sociedades, localizaciones ──
+// wowinX es un grupo con matriz en España (dos sociedades: tecnología/producto y
+// servicios corporativos) y catálogo ampliable a otros países donde el grupo opera.
+const PAISES = [
+  { id: 'p-es', nombre: 'España' },
+  { id: 'p-ae', nombre: 'Dubái' },
+  { id: 'p-in', nombre: 'India' },
+  { id: 'p-co', nombre: 'Colombia' },
+  { id: 'p-mx', nombre: 'México' },
+];
+
+const SOCIEDADES = [
+  { id: 'sc-tech-es',      nombre: 'wowinX Tech España, S.L.',       paisId: 'p-es' },
+  { id: 'sc-servicios-es', nombre: 'wowinX Servicios España, S.L.',  paisId: 'p-es' },
+  { id: 'sc-dubai',        nombre: 'wowinX Middle East FZ-LLC',      paisId: 'p-ae' },
+  { id: 'sc-india',        nombre: 'wowinX India Private Limited',   paisId: 'p-in' },
+  { id: 'sc-colombia',     nombre: 'wowinX Colombia SAS',            paisId: 'p-co' },
+  { id: 'sc-mexico',       nombre: 'wowinX México, S.A. de C.V.',    paisId: 'p-mx' },
+];
+
+const LOCALIZACIONES = [
+  { id: 'loc-madrid',    nombre: 'Madrid' },
+  { id: 'loc-barcelona', nombre: 'Barcelona' },
+  { id: 'loc-bilbao',    nombre: 'Bilbao' },
+  { id: 'loc-malaga',    nombre: 'Málaga' },
+  { id: 'loc-valencia',  nombre: 'Valencia' },
+];
+const LOC_ID_POR_NOMBRE = Object.fromEntries(LOCALIZACIONES.map((l) => [l.nombre, l.id]));
+
+// Dirección, CEO y RRHH/Finanzas cuelgan de la sociedad de servicios corporativos;
+// el resto (Ingeniería, Diseño, Datos, Producto, Marketing, Customer) de la de tecnología.
+const SOCIEDAD_SERVICIOS = new Set(['e1', 'e2', 'e16', 'e17']);
+
+// Dos perfiles externos (freelance) de ejemplo; el resto son plantilla.
+const VINCULO_EXTERNO = new Set(['e9', 'e13']);
+
+// Fechas pensadas para caer dentro de la ventana de alertas de Agenda/Inicio (~6 semanas
+// vista desde "hoy" en el momento de sembrar) — si el seed envejece, basta con adelantarlas.
+const FIN_PERIODO_PRUEBA: Record<string, string> = {
+  e4: '2026-07-30', // Sofía Navarro, ONBOARDING — fin de prueba próximo
+  e13: '2026-08-15', // Raúl Domínguez, ONBOARDING — fin de prueba próximo
+};
+const VENCIMIENTO_CONTRATO: Record<string, string> = {
+  e9: '2026-08-01', // María Fernández, colaboración externa — vencimiento próximo
+  e13: '2026-07-25', // Raúl Domínguez, colaboración externa — vencimiento próximo
+};
+const DESCRIPCION_PUESTO: Record<string, string> = {
+  e1: 'Dirección general del grupo: estrategia, expansión y relación con inversores.',
+  e2: 'Lidera la función de personas: cultura, talento, compensación y cumplimiento laboral.',
+  e3: 'Responsable de la organización de ingeniería y la hoja de ruta técnica del producto.',
+  e4: 'Diseño de arquitectura y mentoría técnica en el equipo de plataforma.',
+  e5: 'Lidera el equipo de backend del producto principal y sus entregas técnicas.',
+  e6: 'Desarrollo de servicios backend y APIs del producto principal.',
+  e7: 'Dirección del equipo de diseño: sistema de diseño y experiencia de producto.',
+  e8: 'Diseño de producto senior para los flujos core de la plataforma.',
+  e9: 'Diseño de producto para iniciativas de marketing y páginas de captación.',
+  e10: 'Lidera el equipo de datos: analítica, cuadros de mando e infraestructura de datos.',
+  e11: 'Análisis de datos de negocio y soporte a decisiones de producto.',
+  e12: 'Dirección de marketing: posicionamiento, demanda y comunicación de marca.',
+  e13: 'Producción de contenido y campañas de marketing digital.',
+  e14: 'Lidera el equipo de éxito de cliente y la retención de cuentas.',
+  e15: 'Gestión de cartera de clientes y resolución de incidencias.',
+  e16: 'Responsable de finanzas del grupo: contabilidad, tesorería y reporting.',
+  e17: 'Selección y captación de talento para todo el grupo.',
+};
 
 // ── Empleados (orden: managers antes que reports) ──
 type E = { id: string; fullName: string; jobTitle: string; dept: string; managerId: string | null; level: string; location: string; remote: boolean; email: string; phone: string; startDate: string; status: EmployeeStatus; salary: number | null; birthday: string; dni: string; address: string; iban: string; emergency: string; fromRecruitment?: boolean };
@@ -40,7 +106,7 @@ const EMPLOYEES: E[] = [
   { id:'e12', fullName:'Iván Moreno Páez', jobTitle:'Marketing Manager', dept:'d-marketing', managerId:'e1', level:'lead', location:'Madrid', remote:false, email:'ivan.moreno@grupo.com', phone:'+34 621 ··· ···', startDate:'2023-05-08', status:'ACTIVO', salary:62000, birthday:'24 dic', dni:'····4456J', address:'Calle Hortaleza ··, Madrid', iban:'ES·· ···· ···· 6690', emergency:'Clara Moreno · +34 6·· ··· ···' },
   { id:'e13', fullName:'Raúl Domínguez Cobo', jobTitle:'Content Marketing', dept:'d-marketing', managerId:'e12', level:'mid', location:'Málaga', remote:true, email:'raul.dominguez@grupo.com', phone:'+34 632 ··· ···', startDate:'2026-06-12', status:'ONBOARDING', salary:42000, birthday:'17 mar', dni:'····7723G', address:'Calle Larios ··, Málaga', iban:'ES·· ···· ···· 3312', emergency:'Eva Domínguez · +34 6·· ··· ···', fromRecruitment:true },
   { id:'e14', fullName:'Ana Romero Cano', jobTitle:'Customer Success Lead', dept:'d-customer', managerId:'e1', level:'lead', location:'Valencia', remote:false, email:'ana.romero@grupo.com', phone:'+34 643 ··· ···', startDate:'2024-04-15', status:'ACTIVO', salary:58000, birthday:'09 jul', dni:'····2218R', address:'Calle Colón ··, Valencia', iban:'ES·· ···· ···· 5543', emergency:'Pau Romero · +34 6·· ··· ···' },
-  { id:'e15', fullName:'Carmen Iglesias Reyes', jobTitle:'CS Manager', dept:'d-customer', managerId:'e14', level:'mid', location:'Valencia', remote:false, email:'carmen.iglesias@grupo.com', phone:'+34 654 ··· ···', startDate:'2025-06-01', status:'ACTIVO', salary:46000, birthday:'21 feb', dni:'····8845K', address:'Avenida del Puerto ··, Valencia', iban:'ES·· ···· ···· 1198', emergency:'José Iglesias · +34 6·· ··· ···' },
+  { id:'e15', fullName:'Carmen Iglesias Reyes', jobTitle:'CS Manager', dept:'d-customer', managerId:'e14', level:'mid', location:'Valencia', remote:false, email:'carmen.iglesias@grupo.com', phone:'+34 654 ··· ···', startDate:'2025-06-01', status:'BAJA', salary:46000, birthday:'21 feb', dni:'····8845K', address:'Avenida del Puerto ··, Valencia', iban:'ES·· ···· ···· 1198', emergency:'José Iglesias · +34 6·· ··· ···' },
   { id:'e16', fullName:'Javier Ramos Gil', jobTitle:'Finance Manager', dept:'d-finance', managerId:'e1', level:'lead', location:'Madrid', remote:false, email:'javier.ramos@grupo.com', phone:'+34 665 ··· ···', startDate:'2022-09-12', status:'ACTIVO', salary:66000, birthday:'03 nov', dni:'····3367M', address:'Paseo de la Castellana ··, Madrid', iban:'ES·· ···· ···· 7741', emergency:'Lucía Ramos · +34 6·· ··· ···' },
   { id:'e17', fullName:'Marcos Ortiz León', jobTitle:'Talent Acquisition', dept:'d-people', managerId:'e2', level:'mid', location:'Madrid', remote:false, email:'marcos.ortiz@grupo.com', phone:'+34 676 ··· ···', startDate:'2025-03-03', status:'ACTIVO', salary:40000, birthday:'14 sep', dni:'····5590P', address:'Calle Bravo Murillo ··, Madrid', iban:'ES·· ···· ···· 2256', emergency:'Rosa Ortiz · +34 6·· ··· ···' },
 ];
@@ -132,6 +198,53 @@ const DOC_TEMPLATES = [
   { name:'Recibí de equipo informático', category:'CERTIFICADOS' },
 ] as const;
 
+// ── Memoria humanX: categorías (tonos apagados, coherentes con la tinta-azul de Informes) ──
+const CATEGORIAS = [
+  { id: 'cat-desempeno',       nombre: 'Desempeño',       color: '#4D6B80', orden: 0 },
+  { id: 'cat-formacion',       nombre: 'Formación',       color: '#6B5C86', orden: 1 },
+  { id: 'cat-disciplinaria',   nombre: 'Disciplinaria',   color: '#86584D', orden: 2 },
+  { id: 'cat-bienestar',       nombre: 'Bienestar',       color: '#4D8066', orden: 3 },
+  { id: 'cat-administrativa',  nombre: 'Administrativa',  color: '#6E7480', orden: 4 },
+  { id: 'cat-reconocimiento',  nombre: 'Reconocimiento',  color: '#8A7247', orden: 5 },
+] as const;
+
+// Anotaciones de ejemplo (autor se resuelve en main() contra los usuarios ya creados).
+const ANOTACIONES = [
+  { employeeId: 'e4',  categoria: 'cat-formacion',      fecha: '2026-06-25', texto: 'Formación de onboarding técnico completada la primera semana.', estado: 'HECHA' },
+  { employeeId: 'e4',  categoria: 'cat-desempeno',      fecha: '2026-07-10', texto: 'Revisión de los 30 días: buen ritmo de adaptación al equipo de plataforma.', estado: 'PENDIENTE' },
+  { employeeId: 'e5',  categoria: 'cat-reconocimiento', fecha: '2026-06-30', texto: 'Lideró la migración de autenticación con muy buen resultado; destacar en el ciclo.', estado: 'PENDIENTE' },
+  { employeeId: 'e6',  categoria: 'cat-bienestar',      fecha: '2026-07-05', texto: 'Comentó carga alta este trimestre por el proyecto de migración; seguimiento en 1:1.', estado: 'PENDIENTE' },
+  { employeeId: 'e8',  categoria: 'cat-administrativa', fecha: '2026-06-24', texto: 'Justificante médico de la ausencia recibido y archivado.', estado: 'HECHA' },
+  { employeeId: 'e9',  categoria: 'cat-administrativa', fecha: '2026-07-01', texto: 'Colaboración externa: revisar condiciones antes del vencimiento de contrato.', estado: 'PENDIENTE' },
+  { employeeId: 'e13', categoria: 'cat-formacion',      fecha: '2026-06-15', texto: 'Pendiente completar formación de marca antes de publicar contenido en solitario.', estado: 'PENDIENTE' },
+  { employeeId: 'e13', categoria: 'cat-desempeno',      fecha: '2026-06-20', texto: 'Primeras piezas de contenido bien recibidas por el equipo de marketing.', estado: 'HECHA' },
+  { employeeId: 'e15', categoria: 'cat-disciplinaria',  fecha: '2026-06-18', texto: 'Aviso verbal por retrasos reiterados en el registro de incidencias de clientes.', estado: 'HECHA' },
+  { employeeId: 'e1',  categoria: 'cat-reconocimiento', fecha: '2026-07-08', texto: 'Cierre de ronda con inversores: comunicar al equipo directivo en el próximo comité.', estado: 'PENDIENTE' },
+] as const;
+
+// ── Expediente humanX: histórico de puesto y salarial de ejemplo (4 progresiones reales) ──
+const REGISTROS_PUESTO = [
+  { empleadoId: 'e3',  fechaInicio: '2024-09-02', fechaFin: '2025-06-30', titulo: 'Tech Lead',          dept: 'd-eng',       sociedad: 'sc-tech-es' },
+  { empleadoId: 'e3',  fechaInicio: '2025-07-01', fechaFin: null,         titulo: 'VP Engineering',      dept: 'd-eng',       sociedad: 'sc-tech-es' },
+  { empleadoId: 'e5',  fechaInicio: '2025-02-10', fechaFin: '2025-11-30', titulo: 'Backend Engineer',    dept: 'd-eng',       sociedad: 'sc-tech-es' },
+  { empleadoId: 'e5',  fechaInicio: '2025-12-01', fechaFin: null,         titulo: 'Tech Lead',           dept: 'd-eng',       sociedad: 'sc-tech-es' },
+  { empleadoId: 'e10', fechaInicio: '2024-01-22', fechaFin: '2025-01-31', titulo: 'Data Analyst',        dept: 'd-data',      sociedad: 'sc-tech-es' },
+  { empleadoId: 'e10', fechaInicio: '2025-02-01', fechaFin: null,         titulo: 'Data Lead',           dept: 'd-data',      sociedad: 'sc-tech-es' },
+  { empleadoId: 'e12', fechaInicio: '2023-05-08', fechaFin: '2024-08-31', titulo: 'Content Marketing',   dept: 'd-marketing', sociedad: 'sc-tech-es' },
+  { empleadoId: 'e12', fechaInicio: '2024-09-01', fechaFin: null,         titulo: 'Marketing Manager',   dept: 'd-marketing', sociedad: 'sc-tech-es' },
+] as const;
+
+const REGISTROS_SALARIALES = [
+  { empleadoId: 'e3',  fecha: '2024-09-02', concepto: 'Alta',                          brutoAnual: 78000 },
+  { empleadoId: 'e3',  fecha: '2025-07-01', concepto: 'Promoción a VP Engineering',     brutoAnual: 95000 },
+  { empleadoId: 'e5',  fecha: '2025-02-10', concepto: 'Alta',                          brutoAnual: 58000 },
+  { empleadoId: 'e5',  fecha: '2025-12-01', concepto: 'Promoción a Tech Lead',          brutoAnual: 72000 },
+  { empleadoId: 'e10', fecha: '2024-01-22', concepto: 'Alta',                          brutoAnual: 52000 },
+  { empleadoId: 'e10', fecha: '2025-02-01', concepto: 'Promoción a Data Lead',          brutoAnual: 68000 },
+  { empleadoId: 'e12', fecha: '2023-05-08', concepto: 'Alta',                          brutoAnual: 45000 },
+  { empleadoId: 'e12', fecha: '2024-09-01', concepto: 'Promoción a Marketing Manager',  brutoAnual: 62000 },
+] as const;
+
 // Cálculo de nómina (idéntico al prototipo)
 const irpfRate = (a: number) => a>=80000?0.30:a>=60000?0.26:a>=45000?0.22:a>=30000?0.18:0.14;
 const payrollFor = (annual: number) => {
@@ -148,25 +261,40 @@ async function main() {
     db.auditDecision.deleteMany(), db.evaluation.deleteMany(), db.interview.deleteMany(),
     db.application.deleteMany(), db.job.deleteMany(), db.stage.deleteMany(), db.candidate.deleteMany(),
     db.auditLog.deleteMany(), db.notification.deleteMany(),
+    db.anotacion.deleteMany(), db.categoria.deleteMany(),
+    db.registroPuesto.deleteMany(), db.registroSalarial.deleteMany(),
     db.documentSignature.deleteMany(), db.document.deleteMany(), db.documentTemplate.deleteMany(),
     db.payrollItem.deleteMany(), db.payslip.deleteMany(), db.payrollRun.deleteMany(),
     db.keyResult.deleteMany(), db.objective.deleteMany(), db.review.deleteMany(), db.performanceCycle.deleteMany(),
-    db.onboardingTask.deleteMany(), db.onboardingProcess.deleteMany(), db.onboardingTemplateTask.deleteMany(), db.onboardingTemplate.deleteMany(),
+    db.procesoTarea.deleteMany(), db.proceso.deleteMany(), db.plantillaProcesoTarea.deleteMany(), db.plantillaProceso.deleteMany(),
     db.timeEntry.deleteMany(), db.leaveBalance.deleteMany(), db.absence.deleteMany(), db.holiday.deleteMany(),
     db.user.deleteMany(), db.employee.deleteMany(), db.department.deleteMany(),
+    db.sociedad.deleteMany(), db.localizacion.deleteMany(), db.pais.deleteMany(),
   ]);
+
+  // Estructura: países → sociedades, y localizaciones (catálogos independientes)
+  for (const p of PAISES) await db.pais.create({ data: { id: p.id, nombre: p.nombre } });
+  for (const s of SOCIEDADES) await db.sociedad.create({ data: { id: s.id, nombre: s.nombre, paisId: s.paisId } });
+  for (const l of LOCALIZACIONES) await db.localizacion.create({ data: { id: l.id, nombre: l.nombre } });
 
   // Departamentos (sin lead todavía)
   for (const d of DEPTS) await db.department.create({ data: { id: d.id, name: d.name, color: d.color } });
 
   // Empleados (en orden → managers existen antes que reports)
-  for (const e of EMPLOYEES) {
+  for (const [i, e] of EMPLOYEES.entries()) {
     await db.employee.create({ data: {
       id: e.id, fullName: e.fullName, email: e.email, phone: e.phone, jobTitle: e.jobTitle,
       level: e.level, location: e.location, remote: e.remote, startDate: D(e.startDate),
       status: e.status, salary: e.salary ?? undefined, birthday: e.birthday, dni: e.dni,
       address: e.address, iban: e.iban, emergency: e.emergency, fromRecruitment: e.fromRecruitment ?? false,
       departmentId: e.dept, managerId: e.managerId ?? undefined,
+      codigo: `EMP-${String(i + 1).padStart(4, '0')}`,
+      vinculo: VINCULO_EXTERNO.has(e.id) ? Vinculo.EXTERNO : Vinculo.PLANTILLA,
+      sociedadId: SOCIEDAD_SERVICIOS.has(e.id) ? 'sc-servicios-es' : 'sc-tech-es',
+      localizacionId: LOC_ID_POR_NOMBRE[e.location],
+      finPeriodoPrueba: FIN_PERIODO_PRUEBA[e.id] ? D(FIN_PERIODO_PRUEBA[e.id]) : undefined,
+      vencimientoContrato: VENCIMIENTO_CONTRATO[e.id] ? D(VENCIMIENTO_CONTRATO[e.id]) : undefined,
+      descripcionPuesto: DESCRIPCION_PUESTO[e.id],
     }});
   }
   // Asignar leads de departamento
@@ -184,16 +312,41 @@ async function main() {
   for (const h of HOLIDAYS)
     await db.holiday.create({ data: { date: D(h.date), name: h.name, location: h.location ?? undefined } });
 
-  // Onboarding
-  const tpl = await db.onboardingTemplate.create({ data: { name: 'Onboarding estándar' } });
+  // Procesos — plantilla maestra de Onboarding (fase G: fase es texto libre, no enum)
+  const ONB_PHASE_LABEL: Record<string, string> = {
+    ANTES: 'Antes del primer día',
+    DIA1: 'Primer día',
+    SEMANA1: 'Primera semana',
+    MES1: 'Primer mes',
+  };
+  const plantillaOnb = await db.plantillaProceso.create({ data: { nombre: 'Onboarding estándar', tipo: 'ONBOARDING', activa: true } });
   for (const [i, t] of ONB_TASKS.entries())
-    await db.onboardingTemplateTask.create({ data: { templateId: tpl.id, label: t.label, phase: t.phase as OnboardingPhase, owner: t.owner, order: i } });
+    await db.plantillaProcesoTarea.create({ data: { plantillaId: plantillaOnb.id, label: t.label, fase: ONB_PHASE_LABEL[t.phase], responsable: t.owner, orden: i } });
   for (const o of ONBOARDING) {
-    const proc = await db.onboardingProcess.create({ data: { employeeId: o.employeeId, buddyId: o.buddyId, templateId: tpl.id, startDate: D(o.startDate) } });
+    const proc = await db.proceso.create({ data: { employeeId: o.employeeId, tipo: 'ONBOARDING', buddyId: o.buddyId, plantillaId: plantillaOnb.id, fechaInicio: D(o.startDate) } });
     for (const t of ONB_TASKS) {
-      const done = o.done.includes(t.id);
-      await db.onboardingTask.create({ data: { processId: proc.id, label: t.label, phase: t.phase as OnboardingPhase, owner: t.owner, done, doneAt: done ? new Date() : undefined } });
+      const completada = o.done.includes(t.id);
+      await db.procesoTarea.create({ data: { procesoId: proc.id, label: t.label, fase: ONB_PHASE_LABEL[t.phase], responsable: t.owner, estado: completada ? 'COMPLETADA' : 'PENDIENTE', completadaAt: completada ? new Date() : undefined } });
     }
+  }
+
+  // Procesos — plantilla maestra de Offboarding + un caso de ejemplo (e15, status BAJA)
+  const OFB_TASKS = [
+    { fase: 'Aviso previo',     label: 'Comunicar la baja a RRHH y al manager', owner: 'RRHH' },
+    { fase: 'Aviso previo',     label: 'Planificar el traspaso de tareas', owner: 'Manager' },
+    { fase: 'Última semana',    label: 'Revocar accesos y cuentas', owner: 'IT' },
+    { fase: 'Última semana',    label: 'Recuperar equipo informático', owner: 'IT' },
+    { fase: 'Última semana',    label: 'Entrevista de salida', owner: 'RRHH' },
+    { fase: 'Salida',           label: 'Finiquito y liquidación', owner: 'RRHH' },
+    { fase: 'Salida',           label: 'Baja en Seguridad Social', owner: 'RRHH' },
+  ];
+  const plantillaOfb = await db.plantillaProceso.create({ data: { nombre: 'Offboarding estándar', tipo: 'OFFBOARDING', activa: true } });
+  for (const [i, t] of OFB_TASKS.entries())
+    await db.plantillaProcesoTarea.create({ data: { plantillaId: plantillaOfb.id, label: t.label, fase: t.fase, responsable: t.owner, orden: i } });
+  const procOfb = await db.proceso.create({ data: { employeeId: 'e15', tipo: 'OFFBOARDING', plantillaId: plantillaOfb.id, fechaInicio: D('2026-07-10'), fechaObjetivo: D('2026-07-24') } });
+  for (const [i, t] of OFB_TASKS.entries()) {
+    const completada = i < 2; // el aviso previo ya está gestionado
+    await db.procesoTarea.create({ data: { procesoId: procOfb.id, label: t.label, fase: t.fase, responsable: t.owner, estado: completada ? 'COMPLETADA' : 'PENDIENTE', completadaAt: completada ? new Date() : undefined } });
   }
 
   // Desempeño
@@ -282,12 +435,35 @@ async function main() {
 
   // Usuarios (login). Contraseña demo para todos: "nucleo123"
   const hash = await bcrypt.hash('nucleo123', 10);
-  await db.user.create({ data: { email: 'admin@grupo.com', passwordHash: hash, role: Role.ADMIN, employeeId: 'e1' } });
-  await db.user.create({ data: { email: 'blanca.ruiz@grupo.com', passwordHash: hash, role: Role.RRHH, employeeId: 'e2' } });
+  const userAdmin = await db.user.create({ data: { email: 'admin@grupo.com', passwordHash: hash, role: Role.ADMIN, employeeId: 'e1' } });
+  const userBlanca = await db.user.create({ data: { email: 'blanca.ruiz@grupo.com', passwordHash: hash, role: Role.RRHH, employeeId: 'e2' } });
   await db.user.create({ data: { email: 'carlos.soto@grupo.com', passwordHash: hash, role: Role.MANAGER, employeeId: 'e3' } });
   await db.user.create({ data: { email: 'diego.ortega@grupo.com', passwordHash: hash, role: Role.EMPLEADO, employeeId: 'e6' } });
 
-  console.log(`✅  Seed completado: ${EMPLOYEES.length} empleados, ${DEPTS.length} departamentos, nómina ${run.period}, 5 ofertas + pipeline VITAE.`);
+  // Expediente humanX: histórico de puesto y salarial
+  for (const r of REGISTROS_PUESTO) {
+    await db.registroPuesto.create({ data: {
+      empleadoId: r.empleadoId, fechaInicio: D(r.fechaInicio), fechaFin: r.fechaFin ? D(r.fechaFin) : undefined,
+      titulo: r.titulo, departamentoId: r.dept, sociedadId: r.sociedad,
+    }});
+  }
+  for (const r of REGISTROS_SALARIALES) {
+    await db.registroSalarial.create({ data: {
+      empleadoId: r.empleadoId, fecha: D(r.fecha), concepto: r.concepto, brutoAnual: r.brutoAnual,
+    }});
+  }
+
+  // Memoria humanX: categorías y anotaciones de ejemplo
+  for (const c of CATEGORIAS) await db.categoria.create({ data: { id: c.id, nombre: c.nombre, color: c.color, orden: c.orden } });
+  for (const a of ANOTACIONES) {
+    await db.anotacion.create({ data: {
+      empleadoId: a.employeeId, categoriaId: a.categoria, fecha: D(a.fecha), texto: a.texto,
+      estado: a.estado as EstadoAnotacion, hechaAt: a.estado === 'HECHA' ? D(a.fecha) : undefined,
+      autorId: a.employeeId === 'e1' ? userAdmin.id : userBlanca.id,
+    }});
+  }
+
+  console.log(`✅  Seed completado: ${EMPLOYEES.length} empleados, ${DEPTS.length} departamentos, nómina ${run.period}, 5 ofertas + pipeline VITAE, ${ANOTACIONES.length} anotaciones, ${REGISTROS_PUESTO.length} registros de puesto, ${REGISTROS_SALARIALES.length} registros salariales.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => db.$disconnect());

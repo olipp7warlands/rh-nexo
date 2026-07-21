@@ -30,7 +30,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(15,20,25,0.45)] p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(10,10,10,0.45)] p-4 sm:p-8"
       onMouseDown={onClose}
     >
       <div
@@ -44,7 +44,7 @@ export function Modal({
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[var(--line)]">
           <div>
-            <h2 className="text-[16px] font-bold tracking-[-0.01em]">{title}</h2>
+            <h2 className="font-serif text-[16px] font-medium tracking-[-0.01em]">{title}</h2>
             {subtitle && <p className="text-[12px] text-[var(--ink-secondary)] mt-0.5">{subtitle}</p>}
           </div>
           <button

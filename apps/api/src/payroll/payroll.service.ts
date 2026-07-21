@@ -2,9 +2,16 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { AddItemDto } from './payroll.dto';
+import { csvSafe } from '../lib/csv-safe';
 
 const irpfRate = (a: number) => (a >= 80000 ? 0.3 : a >= 60000 ? 0.26 : a >= 45000 ? 0.22 : a >= 30000 ? 0.18 : 0.14);
 const euro = (n: number) => `${n.toLocaleString('es-ES')} €`;
+
+// Auditoría A5: renderHtml() interpolaba fullName/jobTitle/dni/period sin escapar en un
+// documento text/html — un valor tipo <img onerror=...> en el puesto de un empleado se
+// ejecutaba tal cual. Estos campos son de texto libre editable por ADMIN/RRHH.
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 @Injectable()
 export class PayrollService {
@@ -115,9 +122,9 @@ export class PayrollService {
     const run = await this.run(runId);
     const header = ['Empleado', 'IBAN', 'Bruto', 'IRPF', 'SS', 'Neto'];
     const lines = run.payslips.map((p) =>
-      [p.employee.fullName, p.employee.iban ?? '', String(p.gross), String(p.irpf), String(p.ss), String(p.net)].join(';'),
+      [csvSafe(p.employee.fullName), csvSafe(p.employee.iban ?? ''), String(p.gross), String(p.irpf), String(p.ss), String(p.net)].join(';'),
     );
-    return [`# Nómina ${run.period} — transferencias`, header.join(';'), ...lines].join('\n');
+    return [`# Nómina ${csvSafe(run.period)} — transferencias`, header.join(';'), ...lines].join('\n');
   }
 
   private renderHtml(ps: {
@@ -127,21 +134,26 @@ export class PayrollService {
   }) {
     const row = (k: string, v: string, strong = false) =>
       `<tr><td>${k}</td><td style="text-align:right;font-family:monospace${strong ? ';font-weight:700' : ''}">${v}</td></tr>`;
-    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Nómina ${ps.run.period} · ${ps.employee.fullName}</title>
+    const period = escapeHtml(ps.run.period);
+    const fullName = escapeHtml(ps.employee.fullName);
+    const jobTitle = escapeHtml(ps.employee.jobTitle);
+    const dni = escapeHtml(ps.employee.dni ?? '—');
+    const status = escapeHtml(ps.status);
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Nómina ${period} · ${fullName}</title>
 <style>body{font-family:Inter,system-ui,sans-serif;color:#0F1419;max-width:640px;margin:40px auto;padding:0 24px}
 h1{font-size:20px;margin:0} .muted{color:#6B7280;font-size:13px} table{width:100%;border-collapse:collapse;margin-top:24px}
 td{padding:10px 0;border-bottom:1px solid #E5E7EB;font-size:14px} .net td{border-top:2px solid #0F1419;border-bottom:none;font-size:16px}
 .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0F1419;padding-bottom:16px}</style></head>
 <body onload="window.print&&0">
-<div class="head"><div><h1>Nexo · Recibo de nómina</h1><div class="muted">Periodo ${ps.run.period} · ${ps.status}</div></div>
-<div style="text-align:right"><strong>${ps.employee.fullName}</strong><div class="muted">${ps.employee.jobTitle}<br>DNI ${ps.employee.dni ?? '—'}</div></div></div>
+<div class="head"><div><h1>humanX · Recibo de nómina</h1><div class="muted">Periodo ${period} · ${status}</div></div>
+<div style="text-align:right"><strong>${fullName}</strong><div class="muted">${jobTitle}<br>DNI ${dni}</div></div></div>
 <table>
 ${row('Salario bruto', euro(ps.gross))}
 ${row('Retención IRPF', '− ' + euro(ps.irpf))}
 ${row('Seguridad Social', '− ' + euro(ps.ss))}
 <tr class="net">${`<td><strong>Líquido a percibir</strong></td><td style="text-align:right;font-family:monospace;font-weight:700">${euro(ps.net)}</td>`}</tr>
 </table>
-<p class="muted" style="margin-top:32px">Documento generado por Nexo. Recibo simplificado (no sustituye al recibo oficial).</p>
+<p class="muted" style="margin-top:32px">Documento generado por humanX. Recibo simplificado (no sustituye al recibo oficial).</p>
 </body></html>`;
   }
 

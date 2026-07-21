@@ -15,10 +15,12 @@ interface JwtPayload {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(config: ConfigService) {
+    // Sin fallback: assertSecretsConfigured() (main.ts) ya abortó el arranque si JWT_SECRET
+    // no está definido — degradar aquí a un secreto conocido permitiría forjar tokens válidos.
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET') ?? 'dev-secret',
+      secretOrKey: config.get<string>('JWT_SECRET')!,
     });
   }
 

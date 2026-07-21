@@ -6,7 +6,17 @@ import { downloadFile } from '../../lib/api';
 import { useReportsOverview } from './useReports';
 import { formatEuro } from '../../lib/format';
 
-function BarList({ items }: { items: { label: string; value: number; color?: string; display?: string }[] }) {
+// Única gama cromática permitida en Informes: azul tinta apagado, en degradado según el
+// valor (más oscuro = mayor). No es un color de marca — es la codificación del propio dato.
+const INK_BLUE_LIGHT = { r: 199, g: 207, b: 218 }; // tinte más pálido, valores bajos
+const INK_BLUE_DARK = { r: 58, g: 74, b: 99 }; // #3A4A63, valor máximo de cada gráfico
+function inkBlueShade(ratio: number): string {
+  const t = 0.25 + 0.75 * Math.max(0, Math.min(1, ratio)); // suelo del 25% para que nada quede casi blanco
+  const lerp = (light: number, dark: number) => Math.round(light + (dark - light) * t);
+  return `rgb(${lerp(INK_BLUE_LIGHT.r, INK_BLUE_DARK.r)}, ${lerp(INK_BLUE_LIGHT.g, INK_BLUE_DARK.g)}, ${lerp(INK_BLUE_LIGHT.b, INK_BLUE_DARK.b)})`;
+}
+
+function BarList({ items }: { items: { label: string; value: number; display?: string }[] }) {
   const max = Math.max(1, ...items.map((i) => i.value));
   return (
     <div className="flex flex-col gap-2.5">
@@ -17,7 +27,7 @@ function BarList({ items }: { items: { label: string; value: number; color?: str
             <span className="mono font-medium">{i.display ?? i.value}</span>
           </div>
           <div className="h-2 rounded-full bg-[var(--bg-hover)] overflow-hidden">
-            <div className="h-full rounded-full" style={{ width: `${(i.value / max) * 100}%`, background: i.color ?? 'var(--accent)' }} />
+            <div className="h-full rounded-full" style={{ width: `${(i.value / max) * 100}%`, background: inkBlueShade(i.value / max) }} />
           </div>
         </div>
       ))}
@@ -106,20 +116,20 @@ export function InformesPage() {
 
           <div className="grid grid-cols-2 gap-5">
             <Card>
-              <h3 className="text-[14px] font-semibold mb-4">Plantilla por departamento</h3>
-              <BarList items={data.headcount.byDept.map((d) => ({ label: d.name, value: d.count, color: d.color }))} />
+              <h3 className="font-serif text-[14px] font-medium mb-4">Plantilla por departamento</h3>
+              <BarList items={data.headcount.byDept.map((d) => ({ label: d.name, value: d.count }))} />
             </Card>
             <Card>
-              <h3 className="text-[14px] font-semibold mb-4">Coste por departamento</h3>
-              <BarList items={data.cost.byDept.map((d) => ({ label: d.name, value: d.total, color: d.color, display: formatEuro(d.total) }))} />
+              <h3 className="font-serif text-[14px] font-medium mb-4">Coste por departamento</h3>
+              <BarList items={data.cost.byDept.map((d) => ({ label: d.name, value: d.total, display: formatEuro(d.total) }))} />
             </Card>
             <Card>
-              <h3 className="text-[14px] font-semibold mb-1">Distribución de desempeño</h3>
+              <h3 className="font-serif text-[14px] font-medium mb-1">Distribución de desempeño</h3>
               <p className="text-[11px] text-[var(--ink-tertiary)] mb-4">{data.performance.rated} evaluaciones con valoración</p>
               <BarList items={data.performance.distribution.map((d) => ({ label: d.label, value: d.count }))} />
             </Card>
             <Card>
-              <h3 className="text-[14px] font-semibold mb-4">Diversidad por ubicación</h3>
+              <h3 className="font-serif text-[14px] font-medium mb-4">Diversidad por ubicación</h3>
               <BarList items={data.diversity.byLocation.map((l) => ({ label: l.location, value: l.count }))} />
               <p className="text-[11px] text-[var(--ink-tertiary)] mt-4">
                 Modalidad: {data.diversity.remote} en remoto · {data.diversity.onsite} presencial.

@@ -126,7 +126,7 @@ function ManagerView() {
 
           {tab === 'resumen' && (
             <Card>
-              <h3 className="text-[15px] font-semibold mb-4">Desglose del periodo</h3>
+              <h3 className="font-serif text-[15px] font-medium mb-4">Desglose del periodo</h3>
               <div className="space-y-3 text-[13px] max-w-sm">
                 <div className="flex justify-between">
                   <span className="text-[var(--ink-secondary)]">Salario bruto</span>
@@ -194,7 +194,7 @@ function ManagerView() {
             <Card padding="p-0">
               <div className="px-6 pt-5 pb-3 border-b border-[var(--line-subtle)] flex items-center justify-between">
                 <div>
-                  <h3 className="text-[15px] font-semibold">Incidencias del periodo</h3>
+                  <h3 className="font-serif text-[15px] font-medium">Incidencias del periodo</h3>
                   <p className="text-[12px] text-[var(--ink-tertiary)] mt-0.5">Variables que afectan a la nómina de {run.period}</p>
                 </div>
                 {run.status === 'BORRADOR' && (

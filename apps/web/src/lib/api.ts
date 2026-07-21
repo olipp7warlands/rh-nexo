@@ -68,7 +68,9 @@ async function request<T>(path: string, init: RequestInit = {}, retryOn401 = tru
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Error ${res.status}`);
+    // Los errores de validación llegan como lista (uno por campo); el resto, como texto.
+    const message = Array.isArray(body.message) ? body.message.join('. ') : body.message;
+    throw new Error(message ?? `Error ${res.status}`);
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
@@ -139,7 +141,9 @@ async function requestForm<T>(path: string, formData: FormData, retryOn401 = tru
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Error ${res.status}`);
+    // Los errores de validación llegan como lista (uno por campo); el resto, como texto.
+    const message = Array.isArray(body.message) ? body.message.join('. ') : body.message;
+    throw new Error(message ?? `Error ${res.status}`);
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }

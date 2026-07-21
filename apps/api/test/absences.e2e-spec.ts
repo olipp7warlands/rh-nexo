@@ -101,4 +101,37 @@ describe('Ausencias (integración)', () => {
     expect(res.headers['content-type']).toContain('text/csv');
     expect(res.text.split('\n')[0]).toBe('Empleado;Tipo;Inicio;Fin;Días;Estado;Motivo');
   });
+
+  // Auditoría M3: un "motivo" que empiece por = se interpreta como fórmula al abrir el CSV
+  // en Excel/LibreOffice (p. ej. exfiltración vía HYPERLINK). Debe llegar neutralizado.
+  it('M3: el motivo con payload de fórmula llega neutralizado en el CSV', async () => {
+    const payload = '=HYPERLINK("http://evil.example","click")';
+    const created = await request(http)
+      .post('/api/absences')
+      .set('Authorization', `Bearer ${empToken}`)
+      .send({ type: 'PERSONAL', startDate: '2026-10-01', endDate: '2026-10-01', reason: payload })
+      .expect(201);
+
+    const res = await request(http).get('/api/absences/export').set('Authorization', `Bearer ${mgrToken}`).expect(200);
+    // La neutralización antepone un apóstrofo (mitigación estándar: Excel/LibreOffice lo
+    // muestran como texto literal en vez de ejecutar la fórmula); el payload original sigue
+    // presente como SUBCADENA de ese texto neutralizado, así que no tiene sentido comprobar
+    // `not.toContain(payload)` — lo que importa es que llega precedido del apóstrofo, no crudo.
+    expect(res.text).toContain(`'${payload}`);
+
+    // limpieza
+    await db.absence.delete({ where: { id: created.body.id } }).catch(() => undefined);
+  });
+
+  // Optimización de rendimiento: la ficha ahora filtra por employeeId en vez de traer toda la
+  // tabla. El filtro se aplica DENTRO del alcance por rol (AND), nunca lo sustituye.
+  it('employeeId filtra dentro del alcance del rol, nunca lo amplía', async () => {
+    const propias = await request(http).get(`/api/absences?employeeId=${EMP}`).set('Authorization', `Bearer ${empToken}`).expect(200);
+    expect(propias.body.every((a: { employeeId: string }) => a.employeeId === EMP)).toBe(true);
+
+    // Diego (EMPLEADO) pidiendo el employeeId de otra persona (e1, ajena a su equipo): lista
+    // vacía, nunca los datos de e1.
+    const ajenas = await request(http).get('/api/absences?employeeId=e1').set('Authorization', `Bearer ${empToken}`).expect(200);
+    expect(ajenas.body).toEqual([]);
+  });
 });

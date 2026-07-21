@@ -27,7 +27,7 @@ export function ReclutamientoPage() {
   if (!canView) {
     return (
       <div className="max-w-[1400px] mx-auto px-10 py-10">
-        <PageHeader eyebrow="Talento" title="Reclutamiento" />
+        <PageHeader eyebrow="Talento" title="Selección" />
         <Card>
           <p className="text-[13px] text-[var(--ink-secondary)]">
             El reclutamiento contiene datos de candidatos y solo está disponible para managers, RRHH y Administración.
@@ -41,7 +41,7 @@ export function ReclutamientoPage() {
     <div className="max-w-[1400px] mx-auto px-10 py-10">
       <PageHeader
         eyebrow="Talento"
-        title="Reclutamiento"
+        title="Selección"
         subtitle="Ofertas abiertas, pipeline de candidatos y contrataciones."
         actions={
           canManage ? (
@@ -74,14 +74,14 @@ export function ReclutamientoPage() {
       <div className="grid grid-cols-2 gap-5">
         {filtered.map((job) => (
           <Card key={job.id} className="cursor-pointer hover:border-[var(--accent)] transition-colors" >
-            <div onClick={() => navigate(`/reclutamiento/${job.id}`)}>
+            <div onClick={() => navigate(`/seleccion/${job.id}`)}>
               <div className="flex items-start justify-between mb-2">
                 <div className="text-[11px] text-[var(--ink-tertiary)] uppercase tracking-wider">
                   {job.department?.name ?? 'Sin departamento'}
                 </div>
                 <JobStatusBadge status={job.status} />
               </div>
-              <h3 className="text-[18px] font-semibold mb-1">{job.title}</h3>
+              <h3 className="font-serif text-[18px] font-medium mb-1">{job.title}</h3>
               <div className="flex items-center gap-3 text-[12px] text-[var(--ink-secondary)] mb-4">
                 <span>{job.location}{job.remote ? ' (remoto)' : ''}</span>
                 <span>·</span>

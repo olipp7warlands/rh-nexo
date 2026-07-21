@@ -7,6 +7,7 @@ import { Modal } from '../_shared/Modal';
 import { useAuth } from '../auth/AuthContext';
 import { useCreateEmployee, useUpdateEmployee, type Employee } from './useEmployees';
 import { useDepartments } from './useDepartments';
+import { useSociedades, useLocalizaciones } from '../estructura/useEstructura';
 
 const schema = z.object({
   fullName: z.string().min(1, 'Obligatorio'),
@@ -27,6 +28,13 @@ const schema = z.object({
   managerId: z.string().optional(),
   salary: z.number().int().min(0, 'No puede ser negativo').optional(),
   iban: z.string().optional(),
+  codigo: z.string().optional(),
+  vinculo: z.enum(['PLANTILLA', 'EXTERNO']).optional(),
+  sociedadId: z.string().optional(),
+  localizacionId: z.string().optional(),
+  finPeriodoPrueba: z.string().optional(),
+  vencimientoContrato: z.string().optional(),
+  descripcionPuesto: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -72,6 +80,8 @@ export function EmployeeModal({
   const { user } = useAuth();
   const canComp = user?.role === 'ADMIN' || user?.role === 'RRHH';
   const { data: departments } = useDepartments();
+  const { data: sociedades } = useSociedades();
+  const { data: localizaciones } = useLocalizaciones();
   const create = useCreateEmployee();
   const update = useUpdateEmployee(employee?.id ?? '');
   const mutation = mode === 'create' ? create : update;
@@ -105,8 +115,15 @@ export function EmployeeModal({
           managerId: employee.managerId ?? '',
           salary: employee.salary ?? undefined,
           iban: employee.iban ?? '',
+          codigo: employee.codigo ?? '',
+          vinculo: employee.vinculo,
+          sociedadId: employee.sociedadId ?? '',
+          localizacionId: employee.localizacionId ?? '',
+          finPeriodoPrueba: employee.finPeriodoPrueba?.slice(0, 10) ?? '',
+          vencimientoContrato: employee.vencimientoContrato?.slice(0, 10) ?? '',
+          descripcionPuesto: employee.descripcionPuesto ?? '',
         }
-      : { remote: false, status: 'ONBOARDING', contractType: 'INDEFINIDO' },
+      : { remote: false, status: 'ONBOARDING', contractType: 'INDEFINIDO', vinculo: 'PLANTILLA' },
   });
 
   const onSubmit = handleSubmit(async (data) => {
@@ -187,6 +204,15 @@ export function EmployeeModal({
 
         {tab === 'Puesto y contrato' && (
           <div className="grid grid-cols-2 gap-4">
+            <Row label="Código" error={errors.codigo?.message}>
+              <Input placeholder="p. ej. EMP-0018" {...register('codigo')} />
+            </Row>
+            <Row label="Vínculo" error={errors.vinculo?.message}>
+              <select className={selectClass} {...register('vinculo')}>
+                <option value="PLANTILLA">Plantilla</option>
+                <option value="EXTERNO">Externo</option>
+              </select>
+            </Row>
             <Row label="Cargo" required error={errors.jobTitle?.message}>
               <Input {...register('jobTitle')} />
             </Row>
@@ -198,6 +224,25 @@ export function EmployeeModal({
                 <option value="senior">Senior</option>
                 <option value="mid">Intermedio</option>
                 <option value="junior">Junior</option>
+              </select>
+            </Row>
+            <div className="col-span-2">
+              <Row label="Descripción del puesto" error={errors.descripcionPuesto?.message}>
+                <textarea
+                  rows={2}
+                  className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none transition-all resize-y"
+                  {...register('descripcionPuesto')}
+                />
+              </Row>
+            </div>
+            <Row label="Sociedad" error={errors.sociedadId?.message}>
+              <select className={selectClass} {...register('sociedadId')}>
+                <option value="">Sin asignar</option>
+                {sociedades?.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre} ({s.pais.nombre})
+                  </option>
+                ))}
               </select>
             </Row>
             <Row label="Departamento" error={errors.departmentId?.message}>
@@ -220,6 +265,16 @@ export function EmployeeModal({
                 ))}
               </select>
             </Row>
+            <Row label="Localización" error={errors.localizacionId?.message}>
+              <select className={selectClass} {...register('localizacionId')}>
+                <option value="">Sin asignar</option>
+                {localizaciones?.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nombre}
+                  </option>
+                ))}
+              </select>
+            </Row>
             <Row label="Ubicación" required error={errors.location?.message}>
               <Input {...register('location')} />
             </Row>
@@ -233,6 +288,12 @@ export function EmployeeModal({
                 <option value="PRACTICAS">Prácticas</option>
                 <option value="FREELANCE">Freelance</option>
               </select>
+            </Row>
+            <Row label="Fin de periodo de prueba" error={errors.finPeriodoPrueba?.message}>
+              <Input type="date" {...register('finPeriodoPrueba')} />
+            </Row>
+            <Row label="Vencimiento de contrato" error={errors.vencimientoContrato?.message}>
+              <Input type="date" {...register('vencimientoContrato')} />
             </Row>
             <Row label="Estado" error={errors.status?.message}>
               <select className={selectClass} {...register('status')}>

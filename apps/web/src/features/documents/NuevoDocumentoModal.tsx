@@ -20,7 +20,14 @@ type FormData = z.infer<typeof schema>;
 const selectClass =
   'w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none';
 
-export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
+export function NuevoDocumentoModal({
+  onClose,
+  presetOwner,
+}: {
+  onClose: () => void;
+  /** Preselecciona y bloquea el responsable (p. ej. al subir desde la ficha de una persona). */
+  presetOwner?: { id: string; fullName: string };
+}) {
   const { data: employees } = useEmployees();
   const create = useCreateDocument();
   const createWithFile = useCreateDocumentWithFile();
@@ -31,7 +38,10 @@ export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { category: 'CONTRATOS' } });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { category: 'CONTRATOS', ownerId: presetOwner?.id ?? '' },
+  });
 
   const pending = create.isPending || createWithFile.isPending;
 
@@ -123,15 +133,19 @@ export function NuevoDocumentoModal({ onClose }: { onClose: () => void }) {
           </p>
         </div>
         <div>
-          <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Responsable (opcional)</label>
-          <select className={selectClass} {...register('ownerId')}>
-            <option value="">Yo mismo</option>
-            {employees?.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.fullName}
-              </option>
-            ))}
-          </select>
+          <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Responsable {!presetOwner && '(opcional)'}</label>
+          {presetOwner ? (
+            <div className="h-9 px-3 flex items-center bg-[var(--bg-subtle)] rounded-md text-[13px]">{presetOwner.fullName}</div>
+          ) : (
+            <select className={selectClass} {...register('ownerId')}>
+              <option value="">Yo mismo</option>
+              {employees?.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <fieldset>
           <legend className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Firmantes (opcional)</legend>
