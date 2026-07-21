@@ -158,4 +158,12 @@ export const authApi = {
       { method: 'POST', body: JSON.stringify({ email, password }) },
       false,
     ),
+  // Revoca la familia de refresh tokens en el servidor (auditoría A3) — mejor esfuerzo: si
+  // falla (red caída, token ya inválido...) el cliente limpia igual su sesión local.
+  logout: (refreshToken: string) =>
+    fetch(`${BASE}/api/auth/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    }).catch(() => {}),
 };

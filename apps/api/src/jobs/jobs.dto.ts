@@ -1,27 +1,27 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { ContractType, JobStatus } from '@prisma/client';
 
 export class CreateJobDto {
-  @IsString() title!: string;
+  @IsString() @MaxLength(200) title!: string;
   @IsOptional() @IsString() departmentId?: string;
-  @IsString() location!: string;
+  @IsString() @MaxLength(200) location!: string;
   @IsOptional() @IsBoolean() remote?: boolean;
-  @IsString() level!: string;
+  @IsString() @MaxLength(50) level!: string;
   @IsOptional() @IsEnum(ContractType) contractType?: ContractType;
   @IsOptional() @IsInt() @Min(1) openings?: number;
-  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
 }
 
 export class UpdateJobDto {
-  @IsOptional() @IsString() title?: string;
+  @IsOptional() @IsString() @MaxLength(200) title?: string;
   @IsOptional() @IsString() departmentId?: string;
-  @IsOptional() @IsString() location?: string;
+  @IsOptional() @IsString() @MaxLength(200) location?: string;
   @IsOptional() @IsBoolean() remote?: boolean;
-  @IsOptional() @IsString() level?: string;
+  @IsOptional() @IsString() @MaxLength(50) level?: string;
   @IsOptional() @IsEnum(ContractType) contractType?: ContractType;
   @IsOptional() @IsEnum(JobStatus) status?: JobStatus;
   @IsOptional() @IsInt() @Min(1) openings?: number;
-  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
 }

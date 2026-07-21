@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { EstadoProceso, EstadoTarea, TipoProceso } from '@prisma/client';
 
 const TIPOS: TipoProceso[] = ['ONBOARDING', 'OFFBOARDING'];
@@ -10,7 +10,7 @@ export class CreateProcesoDto {
   @IsIn(TIPOS) tipo!: TipoProceso;
   @IsOptional() @IsString() buddyId?: string;
   @IsOptional() @IsString() plantillaId?: string;
-  @IsOptional() @IsString() nombre?: string;
+  @IsOptional() @IsString() @MaxLength(200) nombre?: string;
   @IsDateString() fechaInicio!: string;
   @IsOptional() @IsDateString() fechaObjetivo?: string;
 }
@@ -24,25 +24,25 @@ export class UpdateTareaEstadoDto {
 }
 
 export class CreatePlantillaDto {
-  @IsString() @MinLength(2) nombre!: string;
+  @IsString() @MinLength(2) @MaxLength(200) nombre!: string;
   @IsIn(TIPOS) tipo!: TipoProceso;
 }
 
 export class UpdatePlantillaDto {
-  @IsOptional() @IsString() @MinLength(2) nombre?: string;
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(200) nombre?: string;
   @IsOptional() @IsBoolean() activa?: boolean;
 }
 
 export class CreatePlantillaTareaDto {
-  @IsString() @MinLength(1) label!: string;
-  @IsString() @MinLength(1) fase!: string;
-  @IsString() @MinLength(1) responsable!: string;
+  @IsString() @MinLength(1) @MaxLength(200) label!: string;
+  @IsString() @MinLength(1) @MaxLength(100) fase!: string;
+  @IsString() @MinLength(1) @MaxLength(200) responsable!: string;
   @IsOptional() @IsInt() orden?: number;
 }
 
 export class UpdatePlantillaTareaDto {
-  @IsOptional() @IsString() @MinLength(1) label?: string;
-  @IsOptional() @IsString() @MinLength(1) fase?: string;
-  @IsOptional() @IsString() @MinLength(1) responsable?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(200) label?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(100) fase?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(200) responsable?: string;
   @IsOptional() @IsInt() orden?: number;
 }
