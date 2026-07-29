@@ -175,6 +175,30 @@ Si alguna vez tocas esta configuración y las rutas profundas del SPA empiezan a
 es casi seguro este mismo problema — comprueba ambos patrones contra la versión de
 `path-to-regexp` que realmente se está usando en cada punto (no asumas por la documentación).
 
+**Segundo gotcha real (2026-07-29): un cambio solo de frontend puede desplegarse en silencio
+a NINGÚN SITIO.** El servicio de Railway tenía `watchPatterns: ["/apps/api/**"]` configurado
+(no vía `railway.json` — se había fijado en algún momento desde el dashboard, y no aparecía en
+este repo en absoluto). Como este mismo servicio construye Y sirve el frontend
+(`ServeStaticModule` de arriba), cualquier push que solo tocara `apps/web/**` (o
+`packages/ui/**`, del que depende el frontend) pasaba el auto-deploy de largo con estado
+`SKIPPED` — sin error, sin aviso, el código nuevo simplemente no llegaba a producción. Se
+detectó porque una pasada de rendimiento del frontend (code-splitting) quedó "mergeada y
+subida" pero el bundle servido seguía siendo el viejo.
+
+Arreglo: `railway.json` fija ahora `"build": { "watchPatterns": null }` explícitamente — es una
+propiedad real y documentada del schema de Railway (`build.watchPatterns`, array de patrones o
+`null` para "sin filtro"), así que cualquier push a `master` dispara build+deploy,
+independientemente de qué carpeta toque. Dado que es un solo servicio para un monorepo entero
+(API + frontend + `packages/ui` compartido), no tiene sentido restringir por carpeta — casi
+cualquier fichero puede acabar afectando al build.
+
+**Nota para la próxima vez que esto pase:** si un `railway.json` recién commiteado necesita
+tocar algo que el `watchPatterns` ANTIGUO ya estaba bloqueando (como pasó aquí: el propio
+cambio de `railway.json` no toca `apps/api/**`, así que con el patrón viejo todavía activo ese
+mismo push se habría saltado el deploy), hace falta un `railway redeploy --from-source` manual
+una vez para que Railway procese el commit, sincronice el `railway.json` nuevo, y a partir de
+ahí ya despliegue solo con cualquier push futuro.
+
 ---
 
 ## 6. Almacenamiento
