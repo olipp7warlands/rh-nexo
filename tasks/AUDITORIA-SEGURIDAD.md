@@ -5,6 +5,33 @@
 > hasta que se preguntó por M6 explícitamente). Actualizar esta tabla en cualquier sesión
 > futura que toque seguridad — no dejar hallazgos "aprobados" solo en el historial del chat.
 
+## Crítico (C) — a nivel de base de datos (Supabase), no de código de la app
+
+| # | Hallazgo | Estado | Dónde |
+|---|---|---|---|
+| C1 | **RLS desactivado en las 38 tablas de `public`, en las 3 bases (producción, dev, test), sin ninguna policy** — confirmado explotable en vivo: `GET /rest/v1/User` con la anon key PÚBLICA devolvía las 5 cuentas completas de producción, incluidos los hashes bcrypt de la contraseña. Mismo resultado en `Employee` (salario/DNI/IBAN/dirección), `Payslip`, `Document`, `AuditLog` | ✅ **Resuelto y verificado en las 3 bases** | Migración `20260722140500_habilita_rls_todas_las_tablas` |
+
+### C1 — detalle y verificación
+- Activar RLS sin ninguna policy deniega por defecto todo acceso a `anon`/`authenticated`
+  (los únicos roles de PostgREST con `bypassrls=false`) — no hace falta escribir ninguna policy
+  explícita de "denegar".
+- El backend no se ve afectado: Prisma conecta vía `DATABASE_URL`/`DIRECT_URL` como el rol
+  `postgres` (superusuario, `rolsuper=true` confirmado en `pg_roles`), y los superusuarios de
+  Postgres ignoran RLS siempre. `service_role` (usado hoy solo para Supabase Storage) también
+  tiene `bypassrls=true` explícito.
+- **Verificado en las 3 bases, las dos caras**: `pg_class.relrowsecurity` = 38/38 tablas de app
+  en `ON`; `GET /rest/v1/User` con la anon key de cada proyecto devuelve `[]` (antes devolvía
+  filas reales); login + lectura + escritura + documento siguen funcionando igual contra la API
+  real (dev vía servidor local, producción vía `https://nucleoapi-production.up.railway.app`);
+  contra test, la suite e2e completa (135-149 tests según la fase) en verde.
+- Mergeado a `master` y desplegado — sin cambios de código de aplicación, es puramente una
+  migración SQL.
+- **Pendiente, no cerrado del todo**: desactivar el Data API (PostgREST) entero como defensa
+  extra sobre RLS (`Settings → Data API` en el dashboard de Supabase — no automatizable, ni por
+  API ni por Terraform). Probar primero en dev que Supabase Storage sigue funcionando (son
+  servicios arquitectónicamente separados, alta confianza pero no confirmado de forma directa
+  todavía) antes de aplicarlo en producción.
+
 ## Altos (A)
 
 | # | Hallazgo | Estado | Dónde |
@@ -85,11 +112,18 @@ no alcanzables por un atacante externo).
 
 ## Resumen para la próxima sesión
 
-- **Cerrado esta sesión**: A3, M5 (parcial, justificado), M6, y 3 hallazgos bajos.
-- **Pendiente real**: ninguno de los altos/medios conocidos. Bajo: reconstruir/verificar si
-  quedan más hallazgos B originales; decidir si migrar tokens a cookies `httpOnly` algún día.
-- **Suite**: 149/149 tests en verde (`pnpm --filter @nucleo/api test`), build API+web limpio.
-- Todo esto vive en la rama `seguridad-auth`, sin mergear a `master` — Railway tiene el
-  auto-deploy ACTIVO ahora mismo, así que cualquier merge = deploy inmediato. La migración de
-  M6/A3 (`20260721133300_humanx_auditoria_m6_a3_auth`) tiene que aplicarse a producción ANTES
-  de mergear, igual que se hizo con las migraciones de humanX.
+- **Cerrado y DESPLEGADO en producción**: C1 (RLS), A3, M5 (parcial, justificado), M6, y 3
+  hallazgos bajos. Las ramas `seguridad-auth`, `perf-2` y `fix-rls-exposicion-publica` están
+  todas mergeadas en `master` y subidas a `origin` — no queda nada de esto pendiente de
+  mergear. Migraciones (`humanx_auditoria_m6_a3_auth`, `habilita_rls_todas_las_tablas`)
+  aplicadas y verificadas en las 3 bases (dev, test, producción) antes de cada merge.
+- **Pendiente real**: ninguno de los altos/medios/críticos conocidos requiere código nuevo.
+  Quedan tres acciones manuales del usuario, ninguna automatizable desde aquí:
+  1. Desactivar Data API en Supabase (dev primero, para probar Storage; luego producción).
+  2. Reconstruir/verificar si quedan más hallazgos B originales (la lista completa nunca se
+     recuperó — ver sección Bajos).
+  3. Decidir si migrar tokens de `localStorage` a cookies `httpOnly` algún día (cambio de
+     arquitectura, no un "hallazgo barato").
+- **Suite**: 149/149 tests en verde contra `humanx-test` con RLS activo. Build API+web limpio.
+- Railway: auto-deploy ACTIVO; además `watchPatterns` ya no restringe por carpeta (arreglado,
+  ver `tasks/DEPLOY.md` §5) — cualquier push a `master` despliega, toque lo que toque.
