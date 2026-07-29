@@ -9,7 +9,7 @@
 
 | # | Hallazgo | Estado | Rama |
 |---|---|---|---|
-| 1 | Railway en `us-east4` (Virginia) vs Supabase producción en `eu-west-3` (París) — latencia transatlántica en cada round-trip a BD | ⏳ Pendiente — requiere que el usuario cambie la región en el dashboard de Railway (el token de proyecto no tiene permiso para la mutación `scale`) | — |
+| 1 | Railway en `us-east4` (Virginia) vs Supabase producción en `eu-west-3` (París) — latencia transatlántica en cada round-trip a BD | ✅ Resuelto — usuario movió el servicio a `europe-west4-drams3a` (Ámsterdam) desde el dashboard | — |
 | 2 | `connection_limit=1` serializaba las queries concurrentes de una misma pantalla | ✅ Resuelto | `perf-2` (+ variable `DATABASE_URL` de Railway actualizada directamente en producción) |
 | 3 | Cero code-splitting por ruta (bundle único de 508 KB) | ✅ Resuelto | `perf-2` |
 | 4 | `/auth/me` bloqueaba en serie el resto de peticiones de cualquier pantalla | ✅ Resuelto | `perf-2` |
@@ -60,20 +60,38 @@ no es válido — pero ya no bloquea nada. Aplica tanto al login como a recargar
 sesión ya guardada.
 
 ### #5 — Informes (efecto combinado de #1+#2)
-| | Antes (`connection_limit=1`, `us-east4`) | Tras `connection_limit=10` (aún en `us-east4`) |
+| | Antes (`connection_limit=1`, `us-east4`) | Tras `connection_limit=10` (aún en `us-east4`) | Tras mover a `eu-west4` |
+|---|---|---|---|
+| 3 medidas | 2.37s / 2.41s / 2.43s | 2.41s / 2.42s / 2.47s — sin cambio | **0.62s / 0.63s / 0.65s** |
+
+Confirmado: el salto transatlántico era la causa dominante, no `connection_limit` (que no le
+afecta a Informes en sí — sus 15 round-trips van en un único `$transaction`, una sola
+conexión de todas formas). Con `eu-west4`↔`eu-west-3` (mismo continente, ~500 km en vez de
+~6000), **Informes pasa de 2.4s a 0.65s — 3.7× más rápido.**
+
+### #1 — Región (resultado final, todas las pantallas)
+Medido tras el cambio de región, comparado con el estado post-`connection_limit`-fix
+(`us-east4` todavía):
+
+| Pantalla | Tras fix `connection_limit` (`us-east4`) | Tras mover a `eu-west4` |
 |---|---|---|
-| 3 medidas | 2.37s / 2.41s / 2.43s | 2.41s / 2.42s / 2.47s — **sin cambio** |
+| Informes | 2.4s | 0.65s |
+| Inicio (kpis) | 0.60s | 0.35s |
+| Personas | 0.73s | 0.34s |
+| Agenda | 0.83s | 0.28s |
+| Anotaciones | 0.62s | 0.35s |
+| Procesos | 0.62s | 0.31s |
+| Nómina | 0.62s | 0.40s |
+| Documentos | 0.59s | 0.29s |
+| Desempeño | 0.64s | 0.31s |
+| Estructura | 0.60s | 0.29s |
+| 5 peticiones del dashboard en paralelo (peor caso) | 0.69s | 0.45s |
 
-Esperado: Informes hace sus 15 round-trips dentro de un único `$transaction`, que usa una sola
-conexión de todas formas — `connection_limit` no le afecta a él mismo, solo a la contención
-**entre** peticiones distintas. Su coste real es la latencia de red por round-trip
-(~150ms/round-trip medido), dominada por el salto `us-east4`↔`eu-west-3`. **Pendiente
-remedir en cuanto se mueva la región (#1).**
+Downtime: ninguno (confirmado sin volúmenes). Dominio público y variables de entorno: sin
+cambios, confirmado tras el movimiento.
 
-## Pendiente
+## Estado: TAREA 2 cerrada
 
-- Mover el servicio a `eu-west` (Amsterdam, `europe-west4-drams3a`) — el usuario lo hará desde
-  el dashboard (el token de proyecto no puede ejecutar `railway service scale`). Confirmado sin
-  downtime (no hay volúmenes) y las variables de entorno se conservan.
-- Tras el cambio de región: remedir Informes (el hallazgo más grande que queda) y el resto de
-  pantallas, para confirmar que el salto transatlántico era la causa dominante.
+Los 4 hallazgos (región, `connection_limit`, code-splitting, `/auth/me`) están resueltos,
+desplegados en producción y medidos con datos de antes/después reales. Nada pendiente de esta
+tarea.
