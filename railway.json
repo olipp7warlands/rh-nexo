@@ -3,7 +3,7 @@
   "build": {
     "builder": "NIXPACKS",
     "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @nucleo/web build && pnpm --filter @nucleo/api build",
-    "watchPatterns": null
+    "watchPatterns": ["**"]
   },
   "deploy": {
     "startCommand": "export NODE_ENV=production && npx prisma migrate deploy && node apps/api/dist/main.js",
