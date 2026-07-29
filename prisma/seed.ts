@@ -7,6 +7,17 @@
  */
 import { PrismaClient, Role, EmployeeStatus, AbsenceType, AbsenceStatus, PayrollItemType, DocumentCategory, DocumentStatus, SignatureStatus, CandidateSource, Vinculo, EstadoAnotacion } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { assertNotSeedingProductionByAccident } from '../scripts/assert-not-seeding-production';
+
+try {
+  assertNotSeedingProductionByAccident(process.env);
+} catch (e) {
+  console.error((e as Error).message);
+  process.exit(1);
+}
+if (process.env.DATABASE_URL?.includes('qkeadkgdzwzsvjvfczhv')) {
+  console.warn('⚠️  Sembrando PRODUCCIÓN de forma explícita (SEED_ALLOW_PRODUCTION establecido). Esto BORRA los datos actuales.');
+}
 
 const db = new PrismaClient();
 const D = (s: string) => new Date(s + 'T00:00:00Z');
@@ -268,6 +279,7 @@ async function main() {
     db.keyResult.deleteMany(), db.objective.deleteMany(), db.review.deleteMany(), db.performanceCycle.deleteMany(),
     db.procesoTarea.deleteMany(), db.proceso.deleteMany(), db.plantillaProcesoTarea.deleteMany(), db.plantillaProceso.deleteMany(),
     db.timeEntry.deleteMany(), db.leaveBalance.deleteMany(), db.absence.deleteMany(), db.holiday.deleteMany(),
+    db.refreshToken.deleteMany(),
     db.user.deleteMany(), db.employee.deleteMany(), db.department.deleteMany(),
     db.sociedad.deleteMany(), db.localizacion.deleteMany(), db.pais.deleteMany(),
   ]);

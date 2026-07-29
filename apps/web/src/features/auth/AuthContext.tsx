@@ -50,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const refreshToken = tokenStore.refresh;
+    if (refreshToken) void authApi.logout(refreshToken); // best-effort, no bloquea el logout local
     tokenStore.clear();
     setUser(null);
   };

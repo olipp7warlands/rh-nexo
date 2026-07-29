@@ -163,6 +163,7 @@ model User {
   email         String          @unique
   passwordHash  String
   role          Role            @default(EMPLEADO)
+  isActive      Boolean         @default(true) // auditoría M6: cuenta desactivada sin borrarla
   employee      Employee?       @relation(fields: [employeeId], references: [id])
   employeeId    String?         @unique
   lastLogin     DateTime?
@@ -171,6 +172,25 @@ model User {
   auditLogs     AuditLog[]      @relation("AuditActor")
   decisions     AuditDecision[] @relation("DecisionActor")
   anotaciones   Anotacion[]     @relation("AnotacionAutor")
+  refreshTokens RefreshToken[]
+}
+
+// auditoría A3: refresh tokens opacos, persistidos y con rotación. `tokenHash` guarda un
+// SHA-256 del token real (nunca el token en claro); `familyId` agrupa toda la cadena de
+// rotaciones nacida de un mismo login, así que reutilizar un token ya rotado revoca la
+// familia entera (mitiga robo de refresh token).
+model RefreshToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  tokenHash String    @unique
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
 }
 
 model Department {

@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsString, Matches } from 'class-validator';
+import { IsEnum, IsInt, IsString, Matches, MaxLength } from 'class-validator';
 import { PayrollItemType } from '@prisma/client';
 
 export class GenerateRunDto {
@@ -9,6 +9,6 @@ export class GenerateRunDto {
 export class AddItemDto {
   @IsString() employeeId!: string;
   @IsEnum(PayrollItemType) type!: PayrollItemType;
-  @IsString() concept!: string;
+  @IsString() @MaxLength(200) concept!: string;
   @IsInt() amount!: number; // negativo = deducción
 }

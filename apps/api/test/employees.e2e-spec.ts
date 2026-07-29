@@ -192,4 +192,19 @@ describe('Empleados + Departamentos (integración)', () => {
       .send({ fecha: '2026-07-17' })
       .expect(400);
   });
+
+  it('auditoría (hallazgo bajo): un fullName de más de 200 caracteres se rechaza (400)', async () => {
+    await request(http)
+      .post('/api/employees')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        fullName: 'A'.repeat(201),
+        email: 'demasiado.largo@example.com',
+        jobTitle: 'x',
+        level: 'x',
+        location: 'x',
+        startDate: '2026-01-01',
+      })
+      .expect(400);
+  });
 });

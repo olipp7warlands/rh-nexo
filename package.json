@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@prisma/client": "^5.20.0",
+    "bcryptjs": "^2.4.3",
     "dotenv-cli": "^7.4.2",
     "prisma": "^5.20.0",
     "tsx": "^4.19.1",
@@ -31,5 +32,15 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer": ">=2.2.0",
+      "file-type": ">=21.3.2",
+      "lodash": ">=4.18.0",
+      "qs": ">=6.15.2",
+      "body-parser": ">=1.20.6",
+      "brace-expansion": ">=2.1.2"
+    }
   }
 }

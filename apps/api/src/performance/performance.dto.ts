@@ -1,8 +1,8 @@
-import { IsArray, IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateCycleDto {
-  @IsString() name!: string;
+  @IsString() @MaxLength(200) name!: string;
   @IsDateString() startDate!: string;
   @IsDateString() endDate!: string;
 }
@@ -15,15 +15,15 @@ export class UpdateReviewDto {
 }
 
 class KeyResultInput {
-  @IsString() title!: string;
+  @IsString() @MaxLength(300) title!: string;
   @IsOptional() @IsInt() @Min(0) @Max(100) progress?: number;
 }
 
 export class CreateObjectiveDto {
   @IsOptional() @IsString() cycleId?: string;
-  @IsString() scope!: string;
+  @IsString() @MaxLength(50) scope!: string;
   @IsString() ownerId!: string;
-  @IsString() title!: string;
+  @IsString() @MaxLength(300) title!: string;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => KeyResultInput) keyResults?: KeyResultInput[];
 }
 
