@@ -1,4 +1,3 @@
-// Prueba real: confirmar que un cambio de solo frontend dispara deploy tras el fix de watchPatterns.
 import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
