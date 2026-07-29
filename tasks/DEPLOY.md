@@ -185,19 +185,23 @@ este repo en absoluto). Como este mismo servicio construye Y sirve el frontend
 detectó porque una pasada de rendimiento del frontend (code-splitting) quedó "mergeada y
 subida" pero el bundle servido seguía siendo el viejo.
 
-Arreglo: `railway.json` fija ahora `"build": { "watchPatterns": null }` explícitamente — es una
-propiedad real y documentada del schema de Railway (`build.watchPatterns`, array de patrones o
-`null` para "sin filtro"), así que cualquier push a `master` dispara build+deploy,
-independientemente de qué carpeta toque. Dado que es un solo servicio para un monorepo entero
-(API + frontend + `packages/ui` compartido), no tiene sentido restringir por carpeta — casi
-cualquier fichero puede acabar afectando al build.
+Arreglo real: `railway.json` fija `"build": { "watchPatterns": ["**"] }` — un patrón explícito
+que coincide con cualquier ruta. **`watchPatterns: null` NO funciona para esto**, aunque el
+schema de Railway lo acepta como valor válido ("sin filtro" en teoría): en la práctica, Railway
+lo trata como "no anular" y sigue usando el valor viejo que tuviera cacheado desde el
+dashboard — se comprobó en vivo, dos pushes seguidos con `null` (uno tocando solo `apps/web`)
+se saltaron igual, con `skippedReason: "No changes to watched files"`. Con `["**"]` explícito sí
+funciona, confirmado con un push real de solo-frontend que sí disparó `BUILDING`→`SUCCESS`.
 
-**Nota para la próxima vez que esto pase:** si un `railway.json` recién commiteado necesita
-tocar algo que el `watchPatterns` ANTIGUO ya estaba bloqueando (como pasó aquí: el propio
-cambio de `railway.json` no toca `apps/api/**`, así que con el patrón viejo todavía activo ese
-mismo push se habría saltado el deploy), hace falta un `railway redeploy --from-source` manual
-una vez para que Railway procese el commit, sincronice el `railway.json` nuevo, y a partir de
-ahí ya despliegue solo con cualquier push futuro.
+**Nota para la próxima vez que esto pase:** un `railway.json` recién commiteado que cambie
+`watchPatterns` no se autoaplica si el propio commit no toca una ruta que YA coincidiera con el
+patrón viejo activo — el propio cambio de `railway.json` (raíz del repo, no `apps/api/**`) se
+saltó él solo dos veces antes de tomar efecto. Hace falta un `railway redeploy --from-source`
+manual una vez para que Railway procese ese commit y sincronice el `watchPatterns` nuevo; a
+partir de ahí ya despliega solo con cualquier push futuro. Para comprobar qué patrón está
+realmente activo en cualquier momento: `railway status --json` y buscar
+`fileServiceManifest.build.watchPatterns` en el último deployment; para ver por qué se saltó
+uno concreto, `railway deployment list --json` trae `meta.skippedReason`.
 
 ---
 
