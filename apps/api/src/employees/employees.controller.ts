@@ -18,11 +18,25 @@ export class EmployeesController {
     @Query('status') status?: EmployeeStatus,
     @Query('vinculo') vinculo?: Vinculo,
     @Query('paisId') paisId?: string,
+    @Query('sociedadId') sociedadId?: string,
+    @Query('startDateFrom') startDateFrom?: string,
+    @Query('startDateTo') startDateTo?: string,
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
     return this.service.findAll(
-      { search, departmentId, status, vinculo, paisId, take: take ? Number(take) : undefined, skip: skip ? Number(skip) : undefined },
+      {
+        search,
+        departmentId,
+        status,
+        vinculo,
+        paisId,
+        sociedadId,
+        startDateFrom,
+        startDateTo,
+        take: take ? Number(take) : undefined,
+        skip: skip ? Number(skip) : undefined,
+      },
       user,
     );
   }

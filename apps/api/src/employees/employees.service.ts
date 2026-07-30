@@ -36,18 +36,26 @@ export class EmployeesService {
       status?: EmployeeStatus;
       vinculo?: Vinculo;
       paisId?: string;
+      sociedadId?: string;
+      startDateFrom?: string;
+      startDateTo?: string;
       take?: number;
       skip?: number;
     },
     viewer?: AuthUser,
   ) {
-    const { search, departmentId, status, vinculo, paisId, take, skip } = params;
+    const { search, departmentId, status, vinculo, paisId, sociedadId, startDateFrom, startDateTo, take, skip } = params;
     const employees = await this.db.employee.findMany({
       where: {
         departmentId: departmentId || undefined,
         status: status || undefined,
         vinculo: vinculo || undefined,
+        sociedadId: sociedadId || undefined,
         sociedad: paisId ? { paisId } : undefined,
+        startDate:
+          startDateFrom || startDateTo
+            ? { gte: startDateFrom ? new Date(startDateFrom) : undefined, lte: startDateTo ? new Date(startDateTo) : undefined }
+            : undefined,
         OR: search
           ? [
               { fullName: { contains: search, mode: 'insensitive' } },

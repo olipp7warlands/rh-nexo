@@ -82,6 +82,9 @@ export interface EmployeeFilters {
   status?: EmployeeStatus;
   vinculo?: Vinculo;
   paisId?: string;
+  sociedadId?: string;
+  startDateFrom?: string;
+  startDateTo?: string;
 }
 
 export function useEmployees(params: EmployeeFilters = {}) {
@@ -91,6 +94,9 @@ export function useEmployees(params: EmployeeFilters = {}) {
   if (params.status) qs.set('status', params.status);
   if (params.vinculo) qs.set('vinculo', params.vinculo);
   if (params.paisId) qs.set('paisId', params.paisId);
+  if (params.sociedadId) qs.set('sociedadId', params.sociedadId);
+  if (params.startDateFrom) qs.set('startDateFrom', params.startDateFrom);
+  if (params.startDateTo) qs.set('startDateTo', params.startDateTo);
   return useQuery({
     queryKey: ['employees', params],
     queryFn: () => api.get<Employee[]>(`/employees?${qs.toString()}`),

@@ -38,7 +38,7 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-const TABS = ['Personal', 'Puesto y contrato', 'Compensación'] as const;
+const TABS = ['Personal', 'Información profesional'] as const;
 type Tab = (typeof TABS)[number];
 
 const selectClass =
@@ -202,15 +202,15 @@ export function EmployeeModal({
           </div>
         )}
 
-        {tab === 'Puesto y contrato' && (
+        {tab === 'Información profesional' && (
           <div className="grid grid-cols-2 gap-4">
             <Row label="Código" error={errors.codigo?.message}>
               <Input placeholder="p. ej. EMP-0018" {...register('codigo')} />
             </Row>
             <Row label="Vínculo" error={errors.vinculo?.message}>
               <select className={selectClass} {...register('vinculo')}>
-                <option value="PLANTILLA">Plantilla</option>
-                <option value="EXTERNO">Externo</option>
+                <option value="PLANTILLA">Plantilla interna</option>
+                <option value="EXTERNO">Colaboradores externos</option>
               </select>
             </Row>
             <Row label="Cargo" required error={errors.jobTitle?.message}>
@@ -307,11 +307,6 @@ export function EmployeeModal({
               <input type="checkbox" {...register('remote')} className="w-4 h-4 accent-[var(--accent)]" />
               Trabaja en remoto
             </label>
-          </div>
-        )}
-
-        {tab === 'Compensación' && (
-          <div className="grid grid-cols-2 gap-4">
             {canComp ? (
               <>
                 <Row label="Salario bruto anual (€)" error={errors.salary?.message}>

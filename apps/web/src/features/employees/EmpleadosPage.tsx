@@ -4,7 +4,7 @@ import { Avatar, Badge, Button, Card, DeptChip, EmpStatus, Input, PageHeader } f
 import { useAuth } from '../auth/AuthContext';
 import { useEmployees, type EmployeeStatus, type Vinculo } from './useEmployees';
 import { useDepartments } from './useDepartments';
-import { usePaises } from '../estructura/useEstructura';
+import { usePaises, useSociedades } from '../estructura/useEstructura';
 import { EmployeeModal } from './EmployeeModal';
 import { formatDate } from '../../lib/format';
 
@@ -15,7 +15,7 @@ const STATUS_KPIS: { key: EmployeeStatus | 'REMOTO'; label: string; dot: string 
   { key: 'REMOTO', label: 'En remoto', dot: 'var(--ink-tertiary)' },
 ];
 
-const VINCULO_LABEL: Record<Vinculo, string> = { PLANTILLA: 'Plantilla', EXTERNO: 'Externo' };
+const VINCULO_LABEL: Record<Vinculo, string> = { PLANTILLA: 'Plantilla interna', EXTERNO: 'Colaboradores externos' };
 
 const selectClass =
   'h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none';
@@ -30,12 +30,25 @@ export function EmpleadosPage() {
   const [status, setStatus] = useState<EmployeeStatus | undefined>(undefined);
   const [vinculo, setVinculo] = useState<Vinculo | undefined>(undefined);
   const [paisId, setPaisId] = useState<string | undefined>(undefined);
+  const [sociedadId, setSociedadId] = useState<string | undefined>(undefined);
+  const [startDateFrom, setStartDateFrom] = useState<string | undefined>(undefined);
+  const [startDateTo, setStartDateTo] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
 
   const { data: all } = useEmployees({});
-  const { data: employees, isLoading, error } = useEmployees({ search, departmentId, status, vinculo, paisId });
+  const { data: employees, isLoading, error } = useEmployees({
+    search,
+    departmentId,
+    status,
+    vinculo,
+    paisId,
+    sociedadId,
+    startDateFrom,
+    startDateTo,
+  });
   const { data: departments } = useDepartments();
   const { data: paises } = usePaises();
+  const { data: sociedades } = useSociedades();
 
   const kpis = useMemo(() => {
     const list = all ?? [];
@@ -99,8 +112,8 @@ export function EmpleadosPage() {
           aria-label="Filtrar por vínculo"
         >
           <option value="">Todos los vínculos</option>
-          <option value="PLANTILLA">Plantilla</option>
-          <option value="EXTERNO">Externo</option>
+          <option value="PLANTILLA">Plantilla interna</option>
+          <option value="EXTERNO">Colaboradores externos</option>
         </select>
         <select
           className={selectClass}
@@ -115,6 +128,36 @@ export function EmpleadosPage() {
             </option>
           ))}
         </select>
+        <select
+          className={selectClass}
+          value={sociedadId ?? ''}
+          onChange={(e) => setSociedadId(e.target.value || undefined)}
+          aria-label="Filtrar por sociedad"
+        >
+          <option value="">Todas las sociedades</option>
+          {sociedades?.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nombre}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="date"
+            className="w-36"
+            value={startDateFrom ?? ''}
+            onChange={(e) => setStartDateFrom(e.target.value || undefined)}
+            aria-label="Incorporación desde"
+          />
+          <span className="text-[12px] text-[var(--ink-tertiary)]">–</span>
+          <Input
+            type="date"
+            className="w-36"
+            value={startDateTo ?? ''}
+            onChange={(e) => setStartDateTo(e.target.value || undefined)}
+            aria-label="Incorporación hasta"
+          />
+        </div>
       </div>
 
       {/* Chips de departamento */}

@@ -54,14 +54,13 @@ function AnotacionRow({ anotacion }: { anotacion: Anotacion }) {
   );
 }
 
-const TAB_KEYS = ['Resumen', 'Información personal', 'Puesto y contrato', 'Compensación', 'Ausencias', 'Documentos', 'Desempeño'] as const;
+const TAB_KEYS = ['Resumen', 'Información personal', 'Información profesional', 'Ausencias', 'Documentos', 'Desempeño'] as const;
 type Tab = (typeof TAB_KEYS)[number];
 
 const TABS: { key: Tab; hidden?: boolean }[] = [
   { key: 'Resumen' },
   { key: 'Información personal' },
-  { key: 'Puesto y contrato' },
-  { key: 'Compensación' },
+  { key: 'Información profesional' },
   // Oculta a petición: Ausencias no está expuesta a este cliente (ver nav.ts, mismo criterio).
   // El contenido de la pestaña sigue definido más abajo a propósito — reversible, basta con
   // quitar `hidden: true` para que reaparezca aquí.
@@ -319,7 +318,7 @@ export function EmployeeDetailPage() {
         </div>
       )}
 
-      {tab === 'Puesto y contrato' && (
+      {tab === 'Información profesional' && (
         <div className="grid grid-cols-2 gap-5">
           <Card>
             <h3 className="font-serif text-[14px] font-medium mb-4">Puesto</h3>
@@ -343,13 +342,33 @@ export function EmployeeDetailPage() {
           <Card>
             <h3 className="font-serif text-[14px] font-medium mb-4">Contrato</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-              <Field label="Vínculo" value={emp.vinculo === 'EXTERNO' ? 'Externo' : 'Plantilla'} />
+              <Field label="Vínculo" value={emp.vinculo === 'EXTERNO' ? 'Colaboradores externos' : 'Plantilla interna'} />
               <Field label="Tipo" value={CONTRACT_LABEL[emp.contractType] ?? emp.contractType} />
               <Field label="Fecha de alta" value={formatDate(emp.startDate)} mono />
               <Field label="Antigüedad" value={seniority(emp.startDate)} />
               <Field label="Fin de periodo de prueba" value={emp.finPeriodoPrueba ? formatDate(emp.finPeriodoPrueba) : '—'} mono />
               <Field label="Vencimiento de contrato" value={emp.vencimientoContrato ? formatDate(emp.vencimientoContrato) : '—'} mono />
             </div>
+          </Card>
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="font-serif text-[14px] font-medium">Retribución actual</h3>
+              <Badge variant="warning">Confidencial</Badge>
+            </div>
+            {emp.salary !== null && emp.salary !== undefined ? (
+              <>
+                <div className="mono text-[36px] font-bold leading-none">{formatEuro(emp.salary)}</div>
+                <p className="text-[12px] text-[var(--ink-tertiary)] mt-1">bruto anual</p>
+              </>
+            ) : (
+              <p className="text-[13px] text-[var(--ink-tertiary)]">
+                Solo visible para RRHH/Administración y el propio empleado.
+              </p>
+            )}
+          </Card>
+          <Card>
+            <h3 className="font-serif text-[14px] font-medium mb-3">Datos bancarios</h3>
+            <Field label="IBAN" value={emp.iban ?? (canManage ? '—' : 'Restringido')} mono />
           </Card>
           <Card className="col-span-2">
             <h3 className="font-serif text-[14px] font-medium mb-4">Histórico de puestos</h3>
@@ -378,33 +397,8 @@ export function EmployeeDetailPage() {
               <p className="text-[13px] text-[var(--ink-tertiary)]">Sin histórico registrado.</p>
             )}
           </Card>
-        </div>
-      )}
-
-      {tab === 'Compensación' && (
-        <div className="grid grid-cols-3 gap-5">
-          <Card className="col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="font-serif text-[14px] font-medium">Retribución actual</h3>
-              <Badge variant="warning">Confidencial</Badge>
-            </div>
-            {emp.salary !== null && emp.salary !== undefined ? (
-              <>
-                <div className="mono text-[36px] font-bold leading-none">{formatEuro(emp.salary)}</div>
-                <p className="text-[12px] text-[var(--ink-tertiary)] mt-1">bruto anual</p>
-              </>
-            ) : (
-              <p className="text-[13px] text-[var(--ink-tertiary)]">
-                Solo visible para RRHH/Administración y el propio empleado.
-              </p>
-            )}
-          </Card>
-          <Card>
-            <h3 className="font-serif text-[14px] font-medium mb-3">Datos bancarios</h3>
-            <Field label="IBAN" value={emp.iban ?? (canManage ? '—' : 'Restringido')} mono />
-          </Card>
           {canSeeSalary && (
-            <Card className="col-span-3">
+            <Card className="col-span-2">
               <h3 className="font-serif text-[14px] font-medium mb-4">Histórico salarial</h3>
               {historicoSalarial && historicoSalarial.length > 0 ? (
                 <div className="flex flex-col">
