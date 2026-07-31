@@ -95,7 +95,7 @@ describe('Auth + RBAC (integración)', () => {
     await request(http)
       .post('/api/employees')
       .set('Authorization', `Bearer ${token}`)
-      .send({ fullName: 'No Autorizado', email: 'no@x.com', jobTitle: 'x', level: 'x', location: 'x', startDate: '2026-01-01' })
+      .send({ fullName: 'No Autorizado', email: 'no@x.com', jobTitle: 'x', level: 'x', localizacionId: 'loc-madrid', tipoContratoId: 'tc-indefinido', startDate: '2026-01-01' })
       .expect(403);
   });
 
@@ -133,7 +133,7 @@ describe('Auth + RBAC (integración)', () => {
     const user = await createTestUser({ role: 'EMPLEADO', isActive: true });
     const res = await login(user.email, 'temporal123').expect(200);
     const token = res.body.accessToken; // firma "role": "EMPLEADO"
-    const newEmp = { fullName: 'Test M6', email: `m6-${Date.now()}@x.com`, jobTitle: 'x', level: 'x', location: 'x', startDate: '2026-01-01' };
+    const newEmp = { fullName: 'Test M6', email: `m6-${Date.now()}@x.com`, jobTitle: 'x', level: 'x', localizacionId: 'loc-madrid', tipoContratoId: 'tc-indefinido', startDate: '2026-01-01' };
 
     await request(http).post('/api/employees').set('Authorization', `Bearer ${token}`).send(newEmp).expect(403);
 

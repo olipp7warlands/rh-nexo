@@ -51,9 +51,22 @@ export const LEVEL_LABEL: Record<string, string> = {
   junior: 'Junior',
 };
 
-export const CONTRACT_LABEL: Record<string, string> = {
-  INDEFINIDO: 'Indefinido',
-  TEMPORAL: 'Temporal',
-  PRACTICAS: 'Prácticas',
-  FREELANCE: 'Freelance',
-};
+/** Fecha de nacimiento (ISO) → "12 mar" (sin año, para el "cumpleaños" de la ficha). */
+export function birthdayLabel(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+}
+
+/** Fecha de nacimiento (ISO) → edad en años cumplidos, o null si no hay fecha. */
+export function age(iso?: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) years--;
+  return years;
+}

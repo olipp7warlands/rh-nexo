@@ -29,5 +29,11 @@ export const NAV = [
     { key: 'sociedades', label: 'Sociedades', path: '/estructura/sociedades' },
     { key: 'localizaciones', label: 'Localizaciones', path: '/estructura/localizaciones' },
     { key: 'departamentos', label: 'Departamentos', path: '/estructura/departamentos' },
+    // humanX Tanda 2: catálogos editables de la ficha de Personas
+    { key: 'tipos-contrato', label: 'Tipos de contrato', path: '/estructura/tipos-contrato' },
+    { key: 'jornadas', label: 'Jornadas', path: '/estructura/jornadas' },
+    { key: 'relaciones-emergencia', label: 'Relaciones de emergencia', path: '/estructura/relaciones-emergencia' },
+    { key: 'proyectos', label: 'Proyectos', path: '/estructura/proyectos' },
+    { key: 'idiomas', label: 'Idiomas', path: '/estructura/idiomas' },
   ]},
 ] as const;

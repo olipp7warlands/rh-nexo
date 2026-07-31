@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
 export type EmployeeStatus = 'ACTIVO' | 'ONBOARDING' | 'AUSENTE' | 'BAJA';
-export type ContractType = 'INDEFINIDO' | 'TEMPORAL' | 'PRACTICAS' | 'FREELANCE';
 export type Vinculo = 'PLANTILLA' | 'EXTERNO';
 
 export interface Department {
@@ -37,6 +36,12 @@ export interface LocalizacionRef {
   id: string;
   nombre: string;
 }
+// humanX Tanda 2: catálogos nuevos — todos "id + nombre", mismo esqueleto que LocalizacionRef.
+export type TipoContratoRef = LocalizacionRef;
+export type JornadaRef = LocalizacionRef;
+export type ProyectoRef = LocalizacionRef;
+export type RelacionEmergenciaRef = LocalizacionRef;
+export type IdiomaRef = LocalizacionRef;
 
 export interface Employee {
   id: string;
@@ -45,10 +50,8 @@ export interface Employee {
   phone: string | null;
   jobTitle: string;
   level: string;
-  location: string;
   remote: boolean;
   startDate: string;
-  contractType: ContractType;
   status: EmployeeStatus;
   salary: number | null;
   departmentId: string | null;
@@ -56,8 +59,6 @@ export interface Employee {
   dni: string | null;
   address: string | null;
   iban: string | null;
-  emergency: string | null;
-  birthday: string | null;
   fromRecruitment?: boolean;
   candidateId?: string | null;
   department?: Department | null;
@@ -68,12 +69,42 @@ export interface Employee {
   codigo: string | null;
   vinculo: Vinculo;
   sociedadId: string | null;
-  localizacionId: string | null;
+  localizacionId: string;
   finPeriodoPrueba: string | null;
   vencimientoContrato: string | null;
   descripcionPuesto: string | null;
   sociedad?: SociedadRef | null;
-  localizacion?: LocalizacionRef | null;
+  localizacion: LocalizacionRef;
+
+  // humanX Tanda 2 — bloque 3 "Datos laborales" (vive en "Información profesional")
+  tipoContratoId: string;
+  tipoContrato: TipoContratoRef;
+  jornadaId: string | null;
+  jornada?: JornadaRef | null;
+  horario: string | null;
+  proyectoId: string | null;
+  proyecto?: ProyectoRef | null;
+
+  // humanX Tanda 2 — bloque 1 "Datos personales"
+  fechaNacimiento: string | null;
+  nacionalidad: string | null;
+
+  // humanX Tanda 2 — bloque 2 "Contacto de emergencia"
+  contactoEmergenciaNombre: string | null;
+  contactoEmergenciaRelacionId: string | null;
+  contactoEmergenciaRelacion?: RelacionEmergenciaRef | null;
+  contactoEmergenciaTelefono: string | null;
+
+  // humanX Tanda 2 — bloque 4 "Datos administrativos" (ultra-sensible)
+  numSeguridadSocial: string | null;
+  situacionIRPF: string | null;
+
+  // humanX Tanda 2 — bloque 5 "Formación"
+  titulacion: string | null;
+  idiomas: IdiomaRef[];
+  certificaciones: string | null;
+  // Solo de escritura (create/update) — el m:n se manda como lista de ids, no en el GET.
+  idiomaIds?: string[];
 }
 
 export interface EmployeeFilters {
@@ -82,6 +113,10 @@ export interface EmployeeFilters {
   status?: EmployeeStatus;
   vinculo?: Vinculo;
   paisId?: string;
+  sociedadId?: string;
+  proyectoId?: string;
+  startDateFrom?: string;
+  startDateTo?: string;
 }
 
 export function useEmployees(params: EmployeeFilters = {}) {
@@ -91,6 +126,10 @@ export function useEmployees(params: EmployeeFilters = {}) {
   if (params.status) qs.set('status', params.status);
   if (params.vinculo) qs.set('vinculo', params.vinculo);
   if (params.paisId) qs.set('paisId', params.paisId);
+  if (params.sociedadId) qs.set('sociedadId', params.sociedadId);
+  if (params.proyectoId) qs.set('proyectoId', params.proyectoId);
+  if (params.startDateFrom) qs.set('startDateFrom', params.startDateFrom);
+  if (params.startDateTo) qs.set('startDateTo', params.startDateTo);
   return useQuery({
     queryKey: ['employees', params],
     queryFn: () => api.get<Employee[]>(`/employees?${qs.toString()}`),

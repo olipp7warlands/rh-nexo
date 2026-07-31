@@ -27,7 +27,7 @@ export function InicioPage() {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="stat-card">
-          <div className="text-[12px] font-medium text-[var(--ink-secondary)]">Plantilla / Externos</div>
+          <div className="text-[12px] font-medium text-[var(--ink-secondary)]">Plantilla interna / Colaboradores externos</div>
           <div className="mono text-[28px] font-bold leading-none">
             {plantilla} <span className="text-[var(--ink-tertiary)]">/</span> {externos}
           </div>

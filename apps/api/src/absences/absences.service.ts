@@ -24,7 +24,6 @@ export class AbsencesService {
       id: true,
       fullName: true,
       jobTitle: true,
-      location: true,
       managerId: true,
       department: { select: { name: true, color: true } },
     },
@@ -81,8 +80,11 @@ export class AbsencesService {
     const end = new Date(dto.endDate);
     if (end < start) throw new BadRequestException('La fecha de fin es anterior al inicio.');
 
-    const employee = await this.db.employee.findUnique({ where: { id: viewer.employeeId } });
-    const days = await this.leaveDays(start, end, employee?.location ?? null);
+    const employee = await this.db.employee.findUnique({
+      where: { id: viewer.employeeId },
+      include: { localizacion: true },
+    });
+    const days = await this.leaveDays(start, end, employee?.localizacion?.nombre ?? null);
     if (days < 1) throw new BadRequestException('El rango no incluye días laborables.');
 
     const year = start.getUTCFullYear();

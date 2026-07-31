@@ -3,12 +3,19 @@ import { EmployeeStatus, Vinculo } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { renderJobDescriptionPdf } from './job-description.pdf';
 
 const WITH_ESTRUCTURA = {
   department: true,
   manager: { select: { id: true, fullName: true } },
   sociedad: { include: { pais: true } },
   localizacion: true,
+  // humanX Tanda 2
+  tipoContrato: true,
+  jornada: true,
+  proyecto: true,
+  contactoEmergenciaRelacion: true,
+  idiomas: true,
 };
 
 // Tope de seguridad cuando no se pide una página concreta — sin esto, el listado crece sin
@@ -36,18 +43,28 @@ export class EmployeesService {
       status?: EmployeeStatus;
       vinculo?: Vinculo;
       paisId?: string;
+      sociedadId?: string;
+      proyectoId?: string;
+      startDateFrom?: string;
+      startDateTo?: string;
       take?: number;
       skip?: number;
     },
     viewer?: AuthUser,
   ) {
-    const { search, departmentId, status, vinculo, paisId, take, skip } = params;
+    const { search, departmentId, status, vinculo, paisId, sociedadId, proyectoId, startDateFrom, startDateTo, take, skip } = params;
     const employees = await this.db.employee.findMany({
       where: {
         departmentId: departmentId || undefined,
         status: status || undefined,
         vinculo: vinculo || undefined,
+        sociedadId: sociedadId || undefined,
+        proyectoId: proyectoId || undefined,
         sociedad: paisId ? { paisId } : undefined,
+        startDate:
+          startDateFrom || startDateTo
+            ? { gte: startDateFrom ? new Date(startDateFrom) : undefined, lte: startDateTo ? new Date(startDateTo) : undefined }
+            : undefined,
         OR: search
           ? [
               { fullName: { contains: search, mode: 'insensitive' } },
@@ -61,7 +78,7 @@ export class EmployeesService {
       take: take ?? DEFAULT_TAKE,
       skip,
     });
-    return employees.map((e) => this.maskSensitive(e, viewer));
+    return employees.map((e) => this.maskAdminOnly(this.maskSensitive(e, viewer), viewer));
   }
 
   async findOne(id: string, viewer?: AuthUser) {
@@ -92,7 +109,67 @@ export class EmployeesService {
       return found;
     });
     if (!emp) throw new NotFoundException('Empleado no encontrado');
-    return this.maskSensitive(emp, viewer);
+    return this.maskAdminOnly(this.maskSensitive(emp, viewer), viewer);
+  }
+
+  /**
+   * humanX Tanda 3 — Job Description en PDF. `select` deliberadamente mínimo y explícito: no
+   * es un enmascarado posterior como maskSensitive/maskAdminOnly, es que iban/numSeguridadSocial/
+   * situacionIRPF/dni/salary/address ni se piden — nunca llegan a existir en memoria ni pueden
+   * acabar en el PDF por descuido. Solo ADMIN/RRHH pueden llamar a este método (el controller
+   * ya lo restringe vía @Roles, defensa en profundidad: también aquí si algún día se llama
+   * desde otro sitio).
+   */
+  async jobDescriptionPdf(id: string): Promise<{ buffer: Buffer; fileName: string }> {
+    const emp = await this.db.employee.findUnique({
+      where: { id },
+      select: {
+        fullName: true,
+        jobTitle: true,
+        vinculo: true,
+        startDate: true,
+        vencimientoContrato: true,
+        descripcionPuesto: true,
+        horario: true,
+        remote: true,
+        sociedad: { select: { nombre: true } },
+        department: { select: { name: true } },
+        proyecto: { select: { nombre: true } },
+        manager: { select: { fullName: true } },
+        localizacion: { select: { nombre: true } },
+        jornada: { select: { nombre: true } },
+        tipoContrato: { select: { nombre: true } },
+      },
+    });
+    if (!emp) throw new NotFoundException('Empleado no encontrado');
+    const buffer = await renderJobDescriptionPdf({
+      fullName: emp.fullName,
+      vinculo: emp.vinculo,
+      jobTitle: emp.jobTitle,
+      startDate: emp.startDate,
+      vencimientoContrato: emp.vencimientoContrato,
+      descripcionPuesto: emp.descripcionPuesto,
+      horario: emp.horario,
+      remote: emp.remote,
+      sociedad: emp.sociedad?.nombre ?? null,
+      departamento: emp.department?.name ?? null,
+      proyecto: emp.proyecto?.nombre ?? null,
+      responsable: emp.manager?.fullName ?? null,
+      centroTrabajo: emp.localizacion.nombre,
+      jornada: emp.jornada?.nombre ?? null,
+      tipoContrato: emp.tipoContrato.nombre,
+    });
+    const slug = emp.fullName
+      .toLowerCase()
+      .replace(/[aàáâãä]/g, 'a')
+      .replace(/[eèéêë]/g, 'e')
+      .replace(/[iìíîï]/g, 'i')
+      .replace(/[oòóôõö]/g, 'o')
+      .replace(/[uùúûü]/g, 'u')
+      .replace(/ñ/g, 'n')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    return { buffer, fileName: `job-description-${slug || id}.pdf` };
   }
 
   /** Mismo criterio de privacidad que el histórico salarial: ADMIN/RRHH o el propio empleado. */
@@ -115,20 +192,23 @@ export class EmployeesService {
   }
 
   /**
-   * Datos personales sensibles (salario, IBAN, DNI, dirección, contacto de emergencia,
-   * cumpleaños) solo son visibles para ADMIN/RRHH y el propio empleado — el resto de la
-   * plantilla ve la ficha "en blanco" en esos campos. Sin `viewer` (uso interno: antes/después
-   * de auditoría) no se enmascara.
+   * Datos personales sensibles (salario, DNI, dirección, fecha de nacimiento, nacionalidad,
+   * contacto de emergencia) solo son visibles para ADMIN/RRHH y el propio empleado — el resto
+   * de la plantilla ve la ficha "en blanco" en esos campos. Sin `viewer` (uso interno:
+   * antes/después de auditoría) no se enmascara.
    */
   private maskSensitive<
     T extends {
       id: string;
       salary: number | null;
-      iban: string | null;
       dni: string | null;
       address: string | null;
-      emergency: string | null;
-      birthday: string | null;
+      fechaNacimiento: Date | null;
+      nacionalidad: string | null;
+      contactoEmergenciaNombre: string | null;
+      contactoEmergenciaRelacionId: string | null;
+      contactoEmergenciaRelacion?: unknown;
+      contactoEmergenciaTelefono: string | null;
     },
   >(emp: T, viewer?: AuthUser): T {
     if (!viewer) return emp;
@@ -136,16 +216,43 @@ export class EmployeesService {
       viewer.role === 'ADMIN' || viewer.role === 'RRHH' || viewer.employeeId === emp.id;
     return privileged
       ? emp
-      : { ...emp, salary: null, iban: null, dni: null, address: null, emergency: null, birthday: null };
+      : {
+          ...emp,
+          salary: null,
+          dni: null,
+          address: null,
+          fechaNacimiento: null,
+          nacionalidad: null,
+          contactoEmergenciaNombre: null,
+          contactoEmergenciaRelacionId: null,
+          contactoEmergenciaRelacion: null,
+          contactoEmergenciaTelefono: null,
+        };
+  }
+
+  /**
+   * humanX Tanda 2 — bloque 4 "Datos administrativos" (nº seguridad social, IBAN, situación
+   * IRPF): ultra-sensible, solo ADMIN/RRHH — a diferencia de maskSensitive, SIN excepción para
+   * el propio empleado. Pedido explícito de RH.
+   */
+  private maskAdminOnly<
+    T extends { iban: string | null; numSeguridadSocial: string | null; situacionIRPF: string | null },
+  >(emp: T, viewer?: AuthUser): T {
+    if (!viewer) return emp;
+    const adminOnly = viewer.role === 'ADMIN' || viewer.role === 'RRHH';
+    return adminOnly ? emp : { ...emp, iban: null, numSeguridadSocial: null, situacionIRPF: null };
   }
 
   async create(dto: CreateEmployeeDto, actorUserId?: string) {
+    const { idiomaIds, ...rest } = dto;
     const emp = await this.db.employee.create({
       data: {
-        ...dto,
+        ...rest,
         startDate: new Date(dto.startDate),
         finPeriodoPrueba: dto.finPeriodoPrueba ? new Date(dto.finPeriodoPrueba) : undefined,
         vencimientoContrato: dto.vencimientoContrato ? new Date(dto.vencimientoContrato) : undefined,
+        fechaNacimiento: dto.fechaNacimiento ? new Date(dto.fechaNacimiento) : undefined,
+        idiomas: idiomaIds ? { connect: idiomaIds.map((id) => ({ id })) } : undefined,
       },
     });
     await this.audit(actorUserId, 'CREATE', emp.id, null, emp);
@@ -155,13 +262,18 @@ export class EmployeesService {
   // Esto es lo que hace funcionar el botón "Editar": persiste + audita.
   async update(id: string, dto: UpdateEmployeeDto, actorUserId?: string) {
     const before = await this.findOne(id);
+    const { idiomaIds, ...rest } = dto;
     const after = await this.db.employee.update({
       where: { id },
       data: {
-        ...dto,
+        ...rest,
         ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
         ...(dto.finPeriodoPrueba ? { finPeriodoPrueba: new Date(dto.finPeriodoPrueba) } : {}),
         ...(dto.vencimientoContrato ? { vencimientoContrato: new Date(dto.vencimientoContrato) } : {}),
+        ...(dto.fechaNacimiento ? { fechaNacimiento: new Date(dto.fechaNacimiento) } : {}),
+        // `set` reemplaza la lista completa de idiomas (no un `connect` acumulativo) — coherente
+        // con que el formulario de edición manda siempre el conjunto completo seleccionado.
+        ...(idiomaIds ? { idiomas: { set: idiomaIds.map((id) => ({ id })) } } : {}),
       },
     });
     await this.audit(actorUserId, 'UPDATE', id, before, after);

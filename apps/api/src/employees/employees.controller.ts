@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { EmployeeStatus, Vinculo } from '@prisma/client';
 import { EmployeesService } from './employees.service';
 import { BajaEmployeeDto, CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
@@ -18,11 +19,27 @@ export class EmployeesController {
     @Query('status') status?: EmployeeStatus,
     @Query('vinculo') vinculo?: Vinculo,
     @Query('paisId') paisId?: string,
+    @Query('sociedadId') sociedadId?: string,
+    @Query('proyectoId') proyectoId?: string,
+    @Query('startDateFrom') startDateFrom?: string,
+    @Query('startDateTo') startDateTo?: string,
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
     return this.service.findAll(
-      { search, departmentId, status, vinculo, paisId, take: take ? Number(take) : undefined, skip: skip ? Number(skip) : undefined },
+      {
+        search,
+        departmentId,
+        status,
+        vinculo,
+        paisId,
+        sociedadId,
+        proyectoId,
+        startDateFrom,
+        startDateTo,
+        take: take ? Number(take) : undefined,
+        skip: skip ? Number(skip) : undefined,
+      },
       user,
     );
   }
@@ -46,6 +63,17 @@ export class EmployeesController {
   @Get(':id/historico-salarial')
   historicoSalarial(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.historicoSalarial(id, user);
+  }
+
+  // humanX Tanda 3: Job Description en PDF. Solo ADMIN/RRHH (defensa en profundidad: el
+  // frontend ya oculta el botón, pero el endpoint también lo exige por si se llama directo).
+  @Roles('ADMIN', 'RRHH')
+  @Get(':id/job-description')
+  async jobDescription(@Param('id') id: string, @Res() res: Response) {
+    const { buffer, fileName } = await this.service.jobDescriptionPdf(id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(buffer);
   }
 
   @Roles('ADMIN', 'RRHH')
