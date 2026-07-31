@@ -63,6 +63,44 @@ const LOCALIZACIONES = [
 ];
 const LOC_ID_POR_NOMBRE = Object.fromEntries(LOCALIZACIONES.map((l) => [l.nombre, l.id]));
 
+// ── Catálogos editables humanX Tanda 2 (mismos nombres que sembró la migración en producción;
+// aquí con ids explícitos y predecibles, como el resto de catálogos del seed) ──
+const TIPOS_CONTRATO = [
+  { id: 'tc-indefinido', nombre: 'Indefinido' },
+  { id: 'tc-temporal', nombre: 'Temporal' },
+  { id: 'tc-practicas', nombre: 'Prácticas' },
+  { id: 'tc-freelance', nombre: 'Freelance' },
+];
+const TC_ID_POR_NOMBRE = Object.fromEntries(TIPOS_CONTRATO.map((t) => [t.nombre, t.id]));
+
+const JORNADAS = [
+  { id: 'jor-completa', nombre: 'Completa' },
+  { id: 'jor-parcial', nombre: 'Parcial' },
+];
+
+const RELACIONES_EMERGENCIA = [
+  { id: 'rel-conyuge', nombre: 'Cónyuge/Pareja' },
+  { id: 'rel-padre-madre', nombre: 'Padre/Madre' },
+  { id: 'rel-hijo', nombre: 'Hijo/a' },
+  { id: 'rel-hermano', nombre: 'Hermano/a' },
+  { id: 'rel-amigo', nombre: 'Amigo/a' },
+  { id: 'rel-otro', nombre: 'Otro' },
+];
+
+const IDIOMAS = [
+  { id: 'idi-espanol', nombre: 'Español' },
+  { id: 'idi-ingles', nombre: 'Inglés' },
+  { id: 'idi-frances', nombre: 'Francés' },
+  { id: 'idi-portugues', nombre: 'Portugués' },
+];
+
+// Un par de proyectos de ejemplo (en producción este catálogo nace vacío — lo puebla RH; en
+// el seed de desarrollo/test conviene tener algo para poder ver el filtro funcionando).
+const PROYECTOS = [
+  { id: 'proy-migracion-cloud', nombre: 'Migración a la nube' },
+  { id: 'proy-rediseno-marca', nombre: 'Rediseño de marca' },
+];
+
 // Dirección, CEO y RRHH/Finanzas cuelgan de la sociedad de servicios corporativos;
 // el resto (Ingeniería, Diseño, Datos, Producto, Marketing, Customer) de la de tecnología.
 const SOCIEDAD_SERVICIOS = new Set(['e1', 'e2', 'e16', 'e17']);
@@ -80,6 +118,32 @@ const VENCIMIENTO_CONTRATO: Record<string, string> = {
   e9: '2026-08-01', // María Fernández, colaboración externa — vencimiento próximo
   e13: '2026-07-25', // Raúl Domínguez, colaboración externa — vencimiento próximo
 };
+// humanX Tanda 2 — datos de ejemplo para verificar la ficha reorganizada; el resto de
+// empleados nace con estos campos vacíos (RH los completa desde la ficha/modal).
+const FECHA_NACIMIENTO: Record<string, string> = {
+  e1: '1985-03-12',
+  e3: '1990-01-21',
+  e6: '1996-11-27',
+};
+const CONTACTO_EMERGENCIA_RELACION: Record<string, string> = {
+  e1: 'rel-conyuge',
+  e3: 'rel-conyuge',
+  e6: 'rel-padre-madre',
+};
+const NACIONALIDAD: Record<string, 'ESPANOLA' | 'COLOMBIANA'> = { e1: 'ESPANOLA', e3: 'ESPANOLA', e11: 'COLOMBIANA' };
+const JORNADA_POR_EMPLEADO: Record<string, string> = { e9: 'jor-parcial', e13: 'jor-parcial' }; // resto: Completa
+const PROYECTO_POR_EMPLEADO: Record<string, string> = { e4: 'proy-migracion-cloud', e5: 'proy-migracion-cloud', e8: 'proy-rediseno-marca' };
+const HORARIO_POR_EMPLEADO: Record<string, string> = { e1: '9:00–18:00', e3: '9:00–18:00' };
+const IDIOMAS_POR_EMPLEADO: Record<string, string[]> = {
+  e1: ['idi-espanol', 'idi-ingles'],
+  e3: ['idi-espanol', 'idi-ingles'],
+  e11: ['idi-espanol', 'idi-ingles', 'idi-frances'],
+};
+const TITULACION: Record<string, string> = {
+  e3: 'Ingeniería Informática, Universidad Politécnica de Madrid',
+  e7: 'Grado en Diseño, IED Madrid',
+};
+
 const DESCRIPCION_PUESTO: Record<string, string> = {
   e1: 'Dirección general del grupo: estrategia, expansión y relación con inversores.',
   e2: 'Lidera la función de personas: cultura, talento, compensación y cumplimiento laboral.',
@@ -282,12 +346,23 @@ async function main() {
     db.refreshToken.deleteMany(),
     db.user.deleteMany(), db.employee.deleteMany(), db.department.deleteMany(),
     db.sociedad.deleteMany(), db.localizacion.deleteMany(), db.pais.deleteMany(),
+    // humanX Tanda 2 — catálogos nuevos (después de employee.deleteMany(): son FK con
+    // RESTRICT, y la relación m:n de Idioma ya se limpia en cascada al borrar Employee)
+    db.tipoContrato.deleteMany(), db.jornada.deleteMany(), db.relacionEmergencia.deleteMany(),
+    db.proyecto.deleteMany(), db.idioma.deleteMany(),
   ]);
 
   // Estructura: países → sociedades, y localizaciones (catálogos independientes)
   for (const p of PAISES) await db.pais.create({ data: { id: p.id, nombre: p.nombre } });
   for (const s of SOCIEDADES) await db.sociedad.create({ data: { id: s.id, nombre: s.nombre, paisId: s.paisId } });
   for (const l of LOCALIZACIONES) await db.localizacion.create({ data: { id: l.id, nombre: l.nombre } });
+
+  // humanX Tanda 2 — catálogos editables nuevos
+  for (const t of TIPOS_CONTRATO) await db.tipoContrato.create({ data: { id: t.id, nombre: t.nombre } });
+  for (const j of JORNADAS) await db.jornada.create({ data: { id: j.id, nombre: j.nombre } });
+  for (const r of RELACIONES_EMERGENCIA) await db.relacionEmergencia.create({ data: { id: r.id, nombre: r.nombre } });
+  for (const p of PROYECTOS) await db.proyecto.create({ data: { id: p.id, nombre: p.nombre } });
+  for (const i of IDIOMAS) await db.idioma.create({ data: { id: i.id, nombre: i.nombre } });
 
   // Departamentos (sin lead todavía)
   for (const d of DEPTS) await db.department.create({ data: { id: d.id, name: d.name, color: d.color } });
@@ -296,9 +371,9 @@ async function main() {
   for (const [i, e] of EMPLOYEES.entries()) {
     await db.employee.create({ data: {
       id: e.id, fullName: e.fullName, email: e.email, phone: e.phone, jobTitle: e.jobTitle,
-      level: e.level, location: e.location, remote: e.remote, startDate: D(e.startDate),
-      status: e.status, salary: e.salary ?? undefined, birthday: e.birthday, dni: e.dni,
-      address: e.address, iban: e.iban, emergency: e.emergency, fromRecruitment: e.fromRecruitment ?? false,
+      level: e.level, remote: e.remote, startDate: D(e.startDate),
+      status: e.status, salary: e.salary ?? undefined, dni: e.dni,
+      address: e.address, iban: e.iban, fromRecruitment: e.fromRecruitment ?? false,
       departmentId: e.dept, managerId: e.managerId ?? undefined,
       codigo: `EMP-${String(i + 1).padStart(4, '0')}`,
       vinculo: VINCULO_EXTERNO.has(e.id) ? Vinculo.EXTERNO : Vinculo.PLANTILLA,
@@ -307,6 +382,17 @@ async function main() {
       finPeriodoPrueba: FIN_PERIODO_PRUEBA[e.id] ? D(FIN_PERIODO_PRUEBA[e.id]) : undefined,
       vencimientoContrato: VENCIMIENTO_CONTRATO[e.id] ? D(VENCIMIENTO_CONTRATO[e.id]) : undefined,
       descripcionPuesto: DESCRIPCION_PUESTO[e.id],
+      // humanX Tanda 2
+      tipoContratoId: TC_ID_POR_NOMBRE['Indefinido'],
+      jornadaId: JORNADA_POR_EMPLEADO[e.id] ?? 'jor-completa',
+      proyectoId: PROYECTO_POR_EMPLEADO[e.id],
+      horario: HORARIO_POR_EMPLEADO[e.id],
+      fechaNacimiento: FECHA_NACIMIENTO[e.id] ? D(FECHA_NACIMIENTO[e.id]) : undefined,
+      nacionalidad: NACIONALIDAD[e.id],
+      contactoEmergenciaNombre: e.emergency,
+      contactoEmergenciaRelacionId: CONTACTO_EMERGENCIA_RELACION[e.id],
+      titulacion: TITULACION[e.id],
+      idiomas: IDIOMAS_POR_EMPLEADO[e.id] ? { connect: IDIOMAS_POR_EMPLEADO[e.id].map((id) => ({ id })) } : undefined,
     }});
   }
   // Asignar leads de departamento

@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Job } from '@prisma/client';
+import { ContractType, Job } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import {
@@ -10,6 +10,16 @@ import {
   MoveStageDto,
   UpdateInterviewDto,
 } from './applications.dto';
+
+// humanX Tanda 2: mismo mapeo usado en el backfill de la migración
+// (20260730220000_tanda2_reestructura_ficha_personas) para convertir el enum ContractType,
+// que Job sigue usando, en el catálogo TipoContrato que ahora usa Employee.
+const CONTRACT_TYPE_LABEL: Record<ContractType, string> = {
+  INDEFINIDO: 'Indefinido',
+  TEMPORAL: 'Temporal',
+  PRACTICAS: 'Prácticas',
+  FREELANCE: 'Freelance',
+};
 
 @Injectable()
 export class ApplicationsService {
@@ -192,6 +202,20 @@ export class ApplicationsService {
     const contratado = await this.db.stage.findUnique({ where: { name: 'Contratado' } });
 
     return this.db.$transaction(async (tx) => {
+      // humanX Tanda 2: Employee ya no tiene `location`/`contractType` (texto libre / enum) —
+      // ahora vive como `localizacionId`/`tipoContratoId` (catálogos). El puente vive aquí, sin
+      // tocar HireDto/Job (siguen mandando texto libre/enum, igual que siempre).
+      const locationName = (dto.location ?? app.job.location).trim();
+      const localizacion =
+        (await tx.localizacion.findFirst({ where: { nombre: { equals: locationName, mode: 'insensitive' } } })) ??
+        (await tx.localizacion.create({ data: { nombre: locationName } }));
+
+      const contractType = dto.contractType ?? app.job.contractType;
+      const tipoContrato = await tx.tipoContrato.findFirst({ where: { nombre: CONTRACT_TYPE_LABEL[contractType] } });
+      if (!tipoContrato) {
+        throw new BadRequestException(`No existe el catálogo "Tipo de contrato" para "${CONTRACT_TYPE_LABEL[contractType]}".`);
+      }
+
       const employee = await tx.employee.create({
         data: {
           fullName: app.candidate.fullName,
@@ -199,10 +223,10 @@ export class ApplicationsService {
           phone: app.candidate.phone,
           jobTitle: dto.jobTitle ?? app.job.title,
           level: dto.level ?? app.job.level,
-          location: dto.location ?? app.job.location,
+          localizacionId: localizacion.id,
           remote: app.job.remote,
           startDate: new Date(dto.startDate),
-          contractType: dto.contractType ?? app.job.contractType,
+          tipoContratoId: tipoContrato.id,
           status: 'ONBOARDING',
           salary: dto.salary,
           departmentId: dto.departmentId ?? app.job.departmentId ?? undefined,

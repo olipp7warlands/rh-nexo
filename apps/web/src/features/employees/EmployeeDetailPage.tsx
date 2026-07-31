@@ -22,7 +22,8 @@ import { NuevoDocumentoModal } from '../documents/NuevoDocumentoModal';
 import { useAbsences } from '../absences/useAbsences';
 import { AbsenceStatusBadge, AbsenceTypeBadge } from '../absences/AbsenceBadges';
 import { useCycles, useCycle } from '../performance/usePerformance';
-import { CONTRACT_LABEL, formatDate, formatEuro, LEVEL_LABEL, seniority } from '../../lib/format';
+import { age, birthdayLabel, formatDate, formatEuro, LEVEL_LABEL, seniority } from '../../lib/format';
+import { NACIONALIDAD_LABEL, SITUACION_IRPF_LABEL } from './listasFijas';
 
 function CategoriaDot({ color }: { color: string }) {
   return <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />;
@@ -145,7 +146,7 @@ export function EmployeeDetailPage() {
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" /> {emp.location}
+                <MapPin className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" /> {emp.localizacion.nombre}
                 {emp.remote && ' · Remoto'}
               </span>
             </div>
@@ -211,12 +212,12 @@ export function EmployeeDetailPage() {
                 <Field label="Puesto" value={emp.jobTitle} />
                 <Field label="Departamento" value={emp.department?.name ?? '—'} />
                 <Field label="Manager" value={emp.manager?.fullName ?? '—'} />
-                <Field label="Ubicación" value={emp.location} />
+                <Field label="Centro de trabajo" value={emp.localizacion.nombre} />
                 <Field label="Fecha de alta" value={formatDate(emp.startDate)} mono />
-                <Field label="Contrato" value={CONTRACT_LABEL[emp.contractType] ?? emp.contractType} />
+                <Field label="Contrato" value={emp.tipoContrato.nombre} />
                 <Field label="Email" value={emp.email} />
                 <Field label="Teléfono" value={emp.phone ?? '—'} />
-                <Field label="Cumpleaños" value={emp.birthday ?? '—'} />
+                <Field label="Cumpleaños" value={birthdayLabel(emp.fechaNacimiento)} />
               </div>
             </Card>
             {emp.reports && emp.reports.length > 0 && (
@@ -292,29 +293,88 @@ export function EmployeeDetailPage() {
 
       {tab === 'Información personal' && (
         <div className="grid grid-cols-2 gap-5">
+          {/* Bloque 1 — Datos personales */}
           <Card>
             <h3 className="font-serif text-[14px] font-medium mb-4">Datos personales</h3>
+            {!canSeeSalary ? (
+              <p className="text-[13px] text-[var(--ink-tertiary)]">
+                Solo visible para RRHH/Administración y el propio empleado.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                <Field label="Nombre completo" value={emp.fullName} />
+                <Field label="DNI / NIE" value={emp.dni ?? '—'} mono />
+                <Field
+                  label="Fecha de nacimiento"
+                  value={emp.fechaNacimiento ? `${formatDate(emp.fechaNacimiento)} (${age(emp.fechaNacimiento)} años)` : '—'}
+                  mono
+                />
+                <Field label="Nacionalidad" value={emp.nacionalidad ? NACIONALIDAD_LABEL[emp.nacionalidad] : '—'} />
+                <div className="col-span-2">
+                  <Field label="Dirección" value={emp.address ?? '—'} />
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Bloque 2 — Contacto de emergencia */}
+          <Card>
+            <h3 className="font-serif text-[14px] font-medium mb-4">Contacto de emergencia</h3>
+            {!canSeeSalary ? (
+              <p className="text-[13px] text-[var(--ink-tertiary)]">
+                Solo visible para RRHH/Administración y el propio empleado.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                <Field label="Nombre" value={emp.contactoEmergenciaNombre ?? '—'} />
+                <Field label="Relación" value={emp.contactoEmergenciaRelacion?.nombre ?? '—'} />
+                <Field label="Teléfono" value={emp.contactoEmergenciaTelefono ?? '—'} />
+              </div>
+            )}
+          </Card>
+
+          {/* Bloque 4 — Datos administrativos (ultra-sensible: ADMIN/RRHH, sin excepción de
+              propio empleado, ver EmployeesService.maskAdminOnly) */}
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="font-serif text-[14px] font-medium">Datos administrativos</h3>
+              <Badge variant="warning">Confidencial</Badge>
+            </div>
+            {!canManage ? (
+              <p className="text-[13px] text-[var(--ink-tertiary)]">Solo visible para RRHH/Administración.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                <Field label="Nº Seguridad Social" value={emp.numSeguridadSocial ?? '—'} mono />
+                <Field label="IBAN" value={emp.iban ?? '—'} mono />
+                <Field label="Situación IRPF" value={emp.situacionIRPF ? SITUACION_IRPF_LABEL[emp.situacionIRPF] : '—'} />
+              </div>
+            )}
+          </Card>
+
+          {/* Bloque 5 — Formación (no restringida) */}
+          <Card>
+            <h3 className="font-serif text-[14px] font-medium mb-4">Formación</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-              <Field label="Nombre completo" value={emp.fullName} />
-              <Field label="DNI / NIE" value={emp.dni ?? '—'} mono />
-              <Field label="Cumpleaños" value={emp.birthday ?? '—'} />
-              <Field label="Dirección" value={emp.address ?? '—'} />
+              <div className="col-span-2">
+                <Field label="Titulación" value={emp.titulacion ?? '—'} />
+              </div>
+              <div className="col-span-2">
+                <div className="text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-1.5">Idiomas</div>
+                {emp.idiomas.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {emp.idiomas.map((i) => (
+                      <Badge key={i.id} variant="neutral">{i.nombre}</Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-[var(--ink-tertiary)]">—</p>
+                )}
+              </div>
+              <div className="col-span-2">
+                <Field label="Certificaciones" value={emp.certificaciones ?? '—'} />
+              </div>
             </div>
           </Card>
-          <div className="flex flex-col gap-5">
-            <Card>
-              <h3 className="font-serif text-[14px] font-medium mb-4">Contacto de emergencia</h3>
-              <p className="text-[13px]">{emp.emergency ?? '—'}</p>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="font-serif text-[14px] font-medium">Datos bancarios</h3>
-                <Badge variant="neutral">Cifrado</Badge>
-              </div>
-              <Field label="IBAN" value={emp.iban ?? (canManage ? '—' : 'Restringido')} mono />
-              <p className="text-[11px] text-[var(--ink-tertiary)] mt-3">Visible solo para RRHH/Administración y el propio empleado.</p>
-            </Card>
-          </div>
         </div>
       )}
 
@@ -330,7 +390,8 @@ export function EmployeeDetailPage() {
               <Field label="Manager" value={emp.manager?.fullName ?? '—'} />
               <Field label="Personas a cargo" value={String(emp.reports?.length ?? 0)} />
               <Field label="Sociedad" value={emp.sociedad ? `${emp.sociedad.nombre} (${emp.sociedad.pais.nombre})` : '—'} />
-              <Field label="Localización" value={emp.localizacion?.nombre ?? emp.location} />
+              <Field label="Centro de trabajo" value={emp.localizacion.nombre} />
+              <Field label="Proyecto" value={emp.proyecto?.nombre ?? '—'} />
               <Field label="Modalidad" value={emp.remote ? 'Remoto' : 'Presencial'} />
               {emp.descripcionPuesto && (
                 <div className="col-span-2">
@@ -343,14 +404,16 @@ export function EmployeeDetailPage() {
             <h3 className="font-serif text-[14px] font-medium mb-4">Contrato</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
               <Field label="Vínculo" value={emp.vinculo === 'EXTERNO' ? 'Colaboradores externos' : 'Plantilla interna'} />
-              <Field label="Tipo" value={CONTRACT_LABEL[emp.contractType] ?? emp.contractType} />
+              <Field label="Tipo" value={emp.tipoContrato.nombre} />
+              <Field label="Jornada" value={emp.jornada?.nombre ?? '—'} />
+              <Field label="Horario" value={emp.horario ?? '—'} />
               <Field label="Fecha de alta" value={formatDate(emp.startDate)} mono />
               <Field label="Antigüedad" value={seniority(emp.startDate)} />
               <Field label="Fin de periodo de prueba" value={emp.finPeriodoPrueba ? formatDate(emp.finPeriodoPrueba) : '—'} mono />
               <Field label="Vencimiento de contrato" value={emp.vencimientoContrato ? formatDate(emp.vencimientoContrato) : '—'} mono />
             </div>
           </Card>
-          <Card>
+          <Card className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="font-serif text-[14px] font-medium">Retribución actual</h3>
               <Badge variant="warning">Confidencial</Badge>
@@ -365,10 +428,6 @@ export function EmployeeDetailPage() {
                 Solo visible para RRHH/Administración y el propio empleado.
               </p>
             )}
-          </Card>
-          <Card>
-            <h3 className="font-serif text-[14px] font-medium mb-3">Datos bancarios</h3>
-            <Field label="IBAN" value={emp.iban ?? (canManage ? '—' : 'Restringido')} mono />
           </Card>
           <Card className="col-span-2">
             <h3 className="font-serif text-[14px] font-medium mb-4">Histórico de puestos</h3>

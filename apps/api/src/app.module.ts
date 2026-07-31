@@ -10,6 +10,11 @@ import { DepartmentsModule } from './departments/departments.module';
 import { PaisesModule } from './paises/paises.module';
 import { SociedadesModule } from './sociedades/sociedades.module';
 import { LocalizacionesModule } from './localizaciones/localizaciones.module';
+import { TiposContratoModule } from './tipos-contrato/tipos-contrato.module';
+import { JornadasModule } from './jornadas/jornadas.module';
+import { RelacionesEmergenciaModule } from './relaciones-emergencia/relaciones-emergencia.module';
+import { ProyectosModule } from './proyectos/proyectos.module';
+import { IdiomasModule } from './idiomas/idiomas.module';
 import { CategoriasModule } from './categorias/categorias.module';
 import { AnotacionesModule } from './anotaciones/anotaciones.module';
 import { AgendaModule } from './agenda/agenda.module';
@@ -59,6 +64,11 @@ import { RolesGuard } from './auth/guards/roles.guard';
     PaisesModule,
     SociedadesModule,
     LocalizacionesModule,
+    TiposContratoModule,
+    JornadasModule,
+    RelacionesEmergenciaModule,
+    ProyectosModule,
+    IdiomasModule,
     CategoriasModule,
     AnotacionesModule,
     AgendaModule,

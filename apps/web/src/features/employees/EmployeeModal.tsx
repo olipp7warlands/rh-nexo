@@ -7,34 +7,58 @@ import { Modal } from '../_shared/Modal';
 import { useAuth } from '../auth/AuthContext';
 import { useCreateEmployee, useUpdateEmployee, type Employee } from './useEmployees';
 import { useDepartments } from './useDepartments';
-import { useSociedades, useLocalizaciones } from '../estructura/useEstructura';
+import {
+  useSociedades,
+  useLocalizaciones,
+  useTiposContrato,
+  useJornadas,
+  useProyectos,
+  useRelacionesEmergencia,
+  useIdiomas,
+} from '../estructura/useEstructura';
+import { NACIONALIDAD_LABEL, SITUACION_IRPF_LABEL } from './listasFijas';
 
 const schema = z.object({
   fullName: z.string().min(1, 'Obligatorio'),
   email: z.string().min(1, 'Obligatorio').email('Email no válido'),
   phone: z.string().optional(),
   dni: z.string().optional(),
-  birthday: z.string().optional(),
   address: z.string().optional(),
-  emergency: z.string().optional(),
   jobTitle: z.string().min(1, 'Obligatorio'),
   level: z.string().min(1, 'Obligatorio'),
-  location: z.string().min(1, 'Obligatorio'),
   remote: z.boolean().optional(),
   startDate: z.string().min(1, 'Obligatorio'),
-  contractType: z.enum(['INDEFINIDO', 'TEMPORAL', 'PRACTICAS', 'FREELANCE']).optional(),
   status: z.enum(['ACTIVO', 'ONBOARDING', 'AUSENTE', 'BAJA']).optional(),
   departmentId: z.string().optional(),
   managerId: z.string().optional(),
   salary: z.number().int().min(0, 'No puede ser negativo').optional(),
-  iban: z.string().optional(),
   codigo: z.string().optional(),
   vinculo: z.enum(['PLANTILLA', 'EXTERNO']).optional(),
   sociedadId: z.string().optional(),
-  localizacionId: z.string().optional(),
+  localizacionId: z.string().min(1, 'Obligatorio'),
   finPeriodoPrueba: z.string().optional(),
   vencimientoContrato: z.string().optional(),
   descripcionPuesto: z.string().optional(),
+  // humanX Tanda 2 — bloque 3 "Datos laborales" (Información profesional)
+  tipoContratoId: z.string().min(1, 'Obligatorio'),
+  jornadaId: z.string().optional(),
+  horario: z.string().optional(),
+  proyectoId: z.string().optional(),
+  // humanX Tanda 2 — bloque 1 "Datos personales"
+  fechaNacimiento: z.string().optional(),
+  nacionalidad: z.string().optional(),
+  // humanX Tanda 2 — bloque 2 "Contacto de emergencia"
+  contactoEmergenciaNombre: z.string().optional(),
+  contactoEmergenciaRelacionId: z.string().optional(),
+  contactoEmergenciaTelefono: z.string().optional(),
+  // humanX Tanda 2 — bloque 4 "Datos administrativos" (ultra-sensible)
+  numSeguridadSocial: z.string().optional(),
+  iban: z.string().optional(),
+  situacionIRPF: z.string().optional(),
+  // humanX Tanda 2 — bloque 5 "Formación"
+  titulacion: z.string().optional(),
+  idiomaIds: z.array(z.string()).optional(),
+  certificaciones: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -82,6 +106,11 @@ export function EmployeeModal({
   const { data: departments } = useDepartments();
   const { data: sociedades } = useSociedades();
   const { data: localizaciones } = useLocalizaciones();
+  const { data: tiposContrato } = useTiposContrato();
+  const { data: jornadas } = useJornadas();
+  const { data: proyectos } = useProyectos();
+  const { data: relacionesEmergencia } = useRelacionesEmergencia();
+  const { data: idiomas } = useIdiomas();
   const create = useCreateEmployee();
   const update = useUpdateEmployee(employee?.id ?? '');
   const mutation = mode === 'create' ? create : update;
@@ -101,29 +130,39 @@ export function EmployeeModal({
           email: employee.email,
           phone: employee.phone ?? '',
           dni: employee.dni ?? '',
-          birthday: employee.birthday ?? '',
           address: employee.address ?? '',
-          emergency: employee.emergency ?? '',
           jobTitle: employee.jobTitle,
           level: employee.level,
-          location: employee.location,
           remote: employee.remote,
           startDate: employee.startDate?.slice(0, 10),
-          contractType: employee.contractType,
           status: employee.status,
           departmentId: employee.departmentId ?? '',
           managerId: employee.managerId ?? '',
           salary: employee.salary ?? undefined,
-          iban: employee.iban ?? '',
           codigo: employee.codigo ?? '',
           vinculo: employee.vinculo,
           sociedadId: employee.sociedadId ?? '',
-          localizacionId: employee.localizacionId ?? '',
+          localizacionId: employee.localizacionId,
           finPeriodoPrueba: employee.finPeriodoPrueba?.slice(0, 10) ?? '',
           vencimientoContrato: employee.vencimientoContrato?.slice(0, 10) ?? '',
           descripcionPuesto: employee.descripcionPuesto ?? '',
+          tipoContratoId: employee.tipoContratoId,
+          jornadaId: employee.jornadaId ?? '',
+          horario: employee.horario ?? '',
+          proyectoId: employee.proyectoId ?? '',
+          fechaNacimiento: employee.fechaNacimiento?.slice(0, 10) ?? '',
+          nacionalidad: employee.nacionalidad ?? '',
+          contactoEmergenciaNombre: employee.contactoEmergenciaNombre ?? '',
+          contactoEmergenciaRelacionId: employee.contactoEmergenciaRelacionId ?? '',
+          contactoEmergenciaTelefono: employee.contactoEmergenciaTelefono ?? '',
+          numSeguridadSocial: employee.numSeguridadSocial ?? '',
+          iban: employee.iban ?? '',
+          situacionIRPF: employee.situacionIRPF ?? '',
+          titulacion: employee.titulacion ?? '',
+          idiomaIds: employee.idiomas.map((i) => i.id),
+          certificaciones: employee.certificaciones ?? '',
         }
-      : { remote: false, status: 'ONBOARDING', contractType: 'INDEFINIDO', vinculo: 'PLANTILLA' },
+      : { remote: false, status: 'ONBOARDING', vinculo: 'PLANTILLA' },
   });
 
   const onSubmit = handleSubmit(async (data) => {
@@ -138,6 +177,21 @@ export function EmployeeModal({
 
   // Posibles managers: cualquier empleado distinto del que se edita.
   const managers = allEmployees.filter((e) => e.id !== employee?.id);
+
+  // Los <select> de catálogo son inputs no controlados (register de RHF fija `.value` una sola
+  // vez, al montar): si sus <option> llegan async DESPUÉS de ese montaje (catálogos nuevos de
+  // Tanda 2, sin caché previa como sociedades/localizaciones), el valor guardado no se refleja
+  // visualmente aunque sí viaje correcto en el submit — confuso para quien edita. Se espera a
+  // que todos los catálogos estén cargados antes de montar el formulario.
+  const catalogsReady =
+    departments && sociedades && localizaciones && tiposContrato && jornadas && proyectos && relacionesEmergencia && idiomas;
+  if (!catalogsReady) {
+    return (
+      <Modal title={mode === 'create' ? 'Añadir empleado' : `Editar · ${employee?.fullName}`} onClose={onClose}>
+        <p className="text-[13px] text-[var(--ink-tertiary)] text-center py-8">Cargando…</p>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -175,29 +229,119 @@ export function EmployeeModal({
 
       <form onSubmit={onSubmit} noValidate>
         {tab === 'Personal' && (
-          <div className="grid grid-cols-2 gap-4">
-            <Row label="Nombre completo" required error={errors.fullName?.message}>
-              <Input autoFocus {...register('fullName')} />
-            </Row>
-            <Row label="Email" required error={errors.email?.message}>
-              <Input type="email" {...register('email')} />
-            </Row>
-            <Row label="Teléfono" error={errors.phone?.message}>
-              <Input {...register('phone')} />
-            </Row>
-            <Row label="DNI / NIE" error={errors.dni?.message}>
-              <Input {...register('dni')} />
-            </Row>
-            <Row label="Cumpleaños" error={errors.birthday?.message}>
-              <Input placeholder="p. ej. 21 ene" {...register('birthday')} />
-            </Row>
-            <Row label="Dirección" error={errors.address?.message}>
-              <Input {...register('address')} />
-            </Row>
-            <div className="col-span-2">
-              <Row label="Contacto de emergencia" error={errors.emergency?.message}>
-                <Input placeholder="Nombre · teléfono" {...register('emergency')} />
-              </Row>
+          <div className="flex flex-col gap-6">
+            {/* Bloque 1 — Datos personales */}
+            <div>
+              <h4 className="text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-3">Datos personales</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <Row label="Nombre completo" required error={errors.fullName?.message}>
+                  <Input autoFocus {...register('fullName')} />
+                </Row>
+                <Row label="Email" required error={errors.email?.message}>
+                  <Input type="email" {...register('email')} />
+                </Row>
+                <Row label="Teléfono" error={errors.phone?.message}>
+                  <Input {...register('phone')} />
+                </Row>
+                <Row label="DNI / NIE" error={errors.dni?.message}>
+                  <Input {...register('dni')} />
+                </Row>
+                <Row label="Fecha de nacimiento" error={errors.fechaNacimiento?.message}>
+                  <Input type="date" {...register('fechaNacimiento')} />
+                </Row>
+                <Row label="Nacionalidad" error={errors.nacionalidad?.message}>
+                  <select className={selectClass} {...register('nacionalidad')}>
+                    <option value="">Sin especificar</option>
+                    {Object.entries(NACIONALIDAD_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </Row>
+                <div className="col-span-2">
+                  <Row label="Dirección" error={errors.address?.message}>
+                    <Input {...register('address')} />
+                  </Row>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloque 2 — Contacto de emergencia */}
+            <div>
+              <h4 className="text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-3">Contacto de emergencia</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <Row label="Nombre" error={errors.contactoEmergenciaNombre?.message}>
+                  <Input {...register('contactoEmergenciaNombre')} />
+                </Row>
+                <Row label="Relación" error={errors.contactoEmergenciaRelacionId?.message}>
+                  <select className={selectClass} {...register('contactoEmergenciaRelacionId')}>
+                    <option value="">Sin especificar</option>
+                    {relacionesEmergencia?.map((r) => (
+                      <option key={r.id} value={r.id}>{r.nombre}</option>
+                    ))}
+                  </select>
+                </Row>
+                <Row label="Teléfono" error={errors.contactoEmergenciaTelefono?.message}>
+                  <Input {...register('contactoEmergenciaTelefono')} />
+                </Row>
+              </div>
+            </div>
+
+            {/* Bloque 4 — Datos administrativos (ultra-sensible: ADMIN/RRHH, sin excepción de
+                propio empleado, ver EmployeesService.maskAdminOnly) */}
+            <div>
+              <h4 className="text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-3">Datos administrativos</h4>
+              {canComp ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <Row label="Nº Seguridad Social" error={errors.numSeguridadSocial?.message}>
+                    <Input {...register('numSeguridadSocial')} />
+                  </Row>
+                  <Row label="IBAN" error={errors.iban?.message}>
+                    <Input {...register('iban')} />
+                  </Row>
+                  <Row label="Situación IRPF" error={errors.situacionIRPF?.message}>
+                    <select className={selectClass} {...register('situacionIRPF')}>
+                      <option value="">Sin especificar</option>
+                      {Object.entries(SITUACION_IRPF_LABEL).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </Row>
+                </div>
+              ) : (
+                <p className="text-[13px] text-[var(--ink-tertiary)]">Solo RRHH y Administración pueden ver y editar estos datos.</p>
+              )}
+            </div>
+
+            {/* Bloque 5 — Formación */}
+            <div>
+              <h4 className="text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-3">Formación</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Row label="Titulación" error={errors.titulacion?.message}>
+                    <Input {...register('titulacion')} />
+                  </Row>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Idiomas</label>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {idiomas?.map((i) => (
+                      <label key={i.id} className="inline-flex items-center gap-1.5 text-[13px]">
+                        <input type="checkbox" value={i.id} className="w-4 h-4 accent-[var(--accent)]" {...register('idiomaIds')} />
+                        {i.nombre}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Row label="Certificaciones" error={errors.certificaciones?.message}>
+                    <textarea
+                      rows={2}
+                      className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] hover:border-[var(--ink-tertiary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none transition-all resize-y"
+                      {...register('certificaciones')}
+                    />
+                  </Row>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -265,9 +409,9 @@ export function EmployeeModal({
                 ))}
               </select>
             </Row>
-            <Row label="Localización" error={errors.localizacionId?.message}>
+            <Row label="Centro de trabajo" required error={errors.localizacionId?.message}>
               <select className={selectClass} {...register('localizacionId')}>
-                <option value="">Sin asignar</option>
+                <option value="">Selecciona…</option>
                 {localizaciones?.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.nombre}
@@ -275,19 +419,37 @@ export function EmployeeModal({
                 ))}
               </select>
             </Row>
-            <Row label="Ubicación" required error={errors.location?.message}>
-              <Input {...register('location')} />
+            <Row label="Proyecto" error={errors.proyectoId?.message}>
+              <select className={selectClass} {...register('proyectoId')}>
+                <option value="">Sin asignar</option>
+                {proyectos?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
             </Row>
             <Row label="Fecha de alta" required error={errors.startDate?.message}>
               <Input type="date" {...register('startDate')} />
             </Row>
-            <Row label="Tipo de contrato" error={errors.contractType?.message}>
-              <select className={selectClass} {...register('contractType')}>
-                <option value="INDEFINIDO">Indefinido</option>
-                <option value="TEMPORAL">Temporal</option>
-                <option value="PRACTICAS">Prácticas</option>
-                <option value="FREELANCE">Freelance</option>
+            <Row label="Tipo de contrato" required error={errors.tipoContratoId?.message}>
+              <select className={selectClass} {...register('tipoContratoId')}>
+                <option value="">Selecciona…</option>
+                {tiposContrato?.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
               </select>
+            </Row>
+            <Row label="Jornada" error={errors.jornadaId?.message}>
+              <select className={selectClass} {...register('jornadaId')}>
+                <option value="">Sin especificar</option>
+                {jornadas?.map((j) => (
+                  <option key={j.id} value={j.id}>{j.nombre}</option>
+                ))}
+              </select>
+            </Row>
+            <Row label="Horario" error={errors.horario?.message}>
+              <Input placeholder="p. ej. 9:00–18:00" {...register('horario')} />
             </Row>
             <Row label="Fin de periodo de prueba" error={errors.finPeriodoPrueba?.message}>
               <Input type="date" {...register('finPeriodoPrueba')} />
@@ -308,18 +470,13 @@ export function EmployeeModal({
               Trabaja en remoto
             </label>
             {canComp ? (
-              <>
-                <Row label="Salario bruto anual (€)" error={errors.salary?.message}>
-                  <Input
-                    type="number"
-                    min={0}
-                    {...register('salary', { setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)) })}
-                  />
-                </Row>
-                <Row label="IBAN" error={errors.iban?.message}>
-                  <Input {...register('iban')} />
-                </Row>
-              </>
+              <Row label="Salario bruto anual (€)" error={errors.salary?.message}>
+                <Input
+                  type="number"
+                  min={0}
+                  {...register('salary', { setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)) })}
+                />
+              </Row>
             ) : (
               <p className="col-span-2 text-[13px] text-[var(--ink-tertiary)]">
                 Solo RRHH y Administración pueden ver y editar la compensación.

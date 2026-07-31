@@ -31,6 +31,12 @@ const AnotacionesPage = lazy(() => import('./features/anotaciones/AnotacionesPag
 const SociedadesPage = lazy(() => import('./features/estructura/SociedadesPage').then((m) => ({ default: m.SociedadesPage })));
 const LocalizacionesPage = lazy(() => import('./features/estructura/LocalizacionesPage').then((m) => ({ default: m.LocalizacionesPage })));
 const DepartamentosPage = lazy(() => import('./features/estructura/DepartamentosPage').then((m) => ({ default: m.DepartamentosPage })));
+// humanX Tanda 2: catálogos editables de la ficha de Personas
+const TiposContratoPage = lazy(() => import('./features/estructura/TiposContratoPage').then((m) => ({ default: m.TiposContratoPage })));
+const JornadasPage = lazy(() => import('./features/estructura/JornadasPage').then((m) => ({ default: m.JornadasPage })));
+const RelacionesEmergenciaPage = lazy(() => import('./features/estructura/RelacionesEmergenciaPage').then((m) => ({ default: m.RelacionesEmergenciaPage })));
+const ProyectosPage = lazy(() => import('./features/estructura/ProyectosPage').then((m) => ({ default: m.ProyectosPage })));
+const IdiomasPage = lazy(() => import('./features/estructura/IdiomasPage').then((m) => ({ default: m.IdiomasPage })));
 
 const PAGES: Record<string, JSX.Element> = {
   '/': <InicioPage />,
@@ -48,6 +54,11 @@ const PAGES: Record<string, JSX.Element> = {
   '/estructura/sociedades': <SociedadesPage />,
   '/estructura/localizaciones': <LocalizacionesPage />,
   '/estructura/departamentos': <DepartamentosPage />,
+  '/estructura/tipos-contrato': <TiposContratoPage />,
+  '/estructura/jornadas': <JornadasPage />,
+  '/estructura/relaciones-emergencia': <RelacionesEmergenciaPage />,
+  '/estructura/proyectos': <ProyectosPage />,
+  '/estructura/idiomas': <IdiomasPage />,
 };
 
 /** Redirección que conserva el parámetro de ruta (p. ej. /empleados/:id → /personas/:id). */

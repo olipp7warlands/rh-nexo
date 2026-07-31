@@ -61,7 +61,8 @@ describe('Empleados + Departamentos (integración)', () => {
         email: TEST_EMAIL,
         jobTitle: 'QA Engineer',
         level: 'mid',
-        location: 'Madrid',
+        localizacionId: 'loc-madrid',
+        tipoContratoId: 'tc-indefinido',
         startDate: '2026-06-01',
         departmentId: 'd-eng',
         status: 'ONBOARDING',
@@ -96,25 +97,29 @@ describe('Empleados + Departamentos (integración)', () => {
 
   // Auditoría C2: solo salary/iban se enmascaraban para viewers no privilegiados; dni,
   // address, emergency y birthday se devolvían en claro a cualquier autenticado.
-  it('un EMPLEADO no ve el dni/dirección/contacto de emergencia/cumpleaños de otro compañero', async () => {
+  it('un EMPLEADO no ve el dni/dirección/contacto de emergencia/fecha de nacimiento de otro compañero', async () => {
     const empLogin = await request(http).post('/api/auth/login').send({ email: 'diego.ortega@grupo.com', password: 'nucleo123' });
     const empToken = empLogin.body.accessToken;
 
     const res = await request(http).get('/api/employees/e1').set('Authorization', `Bearer ${empToken}`).expect(200);
     expect(res.body.dni).toBeNull();
     expect(res.body.address).toBeNull();
-    expect(res.body.emergency).toBeNull();
-    expect(res.body.birthday).toBeNull();
+    expect(res.body.contactoEmergenciaNombre).toBeNull();
+    expect(res.body.fechaNacimiento).toBeNull();
     expect(res.body.salary).toBeNull();
+    // humanX Tanda 2 — bloque 4 "Datos administrativos": ultra-sensible, tampoco visible.
     expect(res.body.iban).toBeNull();
+    expect(res.body.numSeguridadSocial).toBeNull();
+    expect(res.body.situacionIRPF).toBeNull();
     // El resto de la ficha sigue siendo visible (directorio normal).
     expect(res.body.fullName).toBe('Elena Vázquez');
   });
 
-  it('ADMIN/RRHH y el propio empleado sí ven esos campos', async () => {
+  it('ADMIN/RRHH y el propio empleado sí ven dni/dirección (maskSensitive), pero NO el bloque administrativo salvo ADMIN/RRHH', async () => {
     const res = await request(http).get('/api/employees/e1').set('Authorization', `Bearer ${token}`).expect(200);
     expect(res.body.dni).not.toBeNull();
     expect(res.body.address).not.toBeNull();
+    expect(res.body.iban).not.toBeNull();
 
     const selfLogin = await request(http).post('/api/auth/login').send({ email: 'diego.ortega@grupo.com', password: 'nucleo123' });
     const selfRes = await request(http)
@@ -122,6 +127,11 @@ describe('Empleados + Departamentos (integración)', () => {
       .set('Authorization', `Bearer ${selfLogin.body.accessToken}`)
       .expect(200);
     expect(selfRes.body.dni).not.toBeNull();
+    // humanX Tanda 2 — bloque 4: el propio empleado NO ve su nº SS/IBAN/situación IRPF, a
+    // diferencia de dni/address (maskSensitive) — pedido explícito de RH, solo ADMIN/RRHH.
+    expect(selfRes.body.iban).toBeNull();
+    expect(selfRes.body.numSeguridadSocial).toBeNull();
+    expect(selfRes.body.situacionIRPF).toBeNull();
   });
 
   it('edita un empleado: persiste el cambio y escribe AuditLog UPDATE', async () => {
@@ -202,7 +212,8 @@ describe('Empleados + Departamentos (integración)', () => {
         email: 'demasiado.largo@example.com',
         jobTitle: 'x',
         level: 'x',
-        location: 'x',
+        localizacionId: 'loc-madrid',
+        tipoContratoId: 'tc-indefinido',
         startDate: '2026-01-01',
       })
       .expect(400);

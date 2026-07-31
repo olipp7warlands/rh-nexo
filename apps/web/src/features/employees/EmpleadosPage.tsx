@@ -4,7 +4,7 @@ import { Avatar, Badge, Button, Card, DeptChip, EmpStatus, Input, PageHeader } f
 import { useAuth } from '../auth/AuthContext';
 import { useEmployees, type EmployeeStatus, type Vinculo } from './useEmployees';
 import { useDepartments } from './useDepartments';
-import { usePaises, useSociedades } from '../estructura/useEstructura';
+import { usePaises, useProyectos, useSociedades } from '../estructura/useEstructura';
 import { EmployeeModal } from './EmployeeModal';
 import { formatDate } from '../../lib/format';
 
@@ -31,6 +31,7 @@ export function EmpleadosPage() {
   const [vinculo, setVinculo] = useState<Vinculo | undefined>(undefined);
   const [paisId, setPaisId] = useState<string | undefined>(undefined);
   const [sociedadId, setSociedadId] = useState<string | undefined>(undefined);
+  const [proyectoId, setProyectoId] = useState<string | undefined>(undefined);
   const [startDateFrom, setStartDateFrom] = useState<string | undefined>(undefined);
   const [startDateTo, setStartDateTo] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
@@ -43,12 +44,14 @@ export function EmpleadosPage() {
     vinculo,
     paisId,
     sociedadId,
+    proyectoId,
     startDateFrom,
     startDateTo,
   });
   const { data: departments } = useDepartments();
   const { data: paises } = usePaises();
   const { data: sociedades } = useSociedades();
+  const { data: proyectos } = useProyectos();
 
   const kpis = useMemo(() => {
     const list = all ?? [];
@@ -141,6 +144,19 @@ export function EmpleadosPage() {
             </option>
           ))}
         </select>
+        <select
+          className={selectClass}
+          value={proyectoId ?? ''}
+          onChange={(e) => setProyectoId(e.target.value || undefined)}
+          aria-label="Filtrar por proyecto"
+        >
+          <option value="">Todos los proyectos</option>
+          {proyectos?.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nombre}
+            </option>
+          ))}
+        </select>
         <div className="flex items-center gap-1.5">
           <Input
             type="date"
@@ -199,7 +215,7 @@ export function EmpleadosPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-[var(--bg-subtle)] border-b border-[var(--line)]">
-                {['Persona', 'Sociedad', 'Departamento', 'Localización', 'Incorporación', 'Vínculo', 'Estado'].map((h) => (
+                {['Persona', 'Sociedad', 'Departamento', 'Centro de trabajo', 'Incorporación', 'Vínculo', 'Estado'].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]">
                     {h}
                   </th>
@@ -227,7 +243,7 @@ export function EmpleadosPage() {
                   </td>
                   <td className="px-5 py-4 text-[12px] text-[var(--ink-secondary)]">{e.sociedad?.nombre ?? '—'}</td>
                   <td className="px-5 py-4">{e.department && <DeptChip name={e.department.name} color={e.department.color} />}</td>
-                  <td className="px-5 py-4 text-[12px] text-[var(--ink-secondary)]">{e.localizacion?.nombre ?? e.location}</td>
+                  <td className="px-5 py-4 text-[12px] text-[var(--ink-secondary)]">{e.localizacion.nombre}</td>
                   <td className="px-5 py-4 text-[12px] text-[var(--ink-secondary)] mono">{formatDate(e.startDate)}</td>
                   <td className="px-5 py-4">
                     <Badge variant={e.vinculo === 'EXTERNO' ? 'warning' : 'neutral'}>{VINCULO_LABEL[e.vinculo]}</Badge>

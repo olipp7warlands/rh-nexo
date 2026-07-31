@@ -48,6 +48,45 @@ enum Vinculo {
   EXTERNO
 }
 
+// humanX Tanda 2: lista fija (no editable desde la app), ficha de Personas — bloque "Datos
+// personales". Ampliar aquí requiere migración, a propósito (es una lista cerrada, no un
+// catálogo gestionable por RH).
+enum Nacionalidad {
+  ESPANOLA
+  COLOMBIANA
+  MEXICANA
+  EMIRATI
+  INDIA
+  ARGENTINA
+  CHILENA
+  PERUANA
+  PORTUGUESA
+  FRANCESA
+  ALEMANA
+  ITALIANA
+  BRITANICA
+  ESTADOUNIDENSE
+  MARROQUI
+  RUMANA
+  BRASILENA
+  VENEZOLANA
+  ECUATORIANA
+  OTRA
+}
+
+// humanX Tanda 2: lista fija (no editable), ficha de Personas — bloque "Datos administrativos"
+// (ultra-sensible, ver EmployeesService.maskAdminOnly).
+enum SituacionIRPF {
+  SOLTERO_SIN_HIJOS
+  CASADO_UN_PERCEPTOR
+  CASADO_DOS_PERCEPTORES
+  CON_DESCENDIENTES
+  CON_ASCENDIENTES
+  DISCAPACIDAD
+  FAMILIA_NUMEROSA
+  OTRA
+}
+
 // humanX: estado de una anotación de Memoria (nota + tarea ligera)
 enum EstadoAnotacion {
   PENDIENTE
@@ -226,6 +265,40 @@ model Localizacion {
   empleados Employee[]
 }
 
+// ─────────────────── Catálogos editables (humanX Tanda 2) ───────────────────
+// Mismo esqueleto que Localizacion: id + nombre único + relación inversa, gestionables por
+// ADMIN/RRHH desde la app, borrado bloqueado mientras tengan empleados asociados.
+model TipoContrato {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  empleados Employee[]
+}
+
+model Jornada {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  empleados Employee[]
+}
+
+model RelacionEmergencia {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  empleados Employee[]
+}
+
+model Proyecto {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  empleados Employee[]
+}
+
+// Único catálogo con relación m:n (una persona puede hablar varios idiomas).
+model Idioma {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  empleados Employee[]
+}
+
 model Employee {
   id              String         @id @default(cuid())
   fullName        String
@@ -233,29 +306,56 @@ model Employee {
   phone           String?
   jobTitle        String
   level           String // exec | lead | senior | mid | junior
-  location        String
   remote          Boolean        @default(false)
   startDate       DateTime
-  contractType    ContractType   @default(INDEFINIDO)
   status          EmployeeStatus @default(ACTIVO)
   salary          Int? // bruto anual en euros
-  birthday        String?
   dni             String?
   address         String?
-  iban            String?
-  emergency       String?
+  iban            String? // humanX Tanda 2: bloque 4, ultra-sensible — ver EmployeesService.maskAdminOnly
   fromRecruitment Boolean        @default(false)
 
   // humanX: expediente — código interno, vínculo, sociedad/localización y alertas de contrato
   codigo              String?
-  vinculo             Vinculo       @default(PLANTILLA)
-  sociedad            Sociedad?     @relation(fields: [sociedadId], references: [id])
+  vinculo             Vinculo      @default(PLANTILLA)
+  sociedad            Sociedad?    @relation(fields: [sociedadId], references: [id])
   sociedadId          String?
-  localizacion        Localizacion? @relation(fields: [localizacionId], references: [id])
-  localizacionId      String?
+  // humanX Tanda 2: "Centro de trabajo" de cara al usuario. Antes convivía con `location`
+  // (texto libre, ya eliminado) — ahora es la única fuente de verdad de ubicación, obligatoria.
+  localizacion        Localizacion @relation(fields: [localizacionId], references: [id], onDelete: Restrict)
+  localizacionId      String
   finPeriodoPrueba    DateTime?
   vencimientoContrato DateTime?
   descripcionPuesto   String?
+
+  // humanX Tanda 2 — bloque 3 "Datos laborales" (vive en la pestaña "Información profesional").
+  tipoContrato   TipoContrato @relation(fields: [tipoContratoId], references: [id], onDelete: Restrict)
+  tipoContratoId String
+  jornada        Jornada?     @relation(fields: [jornadaId], references: [id])
+  jornadaId      String?
+  horario        String?
+  proyecto       Proyecto?    @relation(fields: [proyectoId], references: [id])
+  proyectoId     String?
+
+  // humanX Tanda 2 — bloque 1 "Datos personales"
+  fechaNacimiento DateTime?
+  nacionalidad    Nacionalidad?
+
+  // humanX Tanda 2 — bloque 2 "Contacto de emergencia"
+  contactoEmergenciaNombre     String?
+  contactoEmergenciaRelacion   RelacionEmergencia? @relation(fields: [contactoEmergenciaRelacionId], references: [id])
+  contactoEmergenciaRelacionId String?
+  contactoEmergenciaTelefono   String?
+
+  // humanX Tanda 2 — bloque 4 "Datos administrativos" (ultra-sensible, ver
+  // EmployeesService.maskAdminOnly: ADMIN/RRHH únicamente, sin excepción de propio empleado)
+  numSeguridadSocial String?
+  situacionIRPF      SituacionIRPF?
+
+  // humanX Tanda 2 — bloque 5 "Formación"
+  titulacion      String?
+  idiomas         Idioma[]
+  certificaciones String?
 
   department   Department?  @relation("DeptMembers", fields: [departmentId], references: [id])
   departmentId String?
@@ -304,6 +404,10 @@ model Employee {
   @@index([localizacionId])
   @@index([status])
   @@index([vinculo])
+  @@index([tipoContratoId])
+  @@index([jornadaId])
+  @@index([proyectoId])
+  @@index([contactoEmergenciaRelacionId])
 }
 
 // ──────────────────────────── Expediente (humanX) ────────────────────────────
