@@ -15,7 +15,7 @@ import { EmployeeModal } from './EmployeeModal';
 import { DarDeBajaModal } from './DarDeBajaModal';
 import { useAnotaciones, useMarcarHecha, useReabrir, type Anotacion } from '../anotaciones/useAnotaciones';
 import { AnotacionModal } from '../anotaciones/AnotacionModal';
-import { viewFile } from '../../lib/api';
+import { downloadFile, viewFile } from '../../lib/api';
 import { useDocuments, DOCUMENT_CATEGORY_LABEL, hasRealFile } from '../documents/useDocuments';
 import { DocumentStatusBadge } from '../documents/DocumentBadges';
 import { NuevoDocumentoModal } from '../documents/NuevoDocumentoModal';
@@ -92,6 +92,8 @@ export function EmployeeDetailPage() {
   const [creatingAnotacion, setCreatingAnotacion] = useState(false);
   const [dandoBaja, setDandoBaja] = useState(false);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
+  const [descargandoJD, setDescargandoJD] = useState(false);
+  const [errorJD, setErrorJD] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="max-w-[1400px] mx-auto px-10 py-10 text-[13px] text-[var(--ink-tertiary)]">Cargando ficha…</div>;
@@ -110,6 +112,18 @@ export function EmployeeDetailPage() {
   }
 
   const balance = emp.balances?.find((b) => b.year === new Date().getFullYear()) ?? emp.balances?.[0];
+
+  const handleDownloadJobDescription = async () => {
+    setErrorJD(null);
+    setDescargandoJD(true);
+    try {
+      await downloadFile(`/employees/${id}/job-description`, `job-description-${emp.fullName}.pdf`);
+    } catch (e) {
+      setErrorJD((e as Error).message);
+    } finally {
+      setDescargandoJD(false);
+    }
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto px-10 py-10">
@@ -171,6 +185,9 @@ export function EmployeeDetailPage() {
             <Button variant="secondary" onClick={() => setCreatingAnotacion(true)}>
               + Anotación
             </Button>
+            <Button variant="secondary" onClick={handleDownloadJobDescription} disabled={descargandoJD}>
+              {descargandoJD ? 'Generando…' : 'Descargar Job Description'}
+            </Button>
             <Button variant="primary" onClick={() => setEditing(true)}>
               Editar
             </Button>
@@ -186,6 +203,12 @@ export function EmployeeDetailPage() {
           </div>
         )}
       </div>
+
+      {errorJD && (
+        <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2 mb-5">
+          No se pudo generar el Job Description: {errorJD}
+        </div>
+      )}
 
       {/* Pestañas */}
       <div className="flex gap-1 border-b border-[var(--line)] mb-6 overflow-x-auto">

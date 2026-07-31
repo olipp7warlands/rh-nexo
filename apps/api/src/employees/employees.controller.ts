@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { EmployeeStatus, Vinculo } from '@prisma/client';
 import { EmployeesService } from './employees.service';
 import { BajaEmployeeDto, CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
@@ -62,6 +63,17 @@ export class EmployeesController {
   @Get(':id/historico-salarial')
   historicoSalarial(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.historicoSalarial(id, user);
+  }
+
+  // humanX Tanda 3: Job Description en PDF. Solo ADMIN/RRHH (defensa en profundidad: el
+  // frontend ya oculta el botón, pero el endpoint también lo exige por si se llama directo).
+  @Roles('ADMIN', 'RRHH')
+  @Get(':id/job-description')
+  async jobDescription(@Param('id') id: string, @Res() res: Response) {
+    const { buffer, fileName } = await this.service.jobDescriptionPdf(id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(buffer);
   }
 
   @Roles('ADMIN', 'RRHH')

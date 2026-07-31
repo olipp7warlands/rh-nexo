@@ -3,6 +3,7 @@ import { EmployeeStatus, Vinculo } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { renderJobDescriptionPdf } from './job-description.pdf';
 
 const WITH_ESTRUCTURA = {
   department: true,
@@ -109,6 +110,66 @@ export class EmployeesService {
     });
     if (!emp) throw new NotFoundException('Empleado no encontrado');
     return this.maskAdminOnly(this.maskSensitive(emp, viewer), viewer);
+  }
+
+  /**
+   * humanX Tanda 3 — Job Description en PDF. `select` deliberadamente mínimo y explícito: no
+   * es un enmascarado posterior como maskSensitive/maskAdminOnly, es que iban/numSeguridadSocial/
+   * situacionIRPF/dni/salary/address ni se piden — nunca llegan a existir en memoria ni pueden
+   * acabar en el PDF por descuido. Solo ADMIN/RRHH pueden llamar a este método (el controller
+   * ya lo restringe vía @Roles, defensa en profundidad: también aquí si algún día se llama
+   * desde otro sitio).
+   */
+  async jobDescriptionPdf(id: string): Promise<{ buffer: Buffer; fileName: string }> {
+    const emp = await this.db.employee.findUnique({
+      where: { id },
+      select: {
+        fullName: true,
+        jobTitle: true,
+        vinculo: true,
+        startDate: true,
+        vencimientoContrato: true,
+        descripcionPuesto: true,
+        horario: true,
+        remote: true,
+        sociedad: { select: { nombre: true } },
+        department: { select: { name: true } },
+        proyecto: { select: { nombre: true } },
+        manager: { select: { fullName: true } },
+        localizacion: { select: { nombre: true } },
+        jornada: { select: { nombre: true } },
+        tipoContrato: { select: { nombre: true } },
+      },
+    });
+    if (!emp) throw new NotFoundException('Empleado no encontrado');
+    const buffer = await renderJobDescriptionPdf({
+      fullName: emp.fullName,
+      vinculo: emp.vinculo,
+      jobTitle: emp.jobTitle,
+      startDate: emp.startDate,
+      vencimientoContrato: emp.vencimientoContrato,
+      descripcionPuesto: emp.descripcionPuesto,
+      horario: emp.horario,
+      remote: emp.remote,
+      sociedad: emp.sociedad?.nombre ?? null,
+      departamento: emp.department?.name ?? null,
+      proyecto: emp.proyecto?.nombre ?? null,
+      responsable: emp.manager?.fullName ?? null,
+      centroTrabajo: emp.localizacion.nombre,
+      jornada: emp.jornada?.nombre ?? null,
+      tipoContrato: emp.tipoContrato.nombre,
+    });
+    const slug = emp.fullName
+      .toLowerCase()
+      .replace(/[aàáâãä]/g, 'a')
+      .replace(/[eèéêë]/g, 'e')
+      .replace(/[iìíîï]/g, 'i')
+      .replace(/[oòóôõö]/g, 'o')
+      .replace(/[uùúûü]/g, 'u')
+      .replace(/ñ/g, 'n')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    return { buffer, fileName: `job-description-${slug || id}.pdf` };
   }
 
   /** Mismo criterio de privacidad que el histórico salarial: ADMIN/RRHH o el propio empleado. */
