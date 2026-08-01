@@ -28,15 +28,11 @@ const DocumentosPage = lazy(() => import('./features/documents/DocumentosPage').
 const ReclutamientoPage = lazy(() => import('./features/reclutamiento/ReclutamientoPage').then((m) => ({ default: m.ReclutamientoPage })));
 const JobDetailPage = lazy(() => import('./features/reclutamiento/JobDetailPage').then((m) => ({ default: m.JobDetailPage })));
 const AnotacionesPage = lazy(() => import('./features/anotaciones/AnotacionesPage').then((m) => ({ default: m.AnotacionesPage })));
-const SociedadesPage = lazy(() => import('./features/estructura/SociedadesPage').then((m) => ({ default: m.SociedadesPage })));
-const LocalizacionesPage = lazy(() => import('./features/estructura/LocalizacionesPage').then((m) => ({ default: m.LocalizacionesPage })));
-const DepartamentosPage = lazy(() => import('./features/estructura/DepartamentosPage').then((m) => ({ default: m.DepartamentosPage })));
-// humanX Tanda 2: catálogos editables de la ficha de Personas
-const TiposContratoPage = lazy(() => import('./features/estructura/TiposContratoPage').then((m) => ({ default: m.TiposContratoPage })));
-const JornadasPage = lazy(() => import('./features/estructura/JornadasPage').then((m) => ({ default: m.JornadasPage })));
-const RelacionesEmergenciaPage = lazy(() => import('./features/estructura/RelacionesEmergenciaPage').then((m) => ({ default: m.RelacionesEmergenciaPage })));
-const ProyectosPage = lazy(() => import('./features/estructura/ProyectosPage').then((m) => ({ default: m.ProyectosPage })));
-const IdiomasPage = lazy(() => import('./features/estructura/IdiomasPage').then((m) => ({ default: m.IdiomasPage })));
+// humanX: los 8 catálogos (antes rutas sueltas en /estructura/*) viven consolidados en pestañas
+// dentro de esta única página — ver nav.ts, item "configuracion".
+const ConfiguracionInformacionPage = lazy(() =>
+  import('./features/estructura/ConfiguracionInformacionPage').then((m) => ({ default: m.ConfiguracionInformacionPage })),
+);
 
 const PAGES: Record<string, JSX.Element> = {
   '/': <InicioPage />,
@@ -51,14 +47,7 @@ const PAGES: Record<string, JSX.Element> = {
   '/nomina': <NominaPage />,
   '/documentos': <DocumentosPage />,
   '/seleccion': <ReclutamientoPage />,
-  '/estructura/sociedades': <SociedadesPage />,
-  '/estructura/localizaciones': <LocalizacionesPage />,
-  '/estructura/departamentos': <DepartamentosPage />,
-  '/estructura/tipos-contrato': <TiposContratoPage />,
-  '/estructura/jornadas': <JornadasPage />,
-  '/estructura/relaciones-emergencia': <RelacionesEmergenciaPage />,
-  '/estructura/proyectos': <ProyectosPage />,
-  '/estructura/idiomas': <IdiomasPage />,
+  '/configuracion': <ConfiguracionInformacionPage />,
 };
 
 /** Redirección que conserva el parámetro de ruta (p. ej. /empleados/:id → /personas/:id). */
@@ -93,6 +82,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route element={<AppShell />}>
                   <Route path="/personas/:id" element={<EmployeeDetailPage />} />
                   <Route path="/seleccion/:jobId" element={<JobDetailPage />} />
+                  <Route path="/configuracion/:tab" element={<ConfiguracionInformacionPage />} />
                   {NAV.flatMap((section) =>
                     section.items.map((item) => (
                       <Route
@@ -110,6 +100,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   <Route path="/calendario" element={<Navigate to="/agenda" replace />} />
                   <Route path="/reclutamiento" element={<Navigate to="/seleccion" replace />} />
                   <Route path="/reclutamiento/:jobId" element={<RedirectWithParam to={(id) => `/seleccion/${id}`} />} />
+
+                  {/* Catálogos consolidados (humanX): redirección desde las rutas sueltas viejas. */}
+                  <Route path="/estructura/sociedades" element={<Navigate to="/configuracion/sociedades" replace />} />
+                  <Route path="/estructura/localizaciones" element={<Navigate to="/configuracion/localizaciones" replace />} />
+                  <Route path="/estructura/departamentos" element={<Navigate to="/configuracion/departamentos" replace />} />
+                  <Route path="/estructura/proyectos" element={<Navigate to="/configuracion/proyectos" replace />} />
+                  <Route path="/estructura/tipos-contrato" element={<Navigate to="/configuracion/tipos-contrato" replace />} />
+                  <Route path="/estructura/jornadas" element={<Navigate to="/configuracion/jornadas" replace />} />
+                  <Route path="/estructura/relaciones-emergencia" element={<Navigate to="/configuracion/relaciones-emergencia" replace />} />
+                  <Route path="/estructura/idiomas" element={<Navigate to="/configuracion/idiomas" replace />} />
                 </Route>
               </Route>
 

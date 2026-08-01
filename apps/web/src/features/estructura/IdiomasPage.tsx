@@ -4,7 +4,6 @@ import { useIdiomas, useCreateIdioma, useUpdateIdioma, useDeleteIdioma } from '.
 export function IdiomasPage() {
   return (
     <CatalogoPage
-      eyebrow="Estructura"
       title="Idiomas"
       singular="idioma"
       useList={useIdiomas}

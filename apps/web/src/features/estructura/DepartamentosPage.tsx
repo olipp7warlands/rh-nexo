@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Button, Card, DeptChip, PageHeader } from '@nucleo/ui';
+import { Button, Card, DeptChip } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useDepartments, useDeleteDepartment, type DepartmentWithMeta } from '../employees/useDepartments';
 import { DepartmentModal } from './DepartmentModal';
@@ -27,19 +27,15 @@ export function DepartamentosPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-10 py-10">
-      <PageHeader
-        eyebrow="Estructura"
-        title="Departamentos"
-        subtitle={departments ? `${departments.length} departamentos` : 'Cargando…'}
-        actions={
-          canManage && (
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              Añadir departamento
-            </Button>
-          )
-        }
-      />
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-[13px] text-[var(--ink-tertiary)]">{departments ? `${departments.length} departamentos` : 'Cargando…'}</p>
+        {canManage && (
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            Añadir departamento
+          </Button>
+        )}
+      </div>
 
       {error && (
         <Card>

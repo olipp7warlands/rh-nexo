@@ -25,15 +25,19 @@ export const NAV = [
     { key: 'documentos', label: 'Documentos', path: '/documentos' },
     { key: 'informes', label: 'Informes', path: '/informes' },
   ]},
-  { section: 'Estructura', items: [
-    { key: 'sociedades', label: 'Sociedades', path: '/estructura/sociedades' },
-    { key: 'localizaciones', label: 'Localizaciones', path: '/estructura/localizaciones' },
-    { key: 'departamentos', label: 'Departamentos', path: '/estructura/departamentos' },
-    // humanX Tanda 2: catálogos editables de la ficha de Personas
-    { key: 'tipos-contrato', label: 'Tipos de contrato', path: '/estructura/tipos-contrato' },
-    { key: 'jornadas', label: 'Jornadas', path: '/estructura/jornadas' },
-    { key: 'relaciones-emergencia', label: 'Relaciones de emergencia', path: '/estructura/relaciones-emergencia' },
-    { key: 'proyectos', label: 'Proyectos', path: '/estructura/proyectos' },
-    { key: 'idiomas', label: 'Idiomas', path: '/estructura/idiomas' },
+  // Sin título: un grupo de una sola entrada no lleva cabecera de sección distinta al nombre
+  // de su hijo (ver Sidebar.tsx, la cabecera se omite si `section` está vacío). Los 8 catálogos
+  // editables de la ficha de Personas viven como sub-elementos de un único item acordeón.
+  { section: '', items: [
+    { key: 'configuracion', label: 'Configuración Información', path: '/configuracion', children: [
+      { key: 'sociedades', label: 'Sociedades', path: '/configuracion/sociedades' },
+      { key: 'localizaciones', label: 'Localizaciones', path: '/configuracion/localizaciones' },
+      { key: 'departamentos', label: 'Departamentos', path: '/configuracion/departamentos' },
+      { key: 'proyectos', label: 'Proyectos', path: '/configuracion/proyectos' },
+      { key: 'tipos-contrato', label: 'Tipos de contrato', path: '/configuracion/tipos-contrato' },
+      { key: 'jornadas', label: 'Jornadas', path: '/configuracion/jornadas' },
+      { key: 'relaciones-emergencia', label: 'Relaciones de emergencia', path: '/configuracion/relaciones-emergencia' },
+      { key: 'idiomas', label: 'Idiomas', path: '/configuracion/idiomas' },
+    ]},
   ]},
 ] as const;

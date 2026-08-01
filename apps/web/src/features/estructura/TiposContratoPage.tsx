@@ -4,7 +4,6 @@ import { useTiposContrato, useCreateTipoContrato, useUpdateTipoContrato, useDele
 export function TiposContratoPage() {
   return (
     <CatalogoPage
-      eyebrow="Estructura"
       title="Tipos de contrato"
       singular="tipo de contrato"
       useList={useTiposContrato}

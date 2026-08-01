@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button, Card, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
@@ -77,7 +78,10 @@ export function CalendarioPage() {
         fecha: a.fecha,
         kind: 'alerta',
         render: () => (
-          <div className="flex items-center gap-3 py-2.5 border-b border-[var(--line-subtle)] last:border-0">
+          <Link
+            to={`/personas/${a.empleado.id}?tab=profesional#contrato`}
+            className="flex items-center gap-3 py-2.5 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer -mx-2 px-2 rounded-md"
+          >
             <span className={`w-2 h-2 rounded-full shrink-0 ${a.diasRestantes < 0 ? 'bg-[var(--ink-primary)]' : 'bg-transparent border-[1.5px] border-[var(--ink-primary)]'}`} />
             <div className="min-w-0 flex-1">
               <span className="text-[13px] font-medium">{a.empleado.fullName}</span>
@@ -86,7 +90,7 @@ export function CalendarioPage() {
             <span className="mono text-[11px] text-[var(--ink-tertiary)] shrink-0">
               {a.diasRestantes === 0 ? 'Hoy' : a.diasRestantes > 0 ? `en ${a.diasRestantes} días` : `hace ${-a.diasRestantes} días`}
             </span>
-          </div>
+          </Link>
         ),
       }),
     );
@@ -96,14 +100,17 @@ export function CalendarioPage() {
         fecha: a.fecha,
         kind: 'anotacion',
         render: () => (
-          <div className="flex items-center gap-3 py-2.5 border-b border-[var(--line-subtle)] last:border-0">
+          <Link
+            to={`/personas/${a.empleadoId}?tab=anotaciones`}
+            className="flex items-center gap-3 py-2.5 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer -mx-2 px-2 rounded-md"
+          >
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.categoria?.color ?? 'var(--ink-tertiary)' }} />
             <div className="min-w-0 flex-1">
               <span className="text-[13px] font-medium">{a.empleado.fullName}</span>
               <span className="text-[12px] text-[var(--ink-secondary)] truncate"> · {a.texto}</span>
             </div>
             <span className="mono text-[11px] text-[var(--ink-tertiary)] shrink-0">{formatDate(a.fecha)}</span>
-          </div>
+          </Link>
         ),
       }),
     );
