@@ -58,7 +58,11 @@ export function InicioPage() {
           <div className="px-5">
             {alertas && alertas.length > 0 ? (
               alertas.slice(0, 6).map((a) => (
-                <div key={a.id} className="flex items-center gap-3 py-3 border-b border-[var(--line-subtle)] last:border-0">
+                <Link
+                  key={a.id}
+                  to={`/personas/${a.empleado.id}?tab=profesional#contrato`}
+                  className="flex items-center gap-3 py-3 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer -mx-2 px-2 rounded-md"
+                >
                   <Avatar name={a.empleado.fullName} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-medium truncate">{a.empleado.fullName}</div>
@@ -67,7 +71,7 @@ export function InicioPage() {
                   <span className="mono text-[11px] text-[var(--ink-secondary)] shrink-0">
                     {a.diasRestantes === 0 ? 'Hoy' : a.diasRestantes > 0 ? `en ${a.diasRestantes} días` : `hace ${-a.diasRestantes} días`}
                   </span>
-                </div>
+                </Link>
               ))
             ) : (
               <p className="text-[13px] text-[var(--ink-tertiary)] py-4">Sin alertas en las próximas 6 semanas.</p>
@@ -86,14 +90,18 @@ export function InicioPage() {
             <div className="px-5">
               {anotaciones && anotaciones.length > 0 ? (
                 anotaciones.slice(0, 6).map((a) => (
-                  <div key={a.id} className="flex items-center gap-3 py-3 border-b border-[var(--line-subtle)] last:border-0">
+                  <Link
+                    key={a.id}
+                    to={`/personas/${a.empleadoId}?tab=anotaciones`}
+                    className="flex items-center gap-3 py-3 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)] cursor-pointer -mx-2 px-2 rounded-md"
+                  >
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.categoria?.color ?? 'var(--ink-tertiary)' }} />
                     <div className="min-w-0 flex-1">
                       <div className="text-[13px] font-medium truncate">{a.empleado.fullName}</div>
                       <div className="text-[11px] text-[var(--ink-tertiary)] truncate">{a.texto}</div>
                     </div>
                     <span className="mono text-[11px] text-[var(--ink-tertiary)] shrink-0">{formatDate(a.fecha)}</span>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <p className="text-[13px] text-[var(--ink-tertiary)] py-4">Sin anotaciones pendientes.</p>

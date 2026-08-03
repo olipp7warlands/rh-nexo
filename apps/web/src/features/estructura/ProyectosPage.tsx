@@ -4,7 +4,6 @@ import { useProyectos, useCreateProyecto, useUpdateProyecto, useDeleteProyecto }
 export function ProyectosPage() {
   return (
     <CatalogoPage
-      eyebrow="Estructura"
       title="Proyectos"
       singular="proyecto"
       useList={useProyectos}

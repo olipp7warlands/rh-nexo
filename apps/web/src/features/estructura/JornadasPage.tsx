@@ -4,7 +4,6 @@ import { useJornadas, useCreateJornada, useUpdateJornada, useDeleteJornada } fro
 export function JornadasPage() {
   return (
     <CatalogoPage
-      eyebrow="Estructura"
       title="Jornadas"
       singular="jornada"
       useList={useJornadas}

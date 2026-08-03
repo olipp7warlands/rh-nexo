@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Badge, Button, Card, DeptChip, EmpStatus, Input, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
@@ -20,6 +20,12 @@ const VINCULO_LABEL: Record<Vinculo, string> = { PLANTILLA: 'Plantilla interna',
 const selectClass =
   'h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none';
 
+// dd/mm compacto para la etiqueta del control de fechas (el filtro real sigue en ISO).
+const shortDate = (iso: string) => {
+  const [, m, d] = iso.split('-');
+  return `${d}/${m}`;
+};
+
 export function EmpleadosPage() {
   const { user } = useAuth();
   const canCreate = user?.role === 'ADMIN' || user?.role === 'RRHH';
@@ -35,6 +41,19 @@ export function EmpleadosPage() {
   const [startDateFrom, setStartDateFrom] = useState<string | undefined>(undefined);
   const [startDateTo, setStartDateTo] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const dateFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showDateFilter) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (dateFilterRef.current && !dateFilterRef.current.contains(e.target as Node)) {
+        setShowDateFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showDateFilter]);
 
   const { data: all } = useEmployees({});
   const { data: employees, isLoading, error } = useEmployees({
@@ -93,38 +112,38 @@ export function EmpleadosPage() {
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
-        <div className="w-64">
+        <div className="w-48">
           <Input placeholder="Nombre o puesto…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <select
-          className={selectClass}
+          className={`${selectClass} w-28 truncate`}
           value={status ?? ''}
           onChange={(e) => setStatus((e.target.value || undefined) as EmployeeStatus | undefined)}
           aria-label="Filtrar por estado"
         >
-          <option value="">Todos los estados</option>
+          <option value="">Estados</option>
           <option value="ACTIVO">Activo</option>
           <option value="ONBOARDING">Onboarding</option>
           <option value="AUSENTE">Ausente</option>
           <option value="BAJA">Baja</option>
         </select>
         <select
-          className={selectClass}
+          className={`${selectClass} w-32 truncate`}
           value={vinculo ?? ''}
           onChange={(e) => setVinculo((e.target.value || undefined) as Vinculo | undefined)}
           aria-label="Filtrar por vínculo"
         >
-          <option value="">Todos los vínculos</option>
+          <option value="">Vínculos</option>
           <option value="PLANTILLA">Plantilla interna</option>
           <option value="EXTERNO">Colaboradores externos</option>
         </select>
         <select
-          className={selectClass}
+          className={`${selectClass} w-28 truncate`}
           value={paisId ?? ''}
           onChange={(e) => setPaisId(e.target.value || undefined)}
           aria-label="Filtrar por país"
         >
-          <option value="">Todos los países</option>
+          <option value="">Países</option>
           {paises?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.nombre}
@@ -132,12 +151,12 @@ export function EmpleadosPage() {
           ))}
         </select>
         <select
-          className={selectClass}
+          className={`${selectClass} w-36 truncate`}
           value={sociedadId ?? ''}
           onChange={(e) => setSociedadId(e.target.value || undefined)}
           aria-label="Filtrar por sociedad"
         >
-          <option value="">Todas las sociedades</option>
+          <option value="">Sociedades</option>
           {sociedades?.map((s) => (
             <option key={s.id} value={s.id}>
               {s.nombre}
@@ -145,34 +164,47 @@ export function EmpleadosPage() {
           ))}
         </select>
         <select
-          className={selectClass}
+          className={`${selectClass} w-32 truncate`}
           value={proyectoId ?? ''}
           onChange={(e) => setProyectoId(e.target.value || undefined)}
           aria-label="Filtrar por proyecto"
         >
-          <option value="">Todos los proyectos</option>
+          <option value="">Proyectos</option>
           {proyectos?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.nombre}
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-1.5">
-          <Input
-            type="date"
-            className="w-36"
-            value={startDateFrom ?? ''}
-            onChange={(e) => setStartDateFrom(e.target.value || undefined)}
-            aria-label="Incorporación desde"
-          />
-          <span className="text-[12px] text-[var(--ink-tertiary)]">–</span>
-          <Input
-            type="date"
-            className="w-36"
-            value={startDateTo ?? ''}
-            onChange={(e) => setStartDateTo(e.target.value || undefined)}
-            aria-label="Incorporación hasta"
-          />
+        <div className="relative" ref={dateFilterRef}>
+          <button
+            type="button"
+            onClick={() => setShowDateFilter((v) => !v)}
+            className={`${selectClass} w-32 truncate text-left`}
+          >
+            {startDateFrom || startDateTo
+              ? `${startDateFrom ? shortDate(startDateFrom) : '…'}–${startDateTo ? shortDate(startDateTo) : '…'}`
+              : 'Incorporación'}
+          </button>
+          {showDateFilter && (
+            <div className="absolute z-10 mt-1 p-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md shadow-lg flex items-center gap-1.5">
+              <Input
+                type="date"
+                className="w-36"
+                value={startDateFrom ?? ''}
+                onChange={(e) => setStartDateFrom(e.target.value || undefined)}
+                aria-label="Incorporación desde"
+              />
+              <span className="text-[12px] text-[var(--ink-tertiary)]">–</span>
+              <Input
+                type="date"
+                className="w-36"
+                value={startDateTo ?? ''}
+                onChange={(e) => setStartDateTo(e.target.value || undefined)}
+                aria-label="Incorporación hasta"
+              />
+            </div>
+          )}
         </div>
       </div>
 

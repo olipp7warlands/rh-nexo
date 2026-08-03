@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Mail, MapPin, Phone } from 'lucide-react';
 import { Avatar, Badge, Button, Card, DeptChip, EmpStatus, Field } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
@@ -55,13 +55,34 @@ function AnotacionRow({ anotacion }: { anotacion: Anotacion }) {
   );
 }
 
-const TAB_KEYS = ['Resumen', 'Información personal', 'Información profesional', 'Ausencias', 'Documentos', 'Desempeño'] as const;
+const TAB_KEYS = [
+  'Resumen',
+  'Información personal',
+  'Información profesional',
+  'Anotaciones',
+  'Ausencias',
+  'Documentos',
+  'Desempeño',
+] as const;
 type Tab = (typeof TAB_KEYS)[number];
+
+// Slugs cortos para el parámetro `?tab=` en la URL (evita acentos/espacios sin escapar) — usados
+// para enlazar directo a una pestaña desde anotaciones/alertas/agenda.
+const TAB_SLUGS: Record<string, Tab> = {
+  resumen: 'Resumen',
+  personal: 'Información personal',
+  profesional: 'Información profesional',
+  anotaciones: 'Anotaciones',
+  ausencias: 'Ausencias',
+  documentos: 'Documentos',
+  desempeno: 'Desempeño',
+};
 
 const TABS: { key: Tab; hidden?: boolean }[] = [
   { key: 'Resumen' },
   { key: 'Información personal' },
   { key: 'Información profesional' },
+  { key: 'Anotaciones' },
   // Oculta a petición: Ausencias no está expuesta a este cliente (ver nav.ts, mismo criterio).
   // El contenido de la pestaña sigue definido más abajo a propósito — reversible, basta con
   // quitar `hidden: true` para que reaparezca aquí.
@@ -72,6 +93,7 @@ const TABS: { key: Tab; hidden?: boolean }[] = [
 
 export function EmployeeDetailPage() {
   const { id = '' } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const canManage = user?.role === 'ADMIN' || user?.role === 'RRHH';
 
@@ -87,13 +109,31 @@ export function EmployeeDetailPage() {
   const { data: cycles } = useCycles();
   const { data: cycleActual } = useCycle(cycles?.[0]?.id ?? '');
 
-  const [tab, setTab] = useState<Tab>('Resumen');
+  const [tab, setTab] = useState<Tab>(() => TAB_SLUGS[searchParams.get('tab') ?? ''] ?? 'Resumen');
+  // El useState de arriba solo cubre el montaje inicial: React Router NO remonta esta página al
+  // navegar entre dos URLs que casan con /personas/:id (ni cambiando el id ni el query string),
+  // así que un enlace "?tab=..." pulsado mientras esta ficha ya está montada (p. ej. desde una
+  // anotación en Inicio/Agenda/Memoria hacia otra persona, o hacia la misma con otra pestaña) no
+  // se reflejaba — este efecto sincroniza `tab` cada vez que cambia el parámetro de la URL.
+  useEffect(() => {
+    const wanted = TAB_SLUGS[searchParams.get('tab') ?? ''];
+    if (wanted) setTab(wanted);
+  }, [searchParams]);
   const [editing, setEditing] = useState(false);
   const [creatingAnotacion, setCreatingAnotacion] = useState(false);
   const [dandoBaja, setDandoBaja] = useState(false);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
   const [descargandoJD, setDescargandoJD] = useState(false);
   const [errorJD, setErrorJD] = useState<string | null>(null);
+
+  // Deep-link desde anotaciones/alertas/agenda: además de la pestaña (?tab=), un hash (#anotaciones,
+  // #contrato) hace scroll al bloque exacto una vez esa pestaña está montada.
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [tab]);
 
   if (isLoading) {
     return <div className="max-w-[1400px] mx-auto px-10 py-10 text-[13px] text-[var(--ink-tertiary)]">Cargando ficha…</div>;
@@ -185,9 +225,6 @@ export function EmployeeDetailPage() {
             <Button variant="secondary" onClick={() => setCreatingAnotacion(true)}>
               + Anotación
             </Button>
-            <Button variant="secondary" onClick={handleDownloadJobDescription} disabled={descargandoJD}>
-              {descargandoJD ? 'Generando…' : 'Descargar Job Description'}
-            </Button>
             <Button variant="primary" onClick={() => setEditing(true)}>
               Editar
             </Button>
@@ -204,15 +241,9 @@ export function EmployeeDetailPage() {
         )}
       </div>
 
-      {errorJD && (
-        <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2 mb-5">
-          No se pudo generar el Job Description: {errorJD}
-        </div>
-      )}
-
       {/* Pestañas */}
       <div className="flex gap-1 border-b border-[var(--line)] mb-6 overflow-x-auto">
-        {TABS.filter((t) => !t.hidden).map((t) => (
+        {TABS.filter((t) => !t.hidden && (t.key !== 'Anotaciones' || canManage)).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -262,25 +293,6 @@ export function EmployeeDetailPage() {
                     </Link>
                   ))}
                 </div>
-              </Card>
-            )}
-            {canManage && (
-              <Card>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-serif text-[14px] font-medium">Anotaciones</h3>
-                  <button onClick={() => setCreatingAnotacion(true)} className="text-[12px] font-medium text-[var(--accent-ink)] hover:underline">
-                    + Nueva anotación
-                  </button>
-                </div>
-                {anotaciones && anotaciones.length > 0 ? (
-                  <div className="flex flex-col">
-                    {anotaciones.slice(0, 5).map((a) => (
-                      <AnotacionRow key={a.id} anotacion={a} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[13px] text-[var(--ink-tertiary)]">Sin anotaciones todavía.</p>
-                )}
               </Card>
             )}
           </div>
@@ -402,7 +414,20 @@ export function EmployeeDetailPage() {
       )}
 
       {tab === 'Información profesional' && (
-        <div className="grid grid-cols-2 gap-5">
+        <div className="flex flex-col gap-5">
+          {canManage && (
+            <div className="flex items-center justify-end">
+              <Button variant="secondary" onClick={handleDownloadJobDescription} disabled={descargandoJD}>
+                {descargandoJD ? 'Generando…' : 'Descargar Job Description'}
+              </Button>
+            </div>
+          )}
+          {errorJD && (
+            <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2">
+              No se pudo generar el Job Description: {errorJD}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-5">
           <Card>
             <h3 className="font-serif text-[14px] font-medium mb-4">Puesto</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
@@ -423,6 +448,7 @@ export function EmployeeDetailPage() {
               )}
             </div>
           </Card>
+          <div id="contrato" className="scroll-mt-6">
           <Card>
             <h3 className="font-serif text-[14px] font-medium mb-4">Contrato</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
@@ -436,6 +462,7 @@ export function EmployeeDetailPage() {
               <Field label="Vencimiento de contrato" value={emp.vencimientoContrato ? formatDate(emp.vencimientoContrato) : '—'} mono />
             </div>
           </Card>
+          </div>
           <Card className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="font-serif text-[14px] font-medium">Retribución actual</h3>
@@ -510,7 +537,32 @@ export function EmployeeDetailPage() {
               )}
             </Card>
           )}
+          </div>
         </div>
+      )}
+
+      {tab === 'Anotaciones' && (
+        <Card padding="p-0">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--line)]">
+            <h3 className="font-serif text-[14px] font-medium">Anotaciones de {emp.fullName}</h3>
+            {canManage && (
+              <Button variant="secondary" size="sm" onClick={() => setCreatingAnotacion(true)}>
+                + Nueva anotación
+              </Button>
+            )}
+          </div>
+          {!canManage ? (
+            <p className="px-5 py-8 text-center text-[13px] text-[var(--ink-tertiary)]">Solo visible para RRHH/Administración.</p>
+          ) : anotaciones && anotaciones.length > 0 ? (
+            <div className="px-5">
+              {anotaciones.map((a) => (
+                <AnotacionRow key={a.id} anotacion={a} />
+              ))}
+            </div>
+          ) : (
+            <p className="px-5 py-8 text-center text-[13px] text-[var(--ink-tertiary)]">Sin anotaciones todavía.</p>
+          )}
+        </Card>
       )}
 
       {tab === 'Ausencias' && (

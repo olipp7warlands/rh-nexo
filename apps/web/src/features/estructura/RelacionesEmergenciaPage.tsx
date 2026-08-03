@@ -9,7 +9,6 @@ import {
 export function RelacionesEmergenciaPage() {
   return (
     <CatalogoPage
-      eyebrow="Estructura"
       title="Relaciones de emergencia"
       singular="relación"
       useList={useRelacionesEmergencia}

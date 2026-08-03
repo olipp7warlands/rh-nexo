@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Button, Card, PageHeader } from '@nucleo/ui';
+import { Button, Card } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useSociedades, useDeleteSociedad, type Sociedad } from './useEstructura';
 import { SociedadModal } from './SociedadModal';
@@ -27,19 +27,15 @@ export function SociedadesPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-10 py-10">
-      <PageHeader
-        eyebrow="Estructura"
-        title="Sociedades"
-        subtitle={sociedades ? `${sociedades.length} sociedades del grupo` : 'Cargando…'}
-        actions={
-          canManage && (
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              Añadir sociedad
-            </Button>
-          )
-        }
-      />
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-[13px] text-[var(--ink-tertiary)]">{sociedades ? `${sociedades.length} sociedades del grupo` : 'Cargando…'}</p>
+        {canManage && (
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            Añadir sociedad
+          </Button>
+        )}
+      </div>
 
       {error && (
         <Card>

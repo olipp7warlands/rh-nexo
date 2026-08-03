@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Button, Card, PageHeader } from '@nucleo/ui';
+import { Button, Card } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useLocalizaciones, useDeleteLocalizacion, type Localizacion } from './useEstructura';
 import { LocalizacionModal } from './LocalizacionModal';
@@ -27,19 +27,15 @@ export function LocalizacionesPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-10 py-10">
-      <PageHeader
-        eyebrow="Estructura"
-        title="Localizaciones"
-        subtitle={localizaciones ? `${localizaciones.length} localizaciones` : 'Cargando…'}
-        actions={
-          canManage && (
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              Añadir localización
-            </Button>
-          )
-        }
-      />
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-[13px] text-[var(--ink-tertiary)]">{localizaciones ? `${localizaciones.length} localizaciones` : 'Cargando…'}</p>
+        {canManage && (
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            Añadir localización
+          </Button>
+        )}
+      </div>
 
       {error && (
         <Card>

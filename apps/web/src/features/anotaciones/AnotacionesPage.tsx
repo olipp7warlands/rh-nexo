@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar, Button, Card, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useEmployees } from '../employees/useEmployees';
@@ -48,7 +49,7 @@ function AnotacionCard({ anotacion, onEdit }: { anotacion: Anotacion; onEdit: ()
   return (
     <Card>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0">
+        <Link to={`/personas/${anotacion.empleadoId}?tab=anotaciones`} className="flex items-start gap-3 min-w-0 hover:opacity-80 cursor-pointer">
           <Avatar name={anotacion.empleado.fullName} size="sm" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -62,7 +63,7 @@ function AnotacionCard({ anotacion, onEdit }: { anotacion: Anotacion; onEdit: ()
               <span className="mono text-[11px] text-[var(--ink-tertiary)]">{formatDate(anotacion.fecha)}</span>
             </div>
           </div>
-        </div>
+        </Link>
         <span
           className={`shrink-0 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-medium ${
             anotacion.estado === 'HECHA' ? 'bg-[var(--bg-subtle)] text-[var(--ink-primary)]' : 'bg-[var(--bg-subtle)] text-[var(--ink-secondary)]'

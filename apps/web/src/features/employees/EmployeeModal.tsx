@@ -1,22 +1,42 @@
 import { useState, type ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useAuth } from '../auth/AuthContext';
 import { useCreateEmployee, useUpdateEmployee, type Employee } from './useEmployees';
-import { useDepartments } from './useDepartments';
+import { useDepartments, useCreateDepartment } from './useDepartments';
 import {
+  usePaises,
   useSociedades,
+  useCreateSociedad,
   useLocalizaciones,
+  useCreateLocalizacion,
   useTiposContrato,
+  useCreateTipoContrato,
   useJornadas,
+  useCreateJornada,
   useProyectos,
+  useCreateProyecto,
   useRelacionesEmergencia,
+  useCreateRelacionEmergencia,
   useIdiomas,
+  useCreateIdioma,
 } from '../estructura/useEstructura';
 import { NACIONALIDAD_LABEL, SITUACION_IRPF_LABEL } from './listasFijas';
+
+// Adaptador: Departamento crea con { name, color } (no { nombre }, y exige un color). La
+// creación rápida desde este formulario solo pide nombre — mismo color por defecto que usa
+// DepartmentModal.tsx — para que encaje en el mismo componente genérico que el resto de
+// catálogos (todos { nombre } → { id, nombre }).
+function useCreateDepartmentAsCatalog() {
+  const create = useCreateDepartment();
+  return {
+    mutateAsync: (data: { nombre: string }) => create.mutateAsync({ name: data.nombre, color: '#0F1419' }),
+    isPending: create.isPending,
+  };
+}
 
 const schema = z.object({
   fullName: z.string().min(1, 'Obligatorio'),
@@ -81,6 +101,83 @@ function Row({ label, required, error, children }: { label: string; required?: b
   );
 }
 
+// Desplegable de catálogo con creación al vuelo ("+ Nueva"), igual que la Categoría de
+// AnotacionModal.tsx: alterna entre el <select> normal y una mini-fila de creación (nombre +
+// Crear + ✕), y autoselecciona lo creado vía `onCreated` (setValue del formulario padre).
+// Reutilizable para todo catálogo cuyo alta solo pida `{ nombre }` — Sociedad (pide también
+// país) e Idiomas (checkboxes, no <select>) se gestionan aparte, fuera de este componente.
+function CatalogSelectField({
+  label,
+  required,
+  error,
+  registerReturn,
+  options,
+  emptyLabel,
+  canCreate,
+  useCreateHook,
+  onCreated,
+  onError,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  registerReturn: UseFormRegisterReturn;
+  options: { id: string; label: string }[];
+  emptyLabel: string;
+  canCreate: boolean;
+  useCreateHook: () => { mutateAsync: (data: { nombre: string }) => Promise<{ id: string }>; isPending: boolean };
+  onCreated: (id: string) => void;
+  onError: (message: string) => void;
+}) {
+  const create = useCreateHook();
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newName, setNewName] = useState('');
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    try {
+      const created = await create.mutateAsync({ nombre: newName.trim() });
+      onCreated(created.id);
+      setCreatingNew(false);
+      setNewName('');
+    } catch (e) {
+      onError((e as Error).message);
+    }
+  };
+
+  return (
+    <Row label={label} required={required} error={error}>
+      {!creatingNew ? (
+        <div className="flex items-center gap-2">
+          <select className={selectClass} {...registerReturn}>
+            <option value="">{emptyLabel}</option>
+            {options.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          {canCreate && (
+            <Button variant="secondary" type="button" size="sm" onClick={() => setCreatingNew(true)}>
+              + Nueva
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Input autoFocus placeholder="Nombre" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <Button variant="secondary" type="button" size="sm" onClick={handleCreate} disabled={create.isPending}>
+            Crear
+          </Button>
+          <Button variant="ghost" type="button" size="sm" onClick={() => setCreatingNew(false)}>
+            ✕
+          </Button>
+        </div>
+      )}
+    </Row>
+  );
+}
+
 function clean(data: FormData): Partial<Employee> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(data)) {
@@ -104,6 +201,7 @@ export function EmployeeModal({
   const { user } = useAuth();
   const canComp = user?.role === 'ADMIN' || user?.role === 'RRHH';
   const { data: departments } = useDepartments();
+  const { data: paises } = usePaises();
   const { data: sociedades } = useSociedades();
   const { data: localizaciones } = useLocalizaciones();
   const { data: tiposContrato } = useTiposContrato();
@@ -114,13 +212,22 @@ export function EmployeeModal({
   const create = useCreateEmployee();
   const update = useUpdateEmployee(employee?.id ?? '');
   const mutation = mode === 'create' ? create : update;
+  const createSociedad = useCreateSociedad();
+  const createIdioma = useCreateIdioma();
 
   const [tab, setTab] = useState<Tab>('Personal');
   const [serverError, setServerError] = useState<string | null>(null);
+  const [creatingSociedad, setCreatingSociedad] = useState(false);
+  const [newSociedadNombre, setNewSociedadNombre] = useState('');
+  const [newSociedadPaisId, setNewSociedadPaisId] = useState('');
+  const [creatingIdioma, setCreatingIdioma] = useState(false);
+  const [newIdiomaNombre, setNewIdiomaNombre] = useState('');
 
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors, isSubmitted },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -174,6 +281,35 @@ export function EmployeeModal({
       setServerError((e as Error).message);
     }
   });
+
+  // Sociedad es el único de los 8 catálogos cuya alta pide un segundo campo obligatorio
+  // (país) — no encaja en CatalogSelectField, que asume creación con solo { nombre }.
+  const onCreateSociedad = async () => {
+    if (!newSociedadNombre.trim() || !newSociedadPaisId) return;
+    try {
+      const s = await createSociedad.mutateAsync({ nombre: newSociedadNombre.trim(), paisId: newSociedadPaisId });
+      setValue('sociedadId', s.id);
+      setCreatingSociedad(false);
+      setNewSociedadNombre('');
+      setNewSociedadPaisId('');
+    } catch (e) {
+      setServerError((e as Error).message);
+    }
+  };
+
+  // Idiomas es checkboxes (selección múltiple), no un <select> — se añade el id creado al
+  // array existente en vez de reemplazar un único valor.
+  const onCreateIdioma = async () => {
+    if (!newIdiomaNombre.trim()) return;
+    try {
+      const i = await createIdioma.mutateAsync({ nombre: newIdiomaNombre.trim() });
+      setValue('idiomaIds', [...(getValues('idiomaIds') ?? []), i.id]);
+      setCreatingIdioma(false);
+      setNewIdiomaNombre('');
+    } catch (e) {
+      setServerError((e as Error).message);
+    }
+  };
 
   // Posibles managers: cualquier empleado distinto del que se edita.
   const managers = allEmployees.filter((e) => e.id !== employee?.id);
@@ -272,14 +408,17 @@ export function EmployeeModal({
                 <Row label="Nombre" error={errors.contactoEmergenciaNombre?.message}>
                   <Input {...register('contactoEmergenciaNombre')} />
                 </Row>
-                <Row label="Relación" error={errors.contactoEmergenciaRelacionId?.message}>
-                  <select className={selectClass} {...register('contactoEmergenciaRelacionId')}>
-                    <option value="">Sin especificar</option>
-                    {relacionesEmergencia?.map((r) => (
-                      <option key={r.id} value={r.id}>{r.nombre}</option>
-                    ))}
-                  </select>
-                </Row>
+                <CatalogSelectField
+                  label="Relación"
+                  error={errors.contactoEmergenciaRelacionId?.message}
+                  registerReturn={register('contactoEmergenciaRelacionId')}
+                  options={(relacionesEmergencia ?? []).map((r) => ({ id: r.id, label: r.nombre }))}
+                  emptyLabel="Sin especificar"
+                  canCreate={canComp}
+                  useCreateHook={useCreateRelacionEmergencia}
+                  onCreated={(id) => setValue('contactoEmergenciaRelacionId', id)}
+                  onError={setServerError}
+                />
                 <Row label="Teléfono" error={errors.contactoEmergenciaTelefono?.message}>
                   <Input {...register('contactoEmergenciaTelefono')} />
                 </Row>
@@ -322,7 +461,18 @@ export function EmployeeModal({
                   </Row>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Idiomas</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[12px] font-medium text-[var(--ink-secondary)]">Idiomas</label>
+                    {canComp && !creatingIdioma && (
+                      <button
+                        type="button"
+                        className="text-[12px] font-medium text-[var(--accent-ink)] hover:underline"
+                        onClick={() => setCreatingIdioma(true)}
+                      >
+                        + Nuevo idioma
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {idiomas?.map((i) => (
                       <label key={i.id} className="inline-flex items-center gap-1.5 text-[13px]">
@@ -331,6 +481,22 @@ export function EmployeeModal({
                       </label>
                     ))}
                   </div>
+                  {creatingIdioma && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        autoFocus
+                        placeholder="Nombre del idioma"
+                        value={newIdiomaNombre}
+                        onChange={(e) => setNewIdiomaNombre(e.target.value)}
+                      />
+                      <Button variant="secondary" type="button" size="sm" onClick={onCreateIdioma} disabled={createIdioma.isPending}>
+                        Crear
+                      </Button>
+                      <Button variant="ghost" type="button" size="sm" onClick={() => setCreatingIdioma(false)}>
+                        ✕
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <Row label="Certificaciones" error={errors.certificaciones?.message}>
@@ -379,26 +545,64 @@ export function EmployeeModal({
                 />
               </Row>
             </div>
-            <Row label="Sociedad" error={errors.sociedadId?.message}>
-              <select className={selectClass} {...register('sociedadId')}>
-                <option value="">Sin asignar</option>
-                {sociedades?.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre} ({s.pais.nombre})
-                  </option>
-                ))}
-              </select>
-            </Row>
-            <Row label="Departamento" error={errors.departmentId?.message}>
-              <select className={selectClass} {...register('departmentId')}>
-                <option value="">Sin asignar</option>
-                {departments?.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </Row>
+            <div>
+              <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Sociedad</label>
+              {!creatingSociedad ? (
+                <div className="flex items-center gap-2">
+                  <select className={selectClass} {...register('sociedadId')}>
+                    <option value="">Sin asignar</option>
+                    {sociedades?.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nombre} ({s.pais.nombre})
+                      </option>
+                    ))}
+                  </select>
+                  {canComp && (
+                    <Button variant="secondary" type="button" size="sm" onClick={() => setCreatingSociedad(true)}>
+                      + Nueva
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="Nombre"
+                    value={newSociedadNombre}
+                    onChange={(e) => setNewSociedadNombre(e.target.value)}
+                  />
+                  <select
+                    className={selectClass}
+                    value={newSociedadPaisId}
+                    onChange={(e) => setNewSociedadPaisId(e.target.value)}
+                    aria-label="País de la nueva sociedad"
+                  >
+                    <option value="">País…</option>
+                    {paises?.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nombre}</option>
+                    ))}
+                  </select>
+                  <Button variant="secondary" type="button" size="sm" onClick={onCreateSociedad} disabled={createSociedad.isPending}>
+                    Crear
+                  </Button>
+                  <Button variant="ghost" type="button" size="sm" onClick={() => setCreatingSociedad(false)}>
+                    ✕
+                  </Button>
+                </div>
+              )}
+              {errors.sociedadId && <p className="text-[12px] text-[var(--danger)] mt-1.5">{errors.sociedadId.message}</p>}
+            </div>
+            <CatalogSelectField
+              label="Departamento"
+              error={errors.departmentId?.message}
+              registerReturn={register('departmentId')}
+              options={(departments ?? []).map((d) => ({ id: d.id, label: d.name }))}
+              emptyLabel="Sin asignar"
+              canCreate={canComp}
+              useCreateHook={useCreateDepartmentAsCatalog}
+              onCreated={(id) => setValue('departmentId', id)}
+              onError={setServerError}
+            />
             <Row label="Manager" error={errors.managerId?.message}>
               <select className={selectClass} {...register('managerId')}>
                 <option value="">Sin manager</option>
@@ -409,45 +613,55 @@ export function EmployeeModal({
                 ))}
               </select>
             </Row>
-            <Row label="Centro de trabajo" required error={errors.localizacionId?.message}>
-              <select className={selectClass} {...register('localizacionId')}>
-                <option value="">Selecciona…</option>
-                {localizaciones?.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.nombre}
-                  </option>
-                ))}
-              </select>
-            </Row>
-            <Row label="Proyecto" error={errors.proyectoId?.message}>
-              <select className={selectClass} {...register('proyectoId')}>
-                <option value="">Sin asignar</option>
-                {proyectos?.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-            </Row>
+            <CatalogSelectField
+              label="Centro de trabajo"
+              required
+              error={errors.localizacionId?.message}
+              registerReturn={register('localizacionId')}
+              options={(localizaciones ?? []).map((l) => ({ id: l.id, label: l.nombre }))}
+              emptyLabel="Selecciona…"
+              canCreate={canComp}
+              useCreateHook={useCreateLocalizacion}
+              onCreated={(id) => setValue('localizacionId', id)}
+              onError={setServerError}
+            />
+            <CatalogSelectField
+              label="Proyecto"
+              error={errors.proyectoId?.message}
+              registerReturn={register('proyectoId')}
+              options={(proyectos ?? []).map((p) => ({ id: p.id, label: p.nombre }))}
+              emptyLabel="Sin asignar"
+              canCreate={canComp}
+              useCreateHook={useCreateProyecto}
+              onCreated={(id) => setValue('proyectoId', id)}
+              onError={setServerError}
+            />
             <Row label="Fecha de alta" required error={errors.startDate?.message}>
               <Input type="date" {...register('startDate')} />
             </Row>
-            <Row label="Tipo de contrato" required error={errors.tipoContratoId?.message}>
-              <select className={selectClass} {...register('tipoContratoId')}>
-                <option value="">Selecciona…</option>
-                {tiposContrato?.map((t) => (
-                  <option key={t.id} value={t.id}>{t.nombre}</option>
-                ))}
-              </select>
-            </Row>
-            <Row label="Jornada" error={errors.jornadaId?.message}>
-              <select className={selectClass} {...register('jornadaId')}>
-                <option value="">Sin especificar</option>
-                {jornadas?.map((j) => (
-                  <option key={j.id} value={j.id}>{j.nombre}</option>
-                ))}
-              </select>
-            </Row>
+            <CatalogSelectField
+              label="Tipo de contrato"
+              required
+              error={errors.tipoContratoId?.message}
+              registerReturn={register('tipoContratoId')}
+              options={(tiposContrato ?? []).map((t) => ({ id: t.id, label: t.nombre }))}
+              emptyLabel="Selecciona…"
+              canCreate={canComp}
+              useCreateHook={useCreateTipoContrato}
+              onCreated={(id) => setValue('tipoContratoId', id)}
+              onError={setServerError}
+            />
+            <CatalogSelectField
+              label="Jornada"
+              error={errors.jornadaId?.message}
+              registerReturn={register('jornadaId')}
+              options={(jornadas ?? []).map((j) => ({ id: j.id, label: j.nombre }))}
+              emptyLabel="Sin especificar"
+              canCreate={canComp}
+              useCreateHook={useCreateJornada}
+              onCreated={(id) => setValue('jornadaId', id)}
+              onError={setServerError}
+            />
             <Row label="Horario" error={errors.horario?.message}>
               <Input placeholder="p. ej. 9:00–18:00" {...register('horario')} />
             </Row>

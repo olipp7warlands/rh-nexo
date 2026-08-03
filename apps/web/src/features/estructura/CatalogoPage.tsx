@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Button, Card, PageHeader } from '@nucleo/ui';
+import { Button, Card } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { Catalogo } from './useEstructura';
 import { CatalogoModal } from './CatalogoModal';
 
-// humanX Tanda 2: página genérica de crear/editar/borrar para los catálogos "id + nombre +
+// humanX Tanda 2: cuerpo genérico de crear/editar/borrar para los catálogos "id + nombre +
 // _count.empleados" (TipoContrato, Jornada, RelacionEmergencia, Proyecto, Idioma) — mismo
 // esqueleto que LocalizacionesPage, parametrizado por los hooks para no repetir 5 páginas
-// casi idénticas.
+// casi idénticas. Se embebe como pestaña dentro de ConfiguracionInformacionPage, que ya aporta
+// el wrapper de página y el PageHeader — por eso no incluye ninguno de los dos aquí.
 export function CatalogoPage({
-  eyebrow,
   title,
   singular,
   personasLabel = 'Personas',
@@ -19,7 +19,6 @@ export function CatalogoPage({
   useUpdate,
   useDelete,
 }: {
-  eyebrow: string;
   title: string;
   singular: string;
   personasLabel?: string;
@@ -49,19 +48,15 @@ export function CatalogoPage({
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-10 py-10">
-      <PageHeader
-        eyebrow={eyebrow}
-        title={title}
-        subtitle={items ? `${items.length} ${title.toLowerCase()}` : 'Cargando…'}
-        actions={
-          canManage && (
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              Añadir {singular}
-            </Button>
-          )
-        }
-      />
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-[13px] text-[var(--ink-tertiary)]">{items ? `${items.length} ${title.toLowerCase()}` : 'Cargando…'}</p>
+        {canManage && (
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            Añadir {singular}
+          </Button>
+        )}
+      </div>
 
       {error && (
         <Card>
