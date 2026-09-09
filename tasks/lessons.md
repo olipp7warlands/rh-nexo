@@ -127,3 +127,17 @@
     nómina reales, sembrar (o cualquier operación que borre y reinserte) queda terminantemente
     prohibido sin excepción. Antes de repetir algo parecido, volver a verificar desde cero que
     sigue sin haber datos reales; no asumir que la conclusión de esta fecha sigue vigente.
+
+## RLS / Supabase
+20. **Prisma NO activa RLS en las tablas que crea — cada migración nueva nace expuesta hasta que
+    alguien lo hace a mano.** El 2026-09-09 el linter de Supabase detectó 7 tablas sin RLS en
+    las tres bases (dev, test y producción): `Idioma`, `TipoContrato`, `Jornada`, `Proyecto`,
+    `RelacionEmergencia`, la tabla de unión implícita `_EmployeeToIdioma` y `_prisma_migrations`.
+    Todas eran tablas creadas en migraciones posteriores a la pasada de RLS de la auditoría de
+    seguridad, así que quedaron accesibles en lectura, escritura y borrado vía la API PostgREST
+    de Supabase con la `anon key`. Corregido a mano con `ALTER TABLE ... ENABLE ROW LEVEL
+    SECURITY` en los tres proyectos. Arreglo de raíz: cada migración de Prisma que cree tablas
+    debe editar el `migration.sql` generado para añadir esa sentencia por cada tabla nueva
+    (incluidas las de unión implícita `_AToB`), y tras cada despliegue con migración hay que
+    revisar el Security Advisor de Supabase y confirmar cero errores `rls_disabled_in_public`.
+    Ver regla 8 de la Definición de Hecho en `CLAUDE.md`.

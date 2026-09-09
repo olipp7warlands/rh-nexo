@@ -28,6 +28,7 @@ Eso no puede volver a pasar.
 5. **Audita lo sensible.** Cambios en empleados, nómina y documentos escriben en `AuditLog`.
 6. **Tiene test del camino feliz.** Al menos un test (Vitest unit o Playwright e2e).
 7. **Es accesible.** Foco, labels, navegación por teclado en formularios y diálogos.
+8. **RLS activo en toda tabla nueva.** Toda migración de Prisma que cree tablas nuevas debe incluir al final del SQL generado la sentencia `ALTER TABLE public."NombreTabla" ENABLE ROW LEVEL SECURITY;` para cada tabla creada (incluidas tablas de unión implícitas `_AToB`). Prisma no lo genera solo: hay que editar el fichero `migration.sql` antes de aplicarla. Tras cada despliegue con migración, revisar el Security Advisor de Supabase y confirmar cero errores `rls_disabled_in_public`.
 
 ## Stack
 

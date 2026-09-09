@@ -31,6 +31,15 @@
   API ni por Terraform). Probar primero en dev que Supabase Storage sigue funcionando (son
   servicios arquitectónicamente separados, alta confianza pero no confirmado de forma directa
   todavía) antes de aplicarlo en producción.
+- **Actualización 2026-09-09**: el linter de Supabase detectó 7 tablas sin RLS en las 3 bases
+  (`Idioma`, `TipoContrato`, `Jornada`, `Proyecto`, `RelacionEmergencia`, `_EmployeeToIdioma` y
+  `_prisma_migrations`), todas creadas en migraciones posteriores a la migración
+  `20260722140500_habilita_rls_todas_las_tablas` de C1 — las tablas nuevas nacen sin RLS y
+  quedaban expuestas a la API PostgREST con la anon key (lectura, escritura y borrado). Cerrado
+  ejecutando `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` a mano en los tres proyectos (dev, test
+  y producción). La cobertura de RLS vuelve a ser total en las tres bases. Regla añadida a la
+  Definición de Hecho (`CLAUDE.md`, punto 8) para que toda migración futura active RLS sobre
+  cada tabla nueva desde el propio `migration.sql`; ver también `tasks/lessons.md` §RLS/Supabase.
 
 ## Altos (A)
 
