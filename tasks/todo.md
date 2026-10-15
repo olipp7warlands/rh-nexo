@@ -91,3 +91,24 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 ### Siguiente
 - Confirmar merge de `fase-6-vitae` a `master` y push.
 - Quedan pendientes del `PLAN.md`: Fase 7 (Fichaje, requiere hardware — la última fase).
+
+---
+
+# Selección — conmutador de vistas + histórico · rama `rh-seleccion-vistas`
+
+## Tanda 1 — Mejora A (conmutador Tarjetas/Listado)
+- [x] Control segmentado en `/seleccion` (persistido en `localStorage` `humanx:seleccion-vista`, con try/catch)
+- [x] Vista Listado: tabla por oferta, cabeceras ordenables (`aria-sort`), fila clicable + enlace real
+- [x] Verificado en navegador (API simulada): alterna, persiste tras recargar, orden y filtro OK · `tsc` limpio
+
+## Tanda 2 — Mejora B (histórico `/seleccion/historico`) — PENDIENTE
+- [ ] Migración opcional: `Candidate.location`, `Job.sociedadId` (enseñar `migration.sql` ANTES de aplicar; revisada y antes del merge en producción)
+- [ ] `GET /candidates/historico` solo ADMIN/RRHH + `AuditLog` (acceso a la sección, consultas con filtros, detalle/CV)
+- [ ] Subpestañas Ofertas / Histórico, una fila por candidatura, filtros en query string, tests
+
+## Pendiente aparte
+- [ ] Exportar CSV del histórico (valorar dentro de Informes)
+- [x] Dev Supabase recreado el 2026-10-15: **nuevo ID `bpoqmytzrymxxsfjiraz`** (el antiguo `dfwwslptvumtmqrlehek` fue eliminado por inactividad). 9 migraciones + seed (17 empleados) + RLS (45/45 tablas) aplicados; procedimiento en lessons.md #21 y `scripts/enable-rls-all.sql`. Pendiente de limpiar: `.claude/settings.local.json` conserva permisos antiguos con la URL (y contraseña) del proyecto eliminado.
+- [ ] Índice en `Application(appliedAt)`: añadir solo si el histórico crece (decidido: hoy es ruido)
+- [ ] Orden de despliegue de la migración de Tanda 2: dev → test → backup de producción (Supabase → Database → Backups, comprobar uno reciente o lanzar manual) → `migrate deploy` en producción → merge. Generar con `prisma migrate dev --create-only` y comparar con el SQL aprobado; si difiere, enseñarlo de nuevo.
+- [ ] Tanda 1: validar visualmente con `pnpm dev:local` (puerto real de Vite) contra dev restaurado ANTES de abrir el PR
