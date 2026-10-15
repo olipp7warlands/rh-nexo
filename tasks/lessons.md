@@ -18,8 +18,6 @@
    "ve" los `@types/react` de `apps/web`. Un paquete que importa React debe tener `@types/react`
    (+ `@types/react-dom`) en sus propias `devDependencies`, o `tsc` falla con
    "Could not find a declaration file for module 'react'".
-5. **Artefactos fuera de git.** Añadir `*.tsbuildinfo` al `.gitignore` (lo genera `tsc -b`).
-
 ## React / Formularios
 6. **Inputs reutilizables con `forwardRef`.** Para integrarse con React Hook Form (`register()`),
    los componentes de input del design system deben reenviar `ref` al `<input>` real.
@@ -141,3 +139,16 @@
     (incluidas las de unión implícita `_AToB`), y tras cada despliegue con migración hay que
     revisar el Security Advisor de Supabase y confirmar cero errores `rls_disabled_in_public`.
     Ver regla 8 de la Definición de Hecho en `CLAUDE.md`.
+21. **Supabase free borra los proyectos pausados (~90 días): el de dev hubo que recrearlo el
+    2026-10-15.** El proyecto `dfwwslptvumtmqrlehek` desapareció por inactividad y la API dejó de
+    arrancar (`tenant/user not found`). Nuevo dev: `bpoqmytzrymxxsfjiraz`. Procedimiento para
+    repetirlo: (1) crear el proyecto en Supabase; (2) pegar en `.env.local` DATABASE_URL = pooler
+    de transacción `:6543/postgres?pgbouncer=true&connection_limit=10` y DIRECT_URL = pooler de
+    sesión `:5432`, ambos con usuario `postgres.<ref>` (NO el host directo `db.<ref>.supabase.co`:
+    es solo IPv6 y no conecta desde aquí; y no cruzar las dos URLs: `migrate` a través del pooler
+    de transacción se cuelga); (3) actualizar `DEV_REF` en `scripts/assert-dev-env.js`, o la guarda
+    aborta; (4) `prisma migrate deploy` con el env de `.env.local`; (5) `pnpm db:dev:seed`;
+    (6) `scripts/enable-rls-all.sql` (activa RLS en todas las tablas de public, dinámico; Prisma
+    no lo hace, ver #20) y comprobar que todas tienen `relrowsecurity = true`. Antes de dar por
+    perdido dev, mirar el panel: pausado ≠ borrado. (La lección #5, `*.tsbuildinfo`, se purgó:
+    ya está en `.gitignore`; la numeración se mantiene porque hay referencias a #14, #19 y #20.)
