@@ -109,3 +109,6 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 ## Pendiente aparte
 - [ ] Exportar CSV del histórico (valorar dentro de Informes)
 - [ ] El proyecto Supabase de desarrollo (`dfwwslptvumtmqrlehek`) ya no responde ("tenant/user not found") y no hay Postgres local/Docker: `pnpm dev:local` no arranca la API. Hay que restaurarlo o recrearlo antes de la Tanda 2.
+- [ ] Índice en `Application(appliedAt)`: añadir solo si el histórico crece (decidido: hoy es ruido)
+- [ ] Orden de despliegue de la migración de Tanda 2: dev → test → backup de producción (Supabase → Database → Backups, comprobar uno reciente o lanzar manual) → `migrate deploy` en producción → merge. Generar con `prisma migrate dev --create-only` y comparar con el SQL aprobado; si difiere, enseñarlo de nuevo.
+- [ ] Tanda 1: validar visualmente con `pnpm dev:local` (puerto real de Vite) contra dev restaurado ANTES de abrir el PR
