@@ -73,6 +73,7 @@ export function CandidatePanel({
             <div className="text-[13px] text-[var(--ink-secondary)] space-y-1">
               <div>{candidate.email}</div>
               {candidate.phone && <div>{candidate.phone}</div>}
+              {candidate.location && <div>{candidate.location}</div>}
               {candidate.linkedinUrl && (
                 <a href={candidate.linkedinUrl} target="_blank" rel="noreferrer" className="text-[var(--accent-ink)]">
                   LinkedIn ↗

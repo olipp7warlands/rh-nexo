@@ -101,10 +101,14 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [x] Vista Listado: tabla por oferta, cabeceras ordenables (`aria-sort`), fila clicable + enlace real
 - [x] Verificado en navegador (API simulada): alterna, persiste tras recargar, orden y filtro OK · `tsc` limpio
 
-## Tanda 2 — Mejora B (histórico `/seleccion/historico`) — PENDIENTE
-- [ ] Migración opcional: `Candidate.location`, `Job.sociedadId` (enseñar `migration.sql` ANTES de aplicar; revisada y antes del merge en producción)
-- [ ] `GET /candidates/historico` solo ADMIN/RRHH + `AuditLog` (acceso a la sección, consultas con filtros, detalle/CV)
-- [ ] Subpestañas Ofertas / Histórico, una fila por candidatura, filtros en query string, tests
+## Tanda 2 — Mejora B (histórico `/seleccion/historico`) · rama `rh-seleccion-historico`
+- [x] Migración `20261015121114_seleccion_historico_location_sociedad` (`Candidate.location`, `Job.sociedadId`): aplicada SOLO en dev y verificada. Test y producción pendientes (ciclo de cierre).
+- [x] `GET /candidates/historico` solo ADMIN/RRHH (MANAGER/EMPLEADO 403, verificado en runtime). `AuditLog`: una entrada `VIEW`/`CandidateHistory` por consulta con sus filtros (no por fila) y `VIEW`/`Candidate` al abrir una ficha (`GET /candidates/:id`).
+- [x] DTOs: `location` (candidato), `sociedadId` (oferta, con 400 si no existe), filtros del histórico validados.
+- [x] Modales: Ubicación + LinkedIn en NuevaCandidaturaModal (el input de LinkedIn no existía), Sociedad en NuevaOfertaModal. Ubicación visible en la ficha.
+- [x] UI: subpestañas Ofertas / Histórico de candidatos (solo ADMIN/RRHH), `/seleccion/historico`, una fila por candidatura, filtros en la URL (`q`, `puesto`, `sociedad`, `estado`, `desde`, `hasta`, `pagina`), paginación de 25.
+- [x] Test `apps/api/test/candidates-historico.e2e-spec.ts` ESCRITO, **NO ejecutado**: espera a migrar la base de test (primer paso del ciclo de cierre). Nunca contra dev.
+- [ ] Ciclo de cierre: migrar test → correr suite → backup producción → `migrate deploy` producción → merge.
 
 ## Pendiente aparte
 - [ ] Exportar CSV del histórico (valorar dentro de Informes)

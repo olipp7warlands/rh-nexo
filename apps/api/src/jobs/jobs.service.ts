@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
@@ -29,6 +29,7 @@ export class JobsService {
       include: {
         department: { select: { name: true, color: true } },
         hiringManager: { select: { id: true, fullName: true } },
+        sociedad: { select: { id: true, nombre: true } },
         applications: { select: { stage: { select: { name: true } } } },
       },
       orderBy: { createdAt: 'desc' },
@@ -46,19 +47,29 @@ export class JobsService {
       include: {
         department: { select: { name: true, color: true } },
         hiringManager: { select: { id: true, fullName: true } },
+        sociedad: { select: { id: true, nombre: true } },
       },
     });
     if (!job) throw new NotFoundException('Oferta no encontrada');
     return job;
   }
 
+  /** Una FK inexistente daría un 500; se traduce a un 400 con mensaje claro. */
+  private async assertSociedadExists(sociedadId?: string) {
+    if (!sociedadId) return;
+    const found = await this.db.sociedad.findUnique({ where: { id: sociedadId }, select: { id: true } });
+    if (!found) throw new BadRequestException('La sociedad indicada no existe');
+  }
+
   async create(dto: CreateJobDto, viewer: AuthUser) {
+    await this.assertSociedadExists(dto.sociedadId);
     const job = await this.db.job.create({ data: { ...dto } });
     await this.audit(viewer.id, 'CREATE', job.id, null, job);
     return job;
   }
 
   async update(id: string, dto: UpdateJobDto, viewer: AuthUser) {
+    await this.assertSociedadExists(dto.sociedadId);
     const before = await this.db.job.findUnique({ where: { id } });
     if (!before) throw new NotFoundException('Oferta no encontrada');
     const closing = dto.status === 'CERRADA' && before.status !== 'CERRADA';

@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useJobs, type JobStatus, type JobSummary } from './useRecruitment';
 import { JobStatusBadge } from './RecruitmentBadges';
 import { NuevaOfertaModal } from './NuevaOfertaModal';
+import { SeleccionTabs } from './SeleccionTabs';
 
 const FILTERS: { key: JobStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'Todas' },
@@ -182,6 +183,8 @@ export function ReclutamientoPage() {
           ) : undefined
         }
       />
+
+      {canManage && <SeleccionTabs />}
 
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex gap-1">

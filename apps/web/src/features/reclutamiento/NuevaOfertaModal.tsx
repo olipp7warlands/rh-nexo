@@ -6,6 +6,7 @@ import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useDepartments } from '../employees/useDepartments';
 import { useEmployees } from '../employees/useEmployees';
+import { useSociedades } from '../estructura/useEstructura';
 import { useCreateJob } from './useRecruitment';
 
 const schema = z.object({
@@ -16,6 +17,7 @@ const schema = z.object({
   level: z.string().min(1, 'Obligatorio'),
   openings: z.coerce.number().int().min(1).optional(),
   hiringManagerId: z.string().optional(),
+  sociedadId: z.string().optional(),
   description: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
@@ -26,6 +28,7 @@ const selectClass =
 export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const { data: departments } = useDepartments();
   const { data: employees } = useEmployees();
+  const { data: sociedades } = useSociedades();
   const create = useCreateJob();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
@@ -45,6 +48,7 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
         level: data.level,
         openings: data.openings,
         hiringManagerId: data.hiringManagerId || undefined,
+        sociedadId: data.sociedadId || undefined,
         description: data.description || undefined,
       });
       onClose();
@@ -108,6 +112,19 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <input type="checkbox" className="w-4 h-4 accent-[var(--accent)]" {...register('remote')} />
           Remoto
         </label>
+        <div>
+          <label htmlFor="oferta-sociedad" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+            Sociedad
+          </label>
+          <select id="oferta-sociedad" className={selectClass} {...register('sociedadId')}>
+            <option value="">Sin asignar</option>
+            {sociedades?.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Hiring manager</label>
           <select className={selectClass} {...register('hiringManagerId')}>

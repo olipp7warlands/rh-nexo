@@ -11,6 +11,7 @@ export class CreateJobDto {
   @IsOptional() @IsInt() @Min(1) openings?: number;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
+  @IsOptional() @IsString() sociedadId?: string;
 }
 
 export class UpdateJobDto {
@@ -24,4 +25,5 @@ export class UpdateJobDto {
   @IsOptional() @IsInt() @Min(1) openings?: number;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
+  @IsOptional() @IsString() sociedadId?: string;
 }
