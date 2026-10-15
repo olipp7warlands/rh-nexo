@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PROD_REF = 'qkeadkgdzwzsvjvfczhv';
-const DEV_REF = 'dfwwslptvumtmqrlehek';
+const DEV_REF = 'bpoqmytzrymxxsfjiraz';
 
 function loadEnvLocal() {
   const file = path.resolve(__dirname, '..', '.env.local');

@@ -8,7 +8,7 @@ import {
 describe('assertNotSeedingProductionByAccident (auditoría, hallazgo bajo)', () => {
   it('no lanza si DATABASE_URL no es de producción', () => {
     expect(() =>
-      assertNotSeedingProductionByAccident({ DATABASE_URL: 'postgresql://postgres.dfwwslptvumtmqrlehek:x@host:6543/postgres' }),
+      assertNotSeedingProductionByAccident({ DATABASE_URL: 'postgresql://postgres.bpoqmytzrymxxsfjiraz:x@host:6543/postgres' }),
     ).not.toThrow();
   });
 
