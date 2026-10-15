@@ -91,3 +91,21 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 ### Siguiente
 - Confirmar merge de `fase-6-vitae` a `master` y push.
 - Quedan pendientes del `PLAN.md`: Fase 7 (Fichaje, requiere hardware — la última fase).
+
+---
+
+# Selección — conmutador de vistas + histórico · rama `rh-seleccion-vistas`
+
+## Tanda 1 — Mejora A (conmutador Tarjetas/Listado)
+- [x] Control segmentado en `/seleccion` (persistido en `localStorage` `humanx:seleccion-vista`, con try/catch)
+- [x] Vista Listado: tabla por oferta, cabeceras ordenables (`aria-sort`), fila clicable + enlace real
+- [x] Verificado en navegador (API simulada): alterna, persiste tras recargar, orden y filtro OK · `tsc` limpio
+
+## Tanda 2 — Mejora B (histórico `/seleccion/historico`) — PENDIENTE
+- [ ] Migración opcional: `Candidate.location`, `Job.sociedadId` (enseñar `migration.sql` ANTES de aplicar; revisada y antes del merge en producción)
+- [ ] `GET /candidates/historico` solo ADMIN/RRHH + `AuditLog` (acceso a la sección, consultas con filtros, detalle/CV)
+- [ ] Subpestañas Ofertas / Histórico, una fila por candidatura, filtros en query string, tests
+
+## Pendiente aparte
+- [ ] Exportar CSV del histórico (valorar dentro de Informes)
+- [ ] El proyecto Supabase de desarrollo (`dfwwslptvumtmqrlehek`) ya no responde ("tenant/user not found") y no hay Postgres local/Docker: `pnpm dev:local` no arranca la API. Hay que restaurarlo o recrearlo antes de la Tanda 2.
