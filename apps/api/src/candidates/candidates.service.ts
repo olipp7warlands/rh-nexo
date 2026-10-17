@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
-import { CreateCandidateDto } from './candidates.dto';
+import { CreateCandidateDto, HistoricoQueryDto } from './candidates.dto';
 
 @Injectable()
 export class CandidatesService {
@@ -62,7 +62,99 @@ export class CandidatesService {
       },
     });
     if (!candidate) throw new NotFoundException('Candidato no encontrado');
+    // Registro de accesos (RGPD): la ficha incluye CV, LinkedIn y datos de contacto de un
+    // tercero. Solo en la apertura real, y solo si existe y el viewer puede verla.
+    await this.db.auditLog.create({ data: { actorId: viewer.id, action: 'VIEW', entity: 'Candidate', entityId: id } });
     return candidate;
+  }
+
+  /**
+   * Histórico transversal: una fila por CANDIDATURA (una persona con 3 procesos sale 3 veces),
+   * de todas las ofertas. Solo ADMIN/RRHH — el controlador ya lo exige; se repite aquí como
+   * defensa en profundidad, porque NO aplica scopeWhere (un MANAGER vería pipelines ajenos, el
+   * IDOR de la auditoría A4). Registra UNA entrada de auditoría por consulta con sus filtros
+   * (no una por fila): el acceso a la sección y lo que se buscó.
+   */
+  async historico(query: HistoricoQueryDto, viewer: AuthUser) {
+    if (viewer.role !== 'ADMIN' && viewer.role !== 'RRHH') {
+      throw new ForbiddenException('No autorizado para esta acción');
+    }
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
+
+    const appliedAt: Prisma.DateTimeFilter = {};
+    if (query.from) appliedAt.gte = new Date(query.from);
+    if (query.to) {
+      const to = new Date(query.to);
+      // Solo fecha (YYYY-MM-DD) => inclusiva hasta el final de ese día.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) to.setUTCHours(23, 59, 59, 999);
+      appliedAt.lte = to;
+    }
+
+    const where: Prisma.ApplicationWhereInput = {
+      ...(query.jobId ? { jobId: query.jobId } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.sociedadId ? { job: { sociedadId: query.sociedadId } } : {}),
+      ...(query.q ? { candidate: { fullName: { contains: query.q, mode: 'insensitive' } } } : {}),
+      ...(Object.keys(appliedAt).length ? { appliedAt } : {}),
+    };
+
+    const [total, rows] = await this.db.$transaction([
+      this.db.application.count({ where }),
+      this.db.application.findMany({
+        where,
+        select: {
+          id: true,
+          status: true,
+          appliedAt: true,
+          candidate: { select: { id: true, fullName: true, resumeUrl: true, linkedinUrl: true, location: true } },
+          job: { select: { id: true, title: true, sociedad: { select: { id: true, nombre: true } } } },
+        },
+        orderBy: [{ appliedAt: 'desc' }, { id: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    await this.db.auditLog.create({
+      data: {
+        actorId: viewer.id,
+        action: 'VIEW',
+        entity: 'CandidateHistory',
+        after: {
+          filters: {
+            q: query.q ?? null,
+            jobId: query.jobId ?? null,
+            sociedadId: query.sociedadId ?? null,
+            status: query.status ?? null,
+            from: query.from ?? null,
+            to: query.to ?? null,
+          },
+          page,
+          pageSize,
+          total,
+        },
+      },
+    });
+
+    return {
+      total,
+      page,
+      pageSize,
+      items: rows.map((a) => ({
+        applicationId: a.id,
+        candidateId: a.candidate.id,
+        fullName: a.candidate.fullName,
+        resumeUrl: a.candidate.resumeUrl,
+        linkedinUrl: a.candidate.linkedinUrl,
+        location: a.candidate.location,
+        jobId: a.job.id,
+        jobTitle: a.job.title,
+        sociedad: a.job.sociedad,
+        appliedAt: a.appliedAt,
+        status: a.status,
+      })),
+    };
   }
 
   async create(dto: CreateCandidateDto, viewer: AuthUser) {

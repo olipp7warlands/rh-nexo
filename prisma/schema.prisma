@@ -257,6 +257,7 @@ model Sociedad {
   paisId          String
   empleados       Employee[]
   registrosPuesto RegistroPuesto[]
+  jobs            Job[]
 }
 
 model Localizacion {
@@ -727,9 +728,13 @@ model Job {
   description     String?
   hiringManager   Employee?     @relation("JobHiringManager", fields: [hiringManagerId], references: [id])
   hiringManagerId String?
+  sociedad        Sociedad?     @relation(fields: [sociedadId], references: [id], onDelete: SetNull)
+  sociedadId      String?
   createdAt       DateTime      @default(now())
   closedAt        DateTime?
   applications    Application[]
+
+  @@index([sociedadId])
 }
 
 model Candidate {
@@ -737,6 +742,7 @@ model Candidate {
   fullName     String
   email        String          @unique
   phone        String?
+  location     String?
   source       CandidateSource @default(PORTAL)
   linkedinUrl  String?
   resumeUrl    String?

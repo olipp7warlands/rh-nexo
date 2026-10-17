@@ -12,6 +12,7 @@ const schema = z.object({
   fullName: z.string().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
+  location: z.string().optional(),
   source: z.string().optional(),
   linkedinUrl: z.string().optional(),
   resumeUrl: z.string().optional(),
@@ -49,6 +50,7 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
           fullName: data.fullName,
           email: data.email,
           phone: data.phone || undefined,
+          location: data.location || undefined,
           source: (data.source || 'PORTAL') as CandidateSource,
           linkedinUrl: data.linkedinUrl || undefined,
           resumeUrl: data.resumeUrl || undefined,
@@ -130,6 +132,20 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
                   <option value="AGENCIA">Agencia</option>
                   <option value="OTRO">Otro</option>
                 </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="cand-ubicacion" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                  Ubicación (opcional)
+                </label>
+                <Input id="cand-ubicacion" placeholder="Ciudad, país" {...register('location')} />
+              </div>
+              <div>
+                <label htmlFor="cand-linkedin" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                  LinkedIn (URL, opcional)
+                </label>
+                <Input id="cand-linkedin" placeholder="https://linkedin.com/in/…" {...register('linkedinUrl')} />
               </div>
             </div>
             <div>

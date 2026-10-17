@@ -101,12 +101,17 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [x] Vista Listado: tabla por oferta, cabeceras ordenables (`aria-sort`), fila clicable + enlace real
 - [x] Verificado en navegador (API simulada): alterna, persiste tras recargar, orden y filtro OK · `tsc` limpio
 
-## Tanda 2 — Mejora B (histórico `/seleccion/historico`) — PENDIENTE
-- [ ] Migración opcional: `Candidate.location`, `Job.sociedadId` (enseñar `migration.sql` ANTES de aplicar; revisada y antes del merge en producción)
-- [ ] `GET /candidates/historico` solo ADMIN/RRHH + `AuditLog` (acceso a la sección, consultas con filtros, detalle/CV)
-- [ ] Subpestañas Ofertas / Histórico, una fila por candidatura, filtros en query string, tests
+## Tanda 2 — Mejora B (histórico `/seleccion/historico`) · rama `rh-seleccion-historico`
+- [x] Migración `20261015121114_seleccion_historico_location_sociedad` (`Candidate.location`, `Job.sociedadId`): aplicada SOLO en dev y verificada. Test y producción pendientes (ciclo de cierre).
+- [x] `GET /candidates/historico` solo ADMIN/RRHH (MANAGER/EMPLEADO 403, verificado en runtime). `AuditLog`: una entrada `VIEW`/`CandidateHistory` por consulta con sus filtros (no por fila) y `VIEW`/`Candidate` al abrir una ficha (`GET /candidates/:id`).
+- [x] DTOs: `location` (candidato), `sociedadId` (oferta, con 400 si no existe), filtros del histórico validados.
+- [x] Modales: Ubicación + LinkedIn en NuevaCandidaturaModal (el input de LinkedIn no existía), Sociedad en NuevaOfertaModal. Ubicación visible en la ficha.
+- [x] UI: subpestañas Ofertas / Histórico de candidatos (solo ADMIN/RRHH), `/seleccion/historico`, una fila por candidatura, filtros en la URL (`q`, `puesto`, `sociedad`, `estado`, `desde`, `hasta`, `pagina`), paginación de 25.
+- [x] Test `apps/api/test/candidates-historico.e2e-spec.ts` ESCRITO, **NO ejecutado**: espera a migrar la base de test (primer paso del ciclo de cierre). Nunca contra dev.
+- [ ] Ciclo de cierre: migrar test → correr suite → backup producción → `migrate deploy` producción → merge.
 
 ## Pendiente aparte
+- [ ] **PRIORIDAD ALTA — Suite e2e no está en verde (rama/PR aparte, tras cerrar la Tanda 2).** `agenda.e2e-spec.ts` falla 2 tests (`expected 0 ≥ 4` y `0 ≥ 1`), también en `origin/master` (demostrado el 2026-10-17 contra la base de test). Causa: `prisma/seed.ts` líneas 113-120 fija `FIN_PERIODO_PRUEBA`/`VENCIMIENTO_CONTRATO` en jul-ago 2026 y `agenda.service.ts` solo muestra alertas entre hoy-7 y hoy+42 días (`DIAS_ATRAS`/`DIAS_ADELANTE`); hoy esas fechas ya quedan fuera. Resembrar no lo arregla. Fix propuesto: fechas del seed relativas a "hoy" (p. ej. hoy+10/+20/+30 días). Una suite roja nos deja ciegos en las próximas tandas.
 - [ ] Exportar CSV del histórico (valorar dentro de Informes)
 - [x] Dev Supabase recreado el 2026-10-15: **nuevo ID `bpoqmytzrymxxsfjiraz`** (el antiguo `dfwwslptvumtmqrlehek` fue eliminado por inactividad). 9 migraciones + seed (17 empleados) + RLS (45/45 tablas) aplicados; procedimiento en lessons.md #21 y `scripts/enable-rls-all.sql`. Pendiente de limpiar: `.claude/settings.local.json` conserva permisos antiguos con la URL (y contraseña) del proyecto eliminado.
 - [ ] Índice en `Application(appliedAt)`: añadir solo si el histórico crece (decidido: hoy es ruido)

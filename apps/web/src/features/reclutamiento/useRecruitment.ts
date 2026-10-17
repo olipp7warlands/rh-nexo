@@ -32,6 +32,8 @@ export interface JobSummary {
   description: string | null;
   hiringManagerId: string | null;
   hiringManager: { id: string; fullName: string } | null;
+  sociedadId: string | null;
+  sociedad: { id: string; nombre: string } | null;
   createdAt: string;
   closedAt: string | null;
   totalApplications: number;
@@ -45,6 +47,7 @@ export interface CandidateRef {
   fullName: string;
   email: string;
   phone: string | null;
+  location: string | null;
   source: CandidateSource;
   linkedinUrl: string | null;
   resumeUrl: string | null;
@@ -181,6 +184,7 @@ export function useCreateJob() {
       openings?: number;
       description?: string;
       hiringManagerId?: string;
+      sociedadId?: string;
     }) => api.post<JobDetail>('/jobs', data),
     onSuccess: () => invalidate(qc),
   });
@@ -189,9 +193,64 @@ export function useCreateJob() {
 export function useCreateCandidate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { fullName: string; email: string; phone?: string; source?: CandidateSource; linkedinUrl?: string; resumeUrl?: string }) =>
-      api.post<CandidateRef>('/candidates', data),
+    mutationFn: (data: {
+      fullName: string;
+      email: string;
+      phone?: string;
+      location?: string;
+      source?: CandidateSource;
+      linkedinUrl?: string;
+      resumeUrl?: string;
+    }) => api.post<CandidateRef>('/candidates', data),
     onSuccess: () => invalidate(qc),
+  });
+}
+
+export interface HistoricoFilters {
+  q?: string;
+  jobId?: string;
+  sociedadId?: string;
+  status?: ApplicationStatus;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface HistoricoItem {
+  applicationId: string;
+  candidateId: string;
+  fullName: string;
+  resumeUrl: string | null;
+  linkedinUrl: string | null;
+  location: string | null;
+  jobId: string;
+  jobTitle: string;
+  sociedad: { id: string; nombre: string } | null;
+  appliedAt: string;
+  status: ApplicationStatus;
+}
+
+export interface HistoricoPage {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: HistoricoItem[];
+}
+
+/**
+ * Histórico transversal (solo ADMIN/RRHH). Cada consulta queda auditada en el servidor, así que
+ * `enabled` debe ir condicionado al rol (lección #7) y la query no se refresca sola.
+ */
+export function useHistorico(filters: HistoricoFilters, enabled = true) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) if (v !== undefined && v !== '') qs.set(k, String(v));
+  const query = qs.toString();
+  return useQuery({
+    queryKey: ['recruitment', 'historico', query],
+    queryFn: () => api.get<HistoricoPage>(`/candidates/historico${query ? `?${query}` : ''}`),
+    enabled,
+    placeholderData: (prev) => prev,
   });
 }
 
