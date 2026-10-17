@@ -111,6 +111,7 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [ ] Ciclo de cierre: migrar test → correr suite → backup producción → `migrate deploy` producción → merge.
 
 ## Pendiente aparte
+- [ ] **PRIORIDAD ALTA — Suite e2e no está en verde (rama/PR aparte, tras cerrar la Tanda 2).** `agenda.e2e-spec.ts` falla 2 tests (`expected 0 ≥ 4` y `0 ≥ 1`), también en `origin/master` (demostrado el 2026-10-17 contra la base de test). Causa: `prisma/seed.ts` líneas 113-120 fija `FIN_PERIODO_PRUEBA`/`VENCIMIENTO_CONTRATO` en jul-ago 2026 y `agenda.service.ts` solo muestra alertas entre hoy-7 y hoy+42 días (`DIAS_ATRAS`/`DIAS_ADELANTE`); hoy esas fechas ya quedan fuera. Resembrar no lo arregla. Fix propuesto: fechas del seed relativas a "hoy" (p. ej. hoy+10/+20/+30 días). Una suite roja nos deja ciegos en las próximas tandas.
 - [ ] Exportar CSV del histórico (valorar dentro de Informes)
 - [x] Dev Supabase recreado el 2026-10-15: **nuevo ID `bpoqmytzrymxxsfjiraz`** (el antiguo `dfwwslptvumtmqrlehek` fue eliminado por inactividad). 9 migraciones + seed (17 empleados) + RLS (45/45 tablas) aplicados; procedimiento en lessons.md #21 y `scripts/enable-rls-all.sql`. Pendiente de limpiar: `.claude/settings.local.json` conserva permisos antiguos con la URL (y contraseña) del proyecto eliminado.
 - [ ] Índice en `Application(appliedAt)`: añadir solo si el histórico crece (decidido: hoy es ruido)
