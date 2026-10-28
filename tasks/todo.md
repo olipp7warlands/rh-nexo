@@ -111,7 +111,7 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [ ] Ciclo de cierre: migrar test → correr suite → backup producción → `migrate deploy` producción → merge.
 
 ## Pendiente aparte
-- [ ] **PRIORIDAD ALTA — Suite e2e no está en verde (rama/PR aparte, tras cerrar la Tanda 2).** `agenda.e2e-spec.ts` falla 2 tests (`expected 0 ≥ 4` y `0 ≥ 1`), también en `origin/master` (demostrado el 2026-10-17 contra la base de test). Causa: `prisma/seed.ts` líneas 113-120 fija `FIN_PERIODO_PRUEBA`/`VENCIMIENTO_CONTRATO` en jul-ago 2026 y `agenda.service.ts` solo muestra alertas entre hoy-7 y hoy+42 días (`DIAS_ATRAS`/`DIAS_ADELANTE`); hoy esas fechas ya quedan fuera. Resembrar no lo arregla. Fix propuesto: fechas del seed relativas a "hoy" (p. ej. hoy+10/+20/+30 días). Una suite roja nos deja ciegos en las próximas tandas.
+- [x] Suite e2e en verde otra vez (2026-10-28, rama `fix/seed-agenda-e-historial-scripts`): las fechas de alerta de `prisma/seed.ts` (fin de prueba y vencimiento) son ahora relativas a «hoy» (+10/+15/+25/+30 días, dentro de la ventana -7/+42 de `agenda.service.ts`). `agenda.e2e-spec.ts` 4/4 y suite completa 174/174 contra la base de test. Causa original: fechas absolutas de jul-ago 2026 que caducaron.
 - [ ] Exportar CSV del histórico (valorar dentro de Informes)
 - [x] Dev Supabase recreado el 2026-10-15: **nuevo ID `bpoqmytzrymxxsfjiraz`** (el antiguo `dfwwslptvumtmqrlehek` fue eliminado por inactividad). 9 migraciones + seed (17 empleados) + RLS (45/45 tablas) aplicados; procedimiento en lessons.md #21 y `scripts/enable-rls-all.sql`. Pendiente de limpiar: `.claude/settings.local.json` conserva permisos antiguos con la URL (y contraseña) del proyecto eliminado.
 - [ ] Índice en `Application(appliedAt)`: añadir solo si el histórico crece (decidido: hoy es ruido)
@@ -124,7 +124,8 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [x] Cuentas activas en producción: `blanca.garcia@wowinx.com` y `oliver.perez@wowinx.com` (ADMIN, sin ficha). Reset de contraseña de Oliver hecho por él con el método interactivo en prod y dev, login verificado (lessons #24).
 - [ ] **Recordatorio (~3-4 semanas, a partir del 2026-11-25): borrar `C:/Users/olcas/backups-humanx/prod-pre-limpieza-2026-10-28.sql`** (contiene hashes de contraseña de las cuentas demo). Fuera del repo.
 - [ ] Desinstalar el cliente PostgreSQL 16 sobrante (`C:/Users/olcas/pgclient`); se usa el 17 (`pgclient17`) porque Supabase corre 17.x.
-- [ ] Blanca carga datos reales desde la app: 16 departamentos y localizaciones (Madrid, Dubái, 3 en India).
+- [x] 16 departamentos reales cargados en producción el 2026-10-28 (`scripts/limpieza-2026-10/03-carga-departamentos.sql`, `commit=true`, color `#0F1419`, 0 → 16, segunda pasada a 0). Dev igual.
+- [ ] Blanca crea las localizaciones desde la app (Madrid, Dubái, 3 en India).
 - [x] Migración de la Tanda 2 de Selección ya en producción desde el 17-oct (verificado el 2026-10-28: 10 migraciones, `Job.sociedadId` y `Candidate.location` existen).
 
 # Siguiente fase: Selección II
