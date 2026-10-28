@@ -198,20 +198,22 @@ enum CandidateSource {
 
 // ─────────────────────── Identidad / Organización ───────────────────────
 model User {
-  id            String          @id @default(cuid())
-  email         String          @unique
-  passwordHash  String
-  role          Role            @default(EMPLEADO)
-  isActive      Boolean         @default(true) // auditoría M6: cuenta desactivada sin borrarla
-  employee      Employee?       @relation(fields: [employeeId], references: [id])
-  employeeId    String?         @unique
-  lastLogin     DateTime?
-  createdAt     DateTime        @default(now())
-  notifications Notification[]
-  auditLogs     AuditLog[]      @relation("AuditActor")
-  decisions     AuditDecision[] @relation("DecisionActor")
-  anotaciones   Anotacion[]     @relation("AnotacionAutor")
-  refreshTokens RefreshToken[]
+  id                    String          @id @default(cuid())
+  email                 String          @unique
+  passwordHash          String
+  role                  Role            @default(EMPLEADO)
+  isActive              Boolean         @default(true) // auditoría M6: cuenta desactivada sin borrarla
+  employee              Employee?       @relation(fields: [employeeId], references: [id])
+  employeeId            String?         @unique
+  lastLogin             DateTime?
+  calendarFeedTokenHash String?         @unique // SHA-256 del token del feed ICS (Tanda 3); nunca el token en claro
+  calendarFeedTokenAt   DateTime?
+  createdAt             DateTime        @default(now())
+  notifications         Notification[]
+  auditLogs             AuditLog[]      @relation("AuditActor")
+  decisions             AuditDecision[] @relation("DecisionActor")
+  anotaciones           Anotacion[]     @relation("AnotacionAutor")
+  refreshTokens         RefreshToken[]
 }
 
 // auditoría A3: refresh tokens opacos, persistidos y con rotación. `tokenHash` guarda un
@@ -245,9 +247,11 @@ model Department {
 
 // ──────────────────────── Estructura (humanX) ────────────────────────
 model Pais {
-  id         String     @id @default(cuid())
-  nombre     String     @unique
-  sociedades Sociedad[]
+  id             String         @id @default(cuid())
+  nombre         String         @unique
+  sociedades     Sociedad[]
+  localizaciones Localizacion[]
+  festivos       Holiday[]
 }
 
 model Sociedad {
@@ -263,7 +267,10 @@ model Sociedad {
 model Localizacion {
   id        String     @id @default(cuid())
   nombre    String     @unique
+  pais      Pais?      @relation(fields: [paisId], references: [id], onDelete: SetNull)
+  paisId    String? // nullable en BD (bases con datos previos); la API lo exige al crear
   empleados Employee[]
+  festivos  Holiday[]
 }
 
 // ─────────────────── Catálogos editables (humanX Tanda 2) ───────────────────
@@ -291,6 +298,7 @@ model Proyecto {
   id        String     @id @default(cuid())
   nombre    String     @unique
   empleados Employee[]
+  jobs      Job[]
 }
 
 // Único catálogo con relación m:n (una persona puede hablar varios idiomas).
@@ -506,11 +514,20 @@ model LeaveBalance {
   @@unique([employeeId, year])
 }
 
+/// Ámbito: paisId (nacional de ese país) y/o localizacionId (local). Al menos uno (CHECK
+/// Holiday_ambito_chk, en SQL). Unicidad por índices PARCIALES, también en SQL (ver migración).
 model Holiday {
-  id       String   @id @default(cuid())
-  date     DateTime
-  name     String
-  location String? // null = festivo nacional
+  id             String        @id @default(cuid())
+  date           DateTime
+  name           String
+  location       String? // DEPRECADO: texto libre previo a paisId/localizacionId; se borrará en una migración posterior
+  pais           Pais?         @relation(fields: [paisId], references: [id], onDelete: Restrict)
+  paisId         String?
+  localizacion   Localizacion? @relation(fields: [localizacionId], references: [id], onDelete: Cascade)
+  localizacionId String?
+  validado       Boolean       @default(false) // false = pendiente de validación RRHH
+  aproximado     Boolean       @default(false) // p. ej. festivos lunares (fecha por confirmar)
+  fuente         String?
 }
 
 model TimeEntry {
@@ -730,11 +747,16 @@ model Job {
   hiringManagerId String?
   sociedad        Sociedad?     @relation(fields: [sociedadId], references: [id], onDelete: SetNull)
   sociedadId      String?
+  proyecto        Proyecto?     @relation(fields: [proyectoId], references: [id], onDelete: SetNull)
+  proyectoId      String?
   createdAt       DateTime      @default(now())
-  closedAt        DateTime?
+  openedAt        DateTime      @default(now()) // apertura REAL del proceso (editable); createdAt es solo de sistema
+  closedAt        DateTime? // cierre REAL (editable); null mientras la oferta no esté CERRADA
   applications    Application[]
 
   @@index([sociedadId])
+  @@index([proyectoId])
+  @@index([openedAt])
 }
 
 model Candidate {
@@ -752,27 +774,44 @@ model Candidate {
 }
 
 model Stage {
-  id           String        @id @default(cuid())
-  name         String        @unique
+  id           String             @id @default(cuid())
+  name         String             @unique
   order        Int
   applications Application[]
+  etapas       ApplicationEtapa[]
+}
+
+/// Historial de etapas de una candidatura (Selección II). Lo rellena moveStage desde la Tanda 2;
+/// los procesos históricos importados no traen etapa a etapa. RLS activado en la migración.
+model ApplicationEtapa {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  stage         Stage       @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  stageId       String
+  enteredAt     DateTime    @default(now())
+  byUserId      String?
+
+  @@index([applicationId, enteredAt])
 }
 
 model Application {
-  id          String            @id @default(cuid())
-  job         Job               @relation(fields: [jobId], references: [id])
-  jobId       String
-  candidate   Candidate         @relation(fields: [candidateId], references: [id])
-  candidateId String
-  stage       Stage?            @relation(fields: [stageId], references: [id])
-  stageId     String?
-  status      ApplicationStatus @default(ACTIVO)
-  rating      Float?
-  notes       String?
-  appliedAt   DateTime          @default(now())
-  interviews  Interview[]
-  evaluations Evaluation[]
-  decisions   AuditDecision[]
+  id                 String             @id @default(cuid())
+  job                Job                @relation(fields: [jobId], references: [id])
+  jobId              String
+  candidate          Candidate          @relation(fields: [candidateId], references: [id])
+  candidateId        String
+  stage              Stage?             @relation(fields: [stageId], references: [id])
+  stageId            String?
+  status             ApplicationStatus  @default(ACTIVO)
+  rating             Float?
+  notes              String?
+  appliedAt          DateTime           @default(now()) // fecha de postulación REAL (editable)
+  fechaIncorporacion DateTime? // solo CONTRATADO: fecha de incorporación del contratado
+  etapas             ApplicationEtapa[]
+  interviews         Interview[]
+  evaluations        Evaluation[]
+  decisions          AuditDecision[]
 
   @@unique([jobId, candidateId])
 }
