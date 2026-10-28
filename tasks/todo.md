@@ -121,7 +121,7 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 # Limpieza de producción (datos demo) · COMPLETADA el 2026-10-28
 - [x] Paso 1: 4 cuentas demo desactivadas (`isActive=false`, nunca DELETE) + 18 refresh tokens revocados (4 entradas en `AuditLog`).
 - [x] Script 02 (preflight + postcondiciones + idempotente) ensayado en dev y aplicado en producción con `commit=true`: borrados los 17 empleados demo y todo lo colgante, 8 departamentos, 12 festivos, 5 localizaciones, 6 sociedades demo, 2 países (Colombia, México); creadas 14 sociedades reales (7 SL España + 7 FZCO EAU); países = España, EAU, India. `AuditLog` 31 → 32 (+1 `CLEANUP`). Segunda pasada en dry-run: todos los deltas a 0.
-- [x] Cuentas activas en producción: `blanca.garcia@wowinx.com` y `oliver.perez@wowinx.com` (ADMIN, sin ficha). Reset de contraseña de Oliver pendiente de que lo haga él (lessons #24).
+- [x] Cuentas activas en producción: `blanca.garcia@wowinx.com` y `oliver.perez@wowinx.com` (ADMIN, sin ficha). Reset de contraseña de Oliver hecho por él con el método interactivo en prod y dev, login verificado (lessons #24).
 - [ ] **Recordatorio (~3-4 semanas, a partir del 2026-11-25): borrar `C:/Users/olcas/backups-humanx/prod-pre-limpieza-2026-10-28.sql`** (contiene hashes de contraseña de las cuentas demo). Fuera del repo.
 - [ ] Desinstalar el cliente PostgreSQL 16 sobrante (`C:/Users/olcas/pgclient`); se usa el 17 (`pgclient17`) porque Supabase corre 17.x.
 - [ ] Blanca carga datos reales desde la app: 16 departamentos y localizaciones (Madrid, Dubái, 3 en India).
