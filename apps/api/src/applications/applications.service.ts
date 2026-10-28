@@ -8,6 +8,7 @@ import {
   CreateApplicationDto,
   HireDto,
   MoveStageDto,
+  UpdateApplicationDto,
   UpdateInterviewDto,
 } from './applications.dto';
 
@@ -68,15 +69,56 @@ export class ApplicationsService {
   }
 
   async create(dto: CreateApplicationDto, viewer: AuthUser) {
-    await this.requireJob(dto.jobId, viewer);
     const nuevo = await this.db.stage.findUnique({ where: { name: 'Nuevo' } });
     if (!nuevo) throw new BadRequestException('Falta la etapa "Nuevo" en el pipeline.');
+    const job = await this.requireJob(dto.jobId, viewer);
+    if (dto.appliedAt && dto.appliedAt.slice(0, 10) < job.openedAt.toISOString().slice(0, 10)) {
+      throw new BadRequestException('La fecha de postulación no puede ser anterior a la apertura de la oferta.');
+    }
     const app = await this.db.application.create({
-      data: { jobId: dto.jobId, candidateId: dto.candidateId, stageId: nuevo.id },
+      data: {
+        jobId: dto.jobId,
+        candidateId: dto.candidateId,
+        stageId: nuevo.id,
+        ...(dto.appliedAt ? { appliedAt: new Date(dto.appliedAt) } : {}),
+      },
       include: { job: true, candidate: true, stage: true },
     });
     await this.audit(viewer.id, 'CREATE', app.id, null, app);
     return app;
+  }
+
+  /** Corrige fechas reales de una candidatura (postulación / incorporación). Audita antes y después. */
+  async updateDates(id: string, dto: UpdateApplicationDto, viewer: AuthUser) {
+    const app = await this.requireApplication(id, viewer);
+    const day = (d: Date | string) => (typeof d === 'string' ? d.slice(0, 10) : d.toISOString().slice(0, 10));
+    const appliedAt = dto.appliedAt ? new Date(dto.appliedAt) : app.appliedAt;
+    if (dto.appliedAt && day(dto.appliedAt) < day(app.job.openedAt)) {
+      throw new BadRequestException('La fecha de postulación no puede ser anterior a la apertura de la oferta.');
+    }
+    if (dto.fechaIncorporacion) {
+      if (app.status !== 'CONTRATADO') {
+        throw new BadRequestException('Solo una candidatura contratada tiene fecha de incorporación.');
+      }
+      if (day(dto.fechaIncorporacion) < day(appliedAt)) {
+        throw new BadRequestException('La incorporación no puede ser anterior a la postulación.');
+      }
+    }
+    const updated = await this.db.application.update({
+      where: { id },
+      data: {
+        ...(dto.appliedAt ? { appliedAt } : {}),
+        ...(dto.fechaIncorporacion ? { fechaIncorporacion: new Date(dto.fechaIncorporacion) } : {}),
+      },
+    });
+    await this.audit(
+      viewer.id,
+      'UPDATE',
+      id,
+      { appliedAt: app.appliedAt, fechaIncorporacion: app.fechaIncorporacion },
+      { appliedAt: updated.appliedAt, fechaIncorporacion: updated.fechaIncorporacion },
+    );
+    return updated;
   }
 
   async moveStage(id: string, dto: MoveStageDto, viewer: AuthUser) {
@@ -255,7 +297,7 @@ export class ApplicationsService {
 
       const application = await tx.application.update({
         where: { id: applicationId },
-        data: { status: 'CONTRATADO', stageId: contratado?.id },
+        data: { status: 'CONTRATADO', stageId: contratado?.id, fechaIncorporacion: new Date(dto.startDate) },
       });
 
       await tx.auditLog.create({

@@ -7,6 +7,7 @@ import {
   HireDto,
   MoveStageDto,
   RejectApplicationDto,
+  UpdateApplicationDto,
 } from './applications.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
@@ -30,6 +31,12 @@ export class ApplicationsController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateApplicationDto) {
     return this.service.create(dto, user);
+  }
+
+  @Roles('ADMIN', 'RRHH')
+  @Patch(':id')
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateApplicationDto) {
+    return this.service.updateDates(id, dto, user);
   }
 
   @Patch(':id/stage')

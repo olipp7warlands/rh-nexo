@@ -10,6 +10,7 @@ import {
   useUpdateInterview,
   useAddEvaluation,
   useRejectApplication,
+  useUpdateApplicationDates,
   type JobDetail,
 } from './useRecruitment';
 import { ApplicationStatusBadge } from './RecruitmentBadges';
@@ -36,6 +37,11 @@ export function CandidatePanel({
   const updateInterview = useUpdateInterview();
   const addEvaluation = useAddEvaluation();
   const reject = useRejectApplication();
+  const updateDates = useUpdateApplicationDates();
+  const [editingDates, setEditingDates] = useState(false);
+  const [appliedAtDraft, setAppliedAtDraft] = useState('');
+  const [incorpDraft, setIncorpDraft] = useState('');
+  const [datesError, setDatesError] = useState<string | null>(null);
 
   const [hiring, setHiring] = useState(false);
   const [interviewType, setInterviewType] = useState('tecnica');
@@ -103,6 +109,83 @@ export function CandidatePanel({
                 </div>
               )}
             </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-serif text-[13px] font-medium">Fechas</h3>
+              {canHire && !editingDates && (
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => {
+                    setAppliedAtDraft(application.appliedAt.slice(0, 10));
+                    setIncorpDraft(application.fechaIncorporacion?.slice(0, 10) ?? '');
+                    setDatesError(null);
+                    setEditingDates(true);
+                  }}
+                >
+                  Editar fechas
+                </Button>
+              )}
+            </div>
+            {!editingDates ? (
+              <div className="text-[13px] text-[var(--ink-secondary)] space-y-0.5">
+                <div>Postulación: {formatDate(application.appliedAt)}</div>
+                {application.status === 'CONTRATADO' && (
+                  <div>Incorporación: {application.fechaIncorporacion ? formatDate(application.fechaIncorporacion) : '—'}</div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="panel-postulacion" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                      Fecha de postulación
+                    </label>
+                    <Input id="panel-postulacion" type="date" value={appliedAtDraft} onChange={(e) => setAppliedAtDraft(e.target.value)} />
+                  </div>
+                  {application.status === 'CONTRATADO' && (
+                    <div>
+                      <label htmlFor="panel-incorporacion" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                        Fecha de incorporación
+                      </label>
+                      <Input id="panel-incorporacion" type="date" value={incorpDraft} onChange={(e) => setIncorpDraft(e.target.value)} />
+                    </div>
+                  )}
+                </div>
+                {datesError && (
+                  <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2">
+                    {datesError}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    type="button"
+                    disabled={updateDates.isPending || !appliedAtDraft}
+                    onClick={async () => {
+                      setDatesError(null);
+                      try {
+                        await updateDates.mutateAsync({
+                          id: applicationId,
+                          appliedAt: appliedAtDraft,
+                          fechaIncorporacion: application.status === 'CONTRATADO' && incorpDraft ? incorpDraft : undefined,
+                        });
+                        setEditingDates(false);
+                      } catch (e) {
+                        setDatesError((e as Error).message);
+                      }
+                    }}
+                  >
+                    {updateDates.isPending ? 'Guardando…' : 'Guardar fechas'}
+                  </Button>
+                  <Button variant="ghost" type="button" onClick={() => setEditingDates(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

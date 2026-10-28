@@ -16,6 +16,7 @@ import {
 import { ApplicationStatusBadge, JobStatusBadge } from './RecruitmentBadges';
 import { NuevaCandidaturaModal } from './NuevaCandidaturaModal';
 import { CandidatePanel } from './CandidatePanel';
+import { EditarProcesoModal } from './EditarProcesoModal';
 
 export function JobDetailPage() {
   const { jobId = '' } = useParams();
@@ -28,6 +29,7 @@ export function JobDetailPage() {
   const moveStage = useMoveStage();
   const reject = useRejectApplication();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<{ candidateId: string; applicationId: string } | null>(null);
   const [screenResult, setScreenResult] = useState<string | null>(null);
 
@@ -97,11 +99,18 @@ export function JobDetailPage() {
         eyebrow={job.department?.name ?? 'Talento'}
         title={job.title}
         subtitle={`${job.location}${job.remote ? ' (remoto)' : ''} · ${job.level} · ${job.openings} ${
-          job.openings === 1 ? 'apertura' : 'aperturas'
+          job.openings === 1 ? 'vacante' : 'vacantes'
+        } · Abierta el ${formatDate(job.openedAt)}${job.closedAt ? ` · Cerrada el ${formatDate(job.closedAt)}` : ''}${
+          job.proyecto ? ` · Proyecto ${job.proyecto.nombre}` : ''
         }`}
         actions={
           <>
             <JobStatusBadge status={job.status} />
+            {canHire && (
+              <Button variant="ghost" onClick={() => setEditing(true)}>
+                Editar proceso
+              </Button>
+            )}
             {canManage && (
               <Button variant="secondary" onClick={() => setAdding(true)}>
                 + Candidatura
@@ -222,6 +231,7 @@ export function JobDetailPage() {
       )}
 
       {adding && <NuevaCandidaturaModal jobId={jobId} onClose={() => setAdding(false)} />}
+      {editing && <EditarProcesoModal job={job} onClose={() => setEditing(false)} />}
       {selected && (
         <CandidatePanel
           candidateId={selected.candidateId}

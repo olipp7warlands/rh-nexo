@@ -38,7 +38,7 @@ function useViewMode(): [ViewMode, (v: ViewMode) => void] {
   return [view, update];
 }
 
-type SortKey = 'title' | 'department' | 'status' | 'totalApplications' | 'createdAt';
+type SortKey = 'title' | 'department' | 'status' | 'totalApplications' | 'openedAt';
 const COLUMNS: { key: SortKey | null; label: string }[] = [
   { key: 'title', label: 'Puesto' },
   { key: 'department', label: 'Departamento' },
@@ -49,7 +49,7 @@ const COLUMNS: { key: SortKey | null; label: string }[] = [
   { key: 'totalApplications', label: 'Candidaturas' },
   { key: null, label: 'Pipeline' },
   { key: null, label: 'Hiring manager' },
-  { key: 'createdAt', label: 'Creada' },
+  { key: 'openedAt', label: 'Apertura' },
 ];
 
 function sortValue(j: JobSummary, key: SortKey): string | number {
@@ -59,7 +59,7 @@ function sortValue(j: JobSummary, key: SortKey): string | number {
 
 function JobsTable({ jobs }: { jobs: JobSummary[] }) {
   const navigate = useNavigate();
-  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'createdAt', dir: 'desc' });
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'openedAt', dir: 'desc' });
 
   const sorted = [...jobs].sort((a, b) => {
     const va = sortValue(a, sort.key);
@@ -134,7 +134,7 @@ function JobsTable({ jobs }: { jobs: JobSummary[] }) {
               </td>
               <td className="px-4 py-3 text-[var(--ink-secondary)]">{job.hiringManager?.fullName ?? '—'}</td>
               <td className="px-4 py-3 mono text-[12px] text-[var(--ink-secondary)]">
-                {new Date(job.createdAt).toLocaleDateString('es-ES')}
+                {new Date(job.openedAt).toLocaleDateString('es-ES')}
               </td>
             </tr>
           ))}

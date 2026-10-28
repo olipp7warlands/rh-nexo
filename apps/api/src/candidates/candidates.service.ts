@@ -94,8 +94,22 @@ export class CandidatesService {
     const where: Prisma.ApplicationWhereInput = {
       ...(query.jobId ? { jobId: query.jobId } : {}),
       ...(query.status ? { status: query.status } : {}),
-      ...(query.sociedadId ? { job: { sociedadId: query.sociedadId } } : {}),
-      ...(query.q ? { candidate: { fullName: { contains: query.q, mode: 'insensitive' } } } : {}),
+      ...(query.sociedadId || query.proyectoId
+        ? {
+            job: {
+              ...(query.sociedadId ? { sociedadId: query.sociedadId } : {}),
+              ...(query.proyectoId ? { proyectoId: query.proyectoId } : {}),
+            },
+          }
+        : {}),
+      ...(query.q || query.location
+        ? {
+            candidate: {
+              ...(query.q ? { fullName: { contains: query.q, mode: 'insensitive' as const } } : {}),
+              ...(query.location ? { location: { contains: query.location, mode: 'insensitive' as const } } : {}),
+            },
+          }
+        : {}),
       ...(Object.keys(appliedAt).length ? { appliedAt } : {}),
     };
 
@@ -107,8 +121,17 @@ export class CandidatesService {
           id: true,
           status: true,
           appliedAt: true,
+          fechaIncorporacion: true,
           candidate: { select: { id: true, fullName: true, resumeUrl: true, linkedinUrl: true, location: true } },
-          job: { select: { id: true, title: true, sociedad: { select: { id: true, nombre: true } } } },
+          job: {
+            select: {
+              id: true,
+              title: true,
+              openedAt: true,
+              sociedad: { select: { id: true, nombre: true } },
+              proyecto: { select: { id: true, nombre: true } },
+            },
+          },
         },
         orderBy: [{ appliedAt: 'desc' }, { id: 'asc' }],
         skip: (page - 1) * pageSize,
@@ -126,6 +149,8 @@ export class CandidatesService {
             q: query.q ?? null,
             jobId: query.jobId ?? null,
             sociedadId: query.sociedadId ?? null,
+            proyectoId: query.proyectoId ?? null,
+            location: query.location ?? null,
             status: query.status ?? null,
             from: query.from ?? null,
             to: query.to ?? null,
@@ -151,7 +176,10 @@ export class CandidatesService {
         jobId: a.job.id,
         jobTitle: a.job.title,
         sociedad: a.job.sociedad,
+        proyecto: a.job.proyecto,
+        jobOpenedAt: a.job.openedAt,
         appliedAt: a.appliedAt,
+        fechaIncorporacion: a.fechaIncorporacion,
         status: a.status,
       })),
     };

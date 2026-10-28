@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { ContractType, JobStatus } from '@prisma/client';
 
 export class CreateJobDto {
@@ -12,6 +12,13 @@ export class CreateJobDto {
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
   @IsOptional() @IsString() sociedadId?: string;
+  @IsOptional() @IsString() proyectoId?: string;
+  /** Estado inicial (permite cargar procesos históricos ya cerrados). Por defecto ABIERTA. */
+  @IsOptional() @IsEnum(JobStatus) status?: JobStatus;
+  /** Apertura real del proceso (AAAA-MM-DD). Por defecto, hoy. */
+  @IsOptional() @IsDateString() openedAt?: string;
+  /** Cierre real. Solo con status CERRADA (si falta al cerrar, hoy). Debe ser >= apertura. */
+  @IsOptional() @IsDateString() closedAt?: string;
 }
 
 export class UpdateJobDto {
@@ -26,4 +33,8 @@ export class UpdateJobDto {
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
   @IsOptional() @IsString() sociedadId?: string;
+  @IsOptional() @IsString() proyectoId?: string;
+  @IsOptional() @IsDateString() openedAt?: string;
+  /** Solo con status CERRADA; al reabrir la oferta se pone a NULL automáticamente. */
+  @IsOptional() @IsDateString() closedAt?: string;
 }

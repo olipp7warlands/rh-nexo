@@ -16,6 +16,7 @@ const schema = z.object({
   source: z.string().optional(),
   linkedinUrl: z.string().optional(),
   resumeUrl: z.string().optional(),
+  appliedAt: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -32,7 +33,7 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { mode: 'nuevo', source: 'PORTAL' } });
+  } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { mode: 'nuevo', source: 'PORTAL', appliedAt: new Date().toISOString().slice(0, 10) } });
 
   const mode = watch('mode');
   const pending = createCandidate.isPending || createApplication.isPending;
@@ -61,7 +62,7 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
         setServerError('Selecciona un candidato.');
         return;
       }
-      await createApplication.mutateAsync({ candidateId, jobId });
+      await createApplication.mutateAsync({ candidateId, jobId, appliedAt: data.appliedAt || undefined });
       onClose();
     } catch (e) {
       setServerError((e as Error).message);
@@ -157,6 +158,16 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
             </div>
           </>
         )}
+
+        <div>
+          <label htmlFor="cand-postulacion" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+            Fecha de postulación
+          </label>
+          <Input id="cand-postulacion" type="date" {...register('appliedAt')} />
+          <p className="text-[11px] text-[var(--ink-tertiary)] mt-1">
+            Por defecto hoy. Para cargar un proceso histórico, pon la fecha real (no puede ser anterior a la apertura de la oferta).
+          </p>
+        </div>
 
         {errors.candidateId && <p className="text-[12px] text-[var(--danger)]">{errors.candidateId.message}</p>}
         {serverError && (
