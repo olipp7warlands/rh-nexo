@@ -4,14 +4,11 @@
 > Máx. 20 activas; purgar las ya incorporadas al código/config.
 
 ## Prisma
-1. **Enums en multilínea, siempre.** Prisma NO admite `enum X { A B C }` en una sola línea
-   (error confuso "This line is not an enum value definition" que apunta a líneas equivocadas
-   en cascada). Un valor por línea.
-2. **`prisma generate` desde la raíz necesita `@prisma/client` en la raíz.** El paquete dueño de
-   `prisma/schema.prisma` y del script de seed (aquí, la raíz del monorepo) debe declarar
-   `@prisma/client`, no solo `apps/api`. Si no, `generate` intenta auto-instalarlo y falla.
-3. **`migrate dev` auto-siembra.** Usar `--skip-seed` cuando se quiera controlar el seed aparte
-   y evitar dobles inserciones / errores de unicidad.
+1. **Prisma, tres trampas de arranque.** (a) Enums en multilínea, un valor por línea: `enum X { A B C }`
+   en una línea da un error confuso que apunta a líneas equivocadas. (b) `prisma generate` desde
+   la raíz necesita `@prisma/client` declarado en la raíz (dueña de `schema.prisma` y del seed),
+   si no intenta auto-instalarlo y falla. (c) `migrate dev` auto-siembra: usar `--skip-seed` para
+   controlar el seed aparte. (Antes #1-#3; fusionadas, la numeración se mantiene.)
 
 ## Monorepo / TypeScript (pnpm)
 4. **Cada paquete declara los tipos que consume.** Con el aislamiento de pnpm, `packages/ui` no
@@ -32,10 +29,9 @@
    siquiera se dispare la petición. Replicarlo en cualquier página nueva restringida por rol.
 
 ## Verificación
-8. **El patrón glob de Vitest importa.** `*.spec.ts` NO casa con `auth.e2e-spec.ts` (es `-spec.ts`).
-   Usar `*spec.ts` en `include` para aceptar ambas convenciones.
-9. **NestJS bajo Vitest requiere SWC.** La DI y class-validator dependen de la metadata de
-   decoradores; usar `unplugin-swc` en `vitest.config.ts` (esbuild solo no la emite).
+8. **Vitest + NestJS: glob y SWC.** `*.spec.ts` NO casa con `auth.e2e-spec.ts` (es `-spec.ts`): usar
+   `*spec.ts` en `include`. Y la DI/class-validator necesitan metadata de decoradores: `unplugin-swc`
+   en `vitest.config.ts` (esbuild solo no la emite). (Antes #8-#9.)
 10. **Nunca comparar contra un `count()` en vivo entre specs.** Todos los ficheros
     `*.e2e-spec.ts` corren en paralelo contra el mismo Postgres; `employees.e2e-spec.ts` crea y
     borra un empleado de prueba durante su ejecución, así que cualquier otro test que haga
@@ -152,3 +148,24 @@
     no lo hace, ver #20) y comprobar que todas tienen `relrowsecurity = true`. Antes de dar por
     perdido dev, mirar el panel: pausado ≠ borrado. (La lección #5, `*.tsbuildinfo`, se purgó:
     ya está en `.gitignore`; la numeración se mantiene porque hay referencias a #14, #19 y #20.)
+
+## Operaciones sobre producción
+22. **Tras cada compactación de sesión, re-verificar contra la base antes de afirmar nada.** El
+    2026-10-28 la compactación me hizo perder un hecho verificado (la migración
+    `20261015121114` SÍ estaba aplicada en producción desde el 17-oct) y llegué a darla por
+    pendiente en un informe. Regla: antes de afirmar el estado de migraciones, datos o cuentas,
+    consultarlo en vivo (`_prisma_migrations`, `information_schema`, conteos); el resumen de la
+    sesión no es una fuente.
+23. **backup verificado → commit, en ese orden y nombrando el backup.** El 2026-10-28 el
+    `commit=true` de la limpieza de producción se ejecutó antes del backup programado acordado
+    (confirmé con un backup descrito como «de esta noche», sin comprobar yo que fuera el programado).
+    Sin consecuencias, pero el orden no es negociable: la confirmación de cualquier
+    operación destructiva debe nombrar el backup concreto (fecha/origen) y yo lo cito de vuelta
+    antes de ejecutar, en vez de dar por buena una descripción genérica.
+24. **Contraseñas: nunca por línea de comandos ni por el chat; solo entrada interactiva o variable
+    de entorno tecleada por la persona.** Un argumento queda en el historial y la shell lo
+    escapa; el chat las conserva. El 2026-10-28 creé `oliver.perez@wowinx.com` con una
+    contraseña dada en el chat (vía `ADMIN_PASSWORD` en la propia orden) y hubo que resetearla.
+    El diagnóstico demostró que el hash sí coincidía (el fallo estaba en lo tecleado en el
+    login, no en el escapado), pero la regla sigue: `scripts/create-admin-user.mjs` lee
+    `ADMIN_PASSWORD` o prompt enmascarado; la persona lo ejecuta en su terminal.
