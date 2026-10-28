@@ -17,5 +17,18 @@ catálogos de Tanda 2, `Categoria`, `Stage` ni las plantillas.
 
 Respaldo previo: backup automático de Supabase (madrugada del 28-oct) y `pg_dump --data-only`
 local de las tablas afectadas (fuera del repo; contiene hashes de contraseña, borrar hacia el
-2026-11-25). Se ejecutaron con un runner de Prisma que aplica el mismo SQL sin las
-meta-órdenes de `psql` (no había cliente instalado entonces) y hace `ROLLBACK` en modo dry-run.
+2026-11-25).
+
+## Runner: `run-sql.cjs`
+
+Los SQL se ejecutaron con este runner de Prisma porque no había cliente `psql` instalado. Aplica el
+mismo SQL sin las meta-órdenes de `psql` (`\echo`, `\if`, `BEGIN/COMMIT/ROLLBACK`), todo en UNA
+transacción, imprime los recuentos antes/después y en modo `dry` hace `ROLLBACK`. Aborta si el
+proyecto de la conexión no es el esperado. No contiene credenciales: lee `DIRECT_URL` del entorno.
+
+```
+node --env-file=<envfile> scripts/limpieza-2026-10/run-sql.cjs <fichero.sql> <refSupabaseEsperada> <dry|commit>
+```
+
+Nota: la ruta al `package.json` de la raíz (para resolver `@prisma/client`) está fija en el script
+(`createRequire('C:/Proyectos CLAUDE/nucleo-humanx/package.json')`); ajustarla en otra máquina.
