@@ -108,15 +108,21 @@ const SOCIEDAD_SERVICIOS = new Set(['e1', 'e2', 'e16', 'e17']);
 // Dos perfiles externos (freelance) de ejemplo; el resto son plantilla.
 const VINCULO_EXTERNO = new Set(['e9', 'e13']);
 
-// Fechas pensadas para caer dentro de la ventana de alertas de Agenda/Inicio (~6 semanas
-// vista desde "hoy" en el momento de sembrar) — si el seed envejece, basta con adelantarlas.
+// Fechas RELATIVAS a "hoy" (momento de sembrar) para caer siempre dentro de la ventana de
+// alertas de Agenda/Inicio (-7/+42 días, ver agenda.service.ts). Con fechas absolutas el seed
+// caducaba y la suite e2e se ponía en rojo. Mantener los offsets dentro de 0..+40.
+const enDias = (n: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 const FIN_PERIODO_PRUEBA: Record<string, string> = {
-  e4: '2026-07-30', // Sofía Navarro, ONBOARDING — fin de prueba próximo
-  e13: '2026-08-15', // Raúl Domínguez, ONBOARDING — fin de prueba próximo
+  e4: enDias(10), // Sofía Navarro, ONBOARDING — fin de prueba próximo
+  e13: enDias(25), // Raúl Domínguez, ONBOARDING — fin de prueba próximo
 };
 const VENCIMIENTO_CONTRATO: Record<string, string> = {
-  e9: '2026-08-01', // María Fernández, colaboración externa — vencimiento próximo
-  e13: '2026-07-25', // Raúl Domínguez, colaboración externa — vencimiento próximo
+  e9: enDias(30), // María Fernández, colaboración externa — vencimiento próximo
+  e13: enDias(15), // Raúl Domínguez, colaboración externa — vencimiento próximo
 };
 // humanX Tanda 2 — datos de ejemplo para verificar la ficha reorganizada; el resto de
 // empleados nace con estos campos vacíos (RH los completa desde la ficha/modal).
