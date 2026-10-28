@@ -6,7 +6,7 @@ import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useDepartments } from '../employees/useDepartments';
 import { useEmployees } from '../employees/useEmployees';
-import { useSociedades } from '../estructura/useEstructura';
+import { useProyectos, useSociedades } from '../estructura/useEstructura';
 import { useCreateJob } from './useRecruitment';
 
 const schema = z.object({
@@ -18,7 +18,18 @@ const schema = z.object({
   openings: z.coerce.number().int().min(1).optional(),
   hiringManagerId: z.string().optional(),
   sociedadId: z.string().optional(),
+  proyectoId: z.string().optional(),
   description: z.string().optional(),
+  status: z.enum(['ABIERTA', 'PAUSADA', 'CERRADA']),
+  openedAt: z.string().min(1, 'Obligatoria'),
+  closedAt: z.string().optional(),
+}).superRefine((d, ctx) => {
+  if (d.status === 'CERRADA') {
+    if (!d.closedAt) ctx.addIssue({ code: 'custom', path: ['closedAt'], message: 'Obligatoria en una oferta cerrada' });
+    else if (d.openedAt && d.closedAt < d.openedAt) {
+      ctx.addIssue({ code: 'custom', path: ['closedAt'], message: 'No puede ser anterior a la apertura' });
+    }
+  }
 });
 type FormData = z.infer<typeof schema>;
 
@@ -29,13 +40,19 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const { data: departments } = useDepartments();
   const { data: employees } = useEmployees();
   const { data: sociedades } = useSociedades();
+  const { data: proyectos } = useProyectos();
   const create = useCreateJob();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { openings: 1 } });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { openings: 1, status: 'ABIERTA', openedAt: new Date().toISOString().slice(0, 10) },
+  });
+  const status = watch('status');
 
   const onSubmit = handleSubmit(async (data) => {
     setServerError(null);
@@ -49,7 +66,11 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
         openings: data.openings,
         hiringManagerId: data.hiringManagerId || undefined,
         sociedadId: data.sociedadId || undefined,
+        proyectoId: data.proyectoId || undefined,
         description: data.description || undefined,
+        status: data.status,
+        openedAt: data.openedAt,
+        closedAt: data.status === 'CERRADA' ? data.closedAt : undefined,
       });
       onClose();
     } catch (e) {
@@ -112,6 +133,47 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <input type="checkbox" className="w-4 h-4 accent-[var(--accent)]" {...register('remote')} />
           Remoto
         </label>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label htmlFor="oferta-estado" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+              Estado
+            </label>
+            <select id="oferta-estado" className={selectClass} {...register('status')}>
+              <option value="ABIERTA">Abierta</option>
+              <option value="PAUSADA">Pausada</option>
+              <option value="CERRADA">Cerrada</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="oferta-apertura" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+              Fecha de apertura
+            </label>
+            <Input id="oferta-apertura" type="date" {...register('openedAt')} />
+            {errors.openedAt && <p className="text-[12px] text-[var(--danger)] mt-1.5">{errors.openedAt.message}</p>}
+          </div>
+          {status === 'CERRADA' && (
+            <div>
+              <label htmlFor="oferta-cierre" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                Fecha de cierre
+              </label>
+              <Input id="oferta-cierre" type="date" {...register('closedAt')} />
+              {errors.closedAt && <p className="text-[12px] text-[var(--danger)] mt-1.5">{errors.closedAt.message}</p>}
+            </div>
+          )}
+        </div>
+        <div>
+          <label htmlFor="oferta-proyecto" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+            Proyecto (opcional)
+          </label>
+          <select id="oferta-proyecto" className={selectClass} {...register('proyectoId')}>
+            <option value="">Sin proyecto</option>
+            {proyectos?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <label htmlFor="oferta-sociedad" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
             Sociedad

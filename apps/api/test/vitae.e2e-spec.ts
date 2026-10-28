@@ -223,6 +223,8 @@ describe('VITAE — Reclutamiento (integración)', () => {
     expect(res.body.employee.jobTitle).toBe('Senior Frontend Engineer');
     expect(res.body.onboarding.tareas.length).toBeGreaterThan(0);
     expect(res.body.application.status).toBe('CONTRATADO');
+    // Selección II: la incorporación del contratado queda en la candidatura (fuente del histórico).
+    expect(res.body.application.fechaIncorporacion).toBe('2026-08-01T00:00:00.000Z');
 
     const auditLog = await db.auditLog.findFirst({
       where: { entity: 'Employee', entityId: hiredEmployeeId, action: 'CREATE' },

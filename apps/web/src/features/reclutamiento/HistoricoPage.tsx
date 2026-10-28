@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Card, Input, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
-import { useSociedades } from '../estructura/useEstructura';
+import { useProyectos, useSociedades } from '../estructura/useEstructura';
 import { formatDate } from '../../lib/format';
 import { useHistorico, useJob, useJobs, type ApplicationStatus, type HistoricoItem } from './useRecruitment';
 import { ApplicationStatusBadge } from './RecruitmentBadges';
@@ -22,7 +22,7 @@ const fieldClass =
   'w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none';
 const labelClass = 'block text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-1.5';
 
-const COLUMNS = ['Nombre', 'CV', 'LinkedIn', 'Ubicación', 'Puesto', 'Sociedad', 'Postulación', 'Estado'];
+const COLUMNS = ['Nombre', 'CV', 'LinkedIn', 'Ubicación', 'Puesto', 'Sociedad', 'Proyecto', 'Postulación', 'Incorporación', 'Estado'];
 
 /** Abre la ficha del candidato (CandidatePanel necesita la oferta de esa candidatura). */
 function HistoricoCandidatePanel({ item, onClose }: { item: HistoricoItem; onClose: () => void }) {
@@ -41,6 +41,8 @@ export function HistoricoPage() {
   const q = params.get('q') ?? '';
   const jobId = params.get('puesto') ?? '';
   const sociedadId = params.get('sociedad') ?? '';
+  const proyectoId = params.get('proyecto') ?? '';
+  const location = params.get('ubicacion') ?? '';
   const status = (params.get('estado') ?? '') as ApplicationStatus | '';
   const from = params.get('desde') ?? '';
   const to = params.get('hasta') ?? '';
@@ -69,13 +71,26 @@ export function HistoricoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qInput]);
 
+  // La ubicación (texto libre) también se escribe en la URL con retardo, igual que el nombre.
+  const [locInput, setLocInput] = useState(location);
+  useEffect(() => setLocInput(location), [location]);
+  useEffect(() => {
+    if (locInput === location) return;
+    const t = setTimeout(() => setParam('ubicacion', locInput.trim()), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locInput]);
+
   const { data: jobs } = useJobs(canView);
   const { data: sociedades } = useSociedades();
+  const { data: proyectos } = useProyectos();
   const { data, isLoading, isError, error, isFetching } = useHistorico(
     {
       q: q || undefined,
       jobId: jobId || undefined,
       sociedadId: sociedadId || undefined,
+      proyectoId: proyectoId || undefined,
+      location: location || undefined,
       status: status || undefined,
       from: from || undefined,
       to: to || undefined,
@@ -85,7 +100,7 @@ export function HistoricoPage() {
     canView,
   );
 
-  const hasFilters = !!(q || jobId || sociedadId || status || from || to);
+  const hasFilters = !!(q || jobId || sociedadId || proyectoId || location || status || from || to);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   if (!canView) {
@@ -176,6 +191,25 @@ export function HistoricoPage() {
             <input id="hist-hasta" type="date" className={fieldClass} value={to} min={from || undefined} onChange={(e) => setParam('hasta', e.target.value)} />
           </div>
         </div>
+        <div className="col-span-2">
+          <label htmlFor="hist-ubicacion" className={labelClass}>
+            Ubicación del candidato
+          </label>
+          <Input id="hist-ubicacion" type="search" placeholder="Ciudad o país…" value={locInput} onChange={(e) => setLocInput(e.target.value)} />
+        </div>
+        <div className="col-span-2">
+          <label htmlFor="hist-proyecto" className={labelClass}>
+            Proyecto
+          </label>
+          <select id="hist-proyecto" className={fieldClass} value={proyectoId} onChange={(e) => setParam('proyecto', e.target.value)}>
+            <option value="">Todos</option>
+            {proyectos?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
       </form>
 
       <div className="flex items-center justify-between mb-4 min-h-8">
@@ -255,7 +289,11 @@ export function HistoricoPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-[var(--ink-secondary)]">{it.sociedad?.nombre ?? '—'}</td>
+                  <td className="px-4 py-3 text-[var(--ink-secondary)]">{it.proyecto?.nombre ?? '—'}</td>
                   <td className="px-4 py-3 mono text-[12px] text-[var(--ink-secondary)]">{formatDate(it.appliedAt)}</td>
+                  <td className="px-4 py-3 mono text-[12px] text-[var(--ink-secondary)]">
+                    {it.fechaIncorporacion ? formatDate(it.fechaIncorporacion) : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <ApplicationStatusBadge status={it.status} />
                   </td>

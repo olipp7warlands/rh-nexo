@@ -4,6 +4,15 @@ import { ContractType } from '@prisma/client';
 export class CreateApplicationDto {
   @IsString() candidateId!: string;
   @IsString() jobId!: string;
+  /** Fecha de postulación real (AAAA-MM-DD). Por defecto, ahora. Debe ser >= apertura de la oferta. */
+  @IsOptional() @IsDateString() appliedAt?: string;
+}
+
+/** Corrección de fechas de una candidatura (cargas históricas). Solo ADMIN/RRHH. */
+export class UpdateApplicationDto {
+  @IsOptional() @IsDateString() appliedAt?: string;
+  /** Solo candidaturas CONTRATADO. Debe ser >= fecha de postulación. */
+  @IsOptional() @IsDateString() fechaIncorporacion?: string;
 }
 
 export class MoveStageDto {

@@ -18,6 +18,9 @@ export class HistoricoQueryDto {
   @IsOptional() @IsString() @MaxLength(200) q?: string;
   @IsOptional() @IsString() @MaxLength(50) jobId?: string;
   @IsOptional() @IsString() @MaxLength(50) sociedadId?: string;
+  @IsOptional() @IsString() @MaxLength(50) proyectoId?: string;
+  /** Ubicación del candidato (contiene, sin distinguir mayúsculas). */
+  @IsOptional() @IsString() @MaxLength(200) location?: string;
   @IsOptional() @IsEnum(ApplicationStatus) status?: ApplicationStatus;
   /** Rango sobre la fecha de postulación. `to` es inclusivo (si llega solo la fecha, hasta fin de día). */
   @IsOptional() @IsDateString() from?: string;

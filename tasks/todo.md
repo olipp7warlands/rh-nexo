@@ -134,3 +134,12 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [ ] Calendarios 2026 de fuentes oficiales (BOE/Madrid, EAU, India + Karnataka/Maharashtra/Delhi), cargados como SQL revisado e idempotente marcado «pendiente de validación RRHH», DESPUÉS de crear las localizaciones. 2027 cuando se publique.
 - [ ] Suite e2e en rojo (ver «Pendiente aparte» arriba) sigue sin resolver.
 
+
+# Selección II · Tanda 1 · rama `feat/seleccion-ii-tanda-1` (2026-10-28)
+- [x] Migración consolidada `20261028214546_seleccion_ii_fechas_proyecto_festivos_feed` aplicada en dev y test (producción PENDIENTE: backup verificado y nombrado → `migrate deploy` → merge). Objetos manuales y deriva esperada documentados en su README.
+- [x] Fechas reales: `Job.openedAt`/`closedAt` (cierre solo con CERRADA, cierre >= apertura, reabrir => NULL), `Application.appliedAt` editable, `fechaIncorporacion` (hire + PATCH). UI: Nueva oferta, Editar proceso, fecha de postulación, edición de fechas en la ficha, columna «Apertura».
+- [x] Histórico: filtros ubicación y proyecto (URL + auditoría) y columnas Proyecto/Incorporación.
+- [x] Importación: `scripts/importacion-procesos/` (dry-run/commit, idempotente, email técnico `@candidatos.humanx.invalid`). Plantilla CSV pendiente de entregar a Blanca; CSV real fuera del repo y se borra tras la carga.
+- [x] Tests: 24 nuevos; suite e2e 198/198 contra test.
+- [ ] Tanda 2: analítica + `ApplicationEtapa` en `moveStage` + festivos (leaveDays, /holidays, calendario) + calendarios 2026. Tanda 3: feed ICS (columnas del token ya en la migración).
+- [ ] Aviso: la pantalla de login de dev precarga `admin@grupo.com` (cuenta demo ya inactiva); revisar si el valor por defecto sigue haciendo falta.

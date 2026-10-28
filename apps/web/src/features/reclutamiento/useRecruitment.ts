@@ -34,7 +34,11 @@ export interface JobSummary {
   hiringManager: { id: string; fullName: string } | null;
   sociedadId: string | null;
   sociedad: { id: string; nombre: string } | null;
+  proyectoId: string | null;
+  proyecto: { id: string; nombre: string } | null;
   createdAt: string;
+  /** Apertura REAL del proceso (editable). `createdAt` es solo de sistema. */
+  openedAt: string;
   closedAt: string | null;
   totalApplications: number;
   byStage: Record<string, number>;
@@ -94,6 +98,7 @@ export interface ApplicationItem {
   rating: number | null;
   notes: string | null;
   appliedAt: string;
+  fechaIncorporacion: string | null;
   candidate: CandidateRef;
   stage: Stage | null;
   interviews: Pick<InterviewItem, 'id' | 'type' | 'status' | 'scheduledAt'>[];
@@ -104,6 +109,7 @@ export interface CandidateApplicationDetail {
   id: string;
   status: ApplicationStatus;
   appliedAt: string;
+  fechaIncorporacion: string | null;
   job: { id: string; title: string };
   stage: Stage | null;
   interviews: InterviewItem[];
@@ -185,7 +191,31 @@ export function useCreateJob() {
       description?: string;
       hiringManagerId?: string;
       sociedadId?: string;
+      proyectoId?: string;
+      status?: JobStatus;
+      openedAt?: string;
+      closedAt?: string;
     }) => api.post<JobDetail>('/jobs', data),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Edición del ciclo de vida de una oferta (estado, apertura, cierre, proyecto). Solo ADMIN/RRHH. */
+export function useUpdateJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; status?: JobStatus; openedAt?: string; closedAt?: string; proyectoId?: string }) =>
+      api.patch<JobDetail>(`/jobs/${id}`, data),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Corrige fechas reales de una candidatura (postulación / incorporación). Solo ADMIN/RRHH. */
+export function useUpdateApplicationDates() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; appliedAt?: string; fechaIncorporacion?: string }) =>
+      api.patch<ApplicationItem>(`/applications/${id}`, data),
     onSuccess: () => invalidate(qc),
   });
 }
@@ -210,6 +240,8 @@ export interface HistoricoFilters {
   q?: string;
   jobId?: string;
   sociedadId?: string;
+  proyectoId?: string;
+  location?: string;
   status?: ApplicationStatus;
   from?: string;
   to?: string;
@@ -227,7 +259,10 @@ export interface HistoricoItem {
   jobId: string;
   jobTitle: string;
   sociedad: { id: string; nombre: string } | null;
+  proyecto: { id: string; nombre: string } | null;
+  jobOpenedAt: string;
   appliedAt: string;
+  fechaIncorporacion: string | null;
   status: ApplicationStatus;
 }
 
@@ -257,7 +292,7 @@ export function useHistorico(filters: HistoricoFilters, enabled = true) {
 export function useCreateApplication() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { candidateId: string; jobId: string }) => api.post<ApplicationItem>('/applications', data),
+    mutationFn: (data: { candidateId: string; jobId: string; appliedAt?: string }) => api.post<ApplicationItem>('/applications', data),
     onSuccess: () => invalidate(qc),
   });
 }
