@@ -116,7 +116,7 @@ function AccordionNavGroup({
 }: {
   label: string;
   path: string;
-  subItems: readonly { key: string; label: string; path: string }[];
+  subItems: readonly { key: string; label: string; path: string; roles?: readonly string[] }[];
   Icon?: ComponentType<{ className?: string }>;
   isOnGroupPage: boolean;
   isExpanded: boolean;
@@ -291,7 +291,11 @@ export function Sidebar() {
               const Icon = ICONS[item.key];
               const soon = 'soon' in item && item.soon;
               const tag = 'tag' in item ? item.tag : undefined;
-              const children = 'children' in item ? item.children : undefined;
+              // Sub-entradas con `roles` (p. ej. Festivos) solo las ven esos roles.
+              const children =
+                'children' in item
+                  ? item.children.filter((c) => !('roles' in c) || (!!user && (c.roles as readonly string[]).includes(user.role)))
+                  : undefined;
 
               if (children) {
                 const isOnGroupPage = location.pathname.startsWith(item.path);
