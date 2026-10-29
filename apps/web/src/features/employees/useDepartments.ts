@@ -8,7 +8,7 @@ export interface DepartmentWithMeta {
   color: string;
   leadId: string | null;
   lead?: EmployeeRef | null;
-  _count: { members: number };
+  _count: { members: number; jobs: number };
 }
 
 export function useDepartments() {

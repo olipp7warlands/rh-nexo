@@ -81,6 +81,15 @@ export function useHolidaysManage() {
   return useQuery({ queryKey: ['holidays', 'manage'], queryFn: () => api.get<Holiday[]>('/holidays/manage') });
 }
 
+/** Elimina un festivo PENDIENTE (409 si está validado: hay que marcarlo antes como pendiente). */
+export function useDeleteHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ id: string; deleted: true }>(`/holidays/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['holidays'] }),
+  });
+}
+
 export function useUpdateHoliday() {
   const qc = useQueryClient();
   return useMutation({

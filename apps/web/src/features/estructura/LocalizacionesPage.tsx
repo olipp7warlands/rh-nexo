@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
 import { Button, Card } from '@nucleo/ui';
+import { FilaAcciones, razonEnUso } from '../_shared/AccionesMenu';
 import { useAuth } from '../auth/AuthContext';
 import { useLocalizaciones, useDeleteLocalizacion, type Localizacion } from './useEstructura';
 import { LocalizacionModal } from './LocalizacionModal';
@@ -14,17 +14,7 @@ export function LocalizacionesPage() {
 
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Localizacion | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const onDelete = async (l: Localizacion) => {
-    if (!window.confirm(`¿Eliminar la localización "${l.nombre}"?`)) return;
-    setDeleteError(null);
-    try {
-      await remove.mutateAsync(l.id);
-    } catch (e) {
-      setDeleteError((e as Error).message);
-    }
-  };
 
   const sinPais = (localizaciones ?? []).filter((l) => !l.paisId);
 
@@ -49,13 +39,6 @@ export function LocalizacionesPage() {
       {error && (
         <Card>
           <p className="text-[var(--danger)] text-[13px]">No se pudo cargar: {(error as Error).message}</p>
-        </Card>
-      )}
-      {deleteError && (
-        <Card className="mb-4">
-          <p role="alert" className="text-[var(--danger)] text-[13px]">
-            {deleteError}
-          </p>
         </Card>
       )}
       {isLoading && (
@@ -92,23 +75,16 @@ export function LocalizacionesPage() {
                   <td className="px-5 py-4 mono text-[var(--ink-secondary)]">{l._count.empleados}</td>
                   <td className="px-5 py-4">
                     {canManage && (
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setEditing(l)}
-                          aria-label={`Editar ${l.nombre}`}
-                          className="p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)]"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(l)}
-                          disabled={remove.isPending}
-                          aria-label={`Eliminar ${l.nombre}`}
-                          className="p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <FilaAcciones
+                        label={`Acciones de la localización ${l.nombre}`}
+                        onEdit={() => setEditing(l)}
+                        eliminar={{
+                          title: 'Eliminar la localización',
+                          message: `¿Eliminar la localización «${l.nombre}»? Esta acción no se puede deshacer.`,
+                          disabledReason: razonEnUso([[l._count.empleados, 'persona', 'personas'], [l._count.festivos, 'festivo', 'festivos']]),
+                          onConfirm: () => remove.mutateAsync(l.id),
+                        }}
+                      />
                     )}
                   </td>
                 </tr>

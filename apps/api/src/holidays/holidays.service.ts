@@ -30,6 +30,38 @@ export class HolidaysService {
     return this.db.holiday.findMany({ include: WITH_SCOPE, orderBy: [{ date: 'asc' }, { name: 'asc' }] });
   }
 
+  /**
+   * Elimina un festivo PENDIENTE (p. ej. cargado por error). Un festivo validado está confirmado por
+   * RRHH y no se elimina: hay que marcarlo como pendiente antes (dos pasos conscientes). Auditado.
+   */
+  async remove(id: string, viewer: AuthUser) {
+    const before = await this.db.holiday.findUnique({ where: { id }, include: WITH_SCOPE });
+    if (!before) throw new NotFoundException('Festivo no encontrado');
+    if (before.validado) {
+      throw new ConflictException('Un festivo validado no se elimina: márcalo primero como pendiente.');
+    }
+    await this.db.$transaction([
+      this.db.holiday.delete({ where: { id } }),
+      this.db.auditLog.create({
+        data: {
+          actorId: viewer.id,
+          action: 'DELETE',
+          entity: 'Holiday',
+          entityId: id,
+          before: {
+            date: before.date.toISOString().slice(0, 10),
+            name: before.name,
+            ambito: before.localizacion?.nombre ?? before.pais?.nombre ?? null,
+            validado: before.validado,
+            aproximado: before.aproximado,
+            fuente: before.fuente,
+          },
+        },
+      }),
+    ]);
+    return { id, deleted: true };
+  }
+
   /** Marca un festivo como validado y/o confirma su fecha. Auditado con antes/después. */
   async update(id: string, dto: UpdateHolidayDto, viewer: AuthUser) {
     const before = await this.db.holiday.findUnique({ where: { id } });

@@ -1,10 +1,11 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertSinReferencias } from '../lib/delete-blockers';
 import { CreateDepartmentDto, UpdateDepartmentDto } from './department.dto';
 
 const WITH_META = {
   lead: { select: { id: true, fullName: true } },
-  _count: { select: { members: true } },
+  _count: { select: { members: true, jobs: true } },
 };
 
 @Injectable()
@@ -28,14 +29,13 @@ export class DepartmentsService {
   async remove(id: string) {
     const dept = await this.db.department.findUnique({
       where: { id },
-      include: { _count: { select: { members: true } } },
+      include: { _count: { select: { members: true, jobs: true } } },
     });
     if (!dept) throw new NotFoundException('Departamento no encontrado');
-    if (dept._count.members > 0) {
-      throw new ConflictException(
-        `No se puede eliminar: ${dept._count.members} persona(s) siguen asignadas a este departamento.`,
-      );
-    }
+    assertSinReferencias('el departamento', [
+      { n: dept._count.members, singular: 'persona', plural: 'personas' },
+      { n: dept._count.jobs, singular: 'oferta', plural: 'ofertas' },
+    ]);
     return this.db.department.delete({ where: { id } });
   }
 

@@ -3,7 +3,8 @@ import { Button, Card } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { formatDate } from '../../lib/format';
 import { HolidayMarks, ambitoLabel } from '../absences/HolidayMarks';
-import { useHolidaysManage, useUpdateHoliday } from '../absences/useAbsences';
+import { useDeleteHoliday, useHolidaysManage, useUpdateHoliday } from '../absences/useAbsences';
+import { FilaAcciones } from '../_shared/AccionesMenu';
 import type { Holiday } from '../absences/useAbsences';
 
 const selectClass =
@@ -17,6 +18,7 @@ const selectClass =
 export function FestivosPage() {
   const { data: festivos, isLoading, error } = useHolidaysManage();
   const update = useUpdateHoliday();
+  const remove = useDeleteHoliday();
   const [ambito, setAmbito] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [confirming, setConfirming] = useState<Holiday | null>(null);
@@ -42,6 +44,10 @@ export function FestivosPage() {
   const validar = (h: Holiday) => {
     setMessage(null);
     update.mutate({ id: h.id, validado: true }, { onSuccess: () => setMessage({ type: 'ok', text: `«${h.name}» validado.` }), onError: fail });
+  };
+  const marcarPendiente = (h: Holiday) => {
+    setMessage(null);
+    update.mutate({ id: h.id, validado: false }, { onSuccess: () => setMessage({ type: 'ok', text: `«${h.name}» vuelve a pendiente de validación.` }), onError: fail });
   };
   const confirmarFecha = () => {
     if (!confirming || !fecha) return;
@@ -106,7 +112,7 @@ export function FestivosPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-[var(--bg-subtle)] border-b border-[var(--line)]">
-                {['Fecha', 'Festivo', 'Ámbito', 'Estado', 'Fuente', ''].map((h) => (
+                {['Fecha', 'Festivo', 'Ámbito', 'Estado', 'Fuente', 'Acciones'].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]">
                     {h}
                   </th>
@@ -129,18 +135,23 @@ export function FestivosPage() {
                     <td className="px-5 py-3 text-[12px] text-[var(--ink-tertiary)] max-w-[220px] truncate" title={h.fuente ?? undefined}>
                       {h.fuente ?? '—'}
                     </td>
-                    <td className="px-5 py-3 text-right whitespace-nowrap">
-                      {h.aproximado ? (
-                        <Button variant="secondary" size="sm" type="button" onClick={() => { setFecha(h.date.slice(0, 10)); setConfirming(h); }}>
-                          Confirmar fecha
-                        </Button>
-                      ) : (
-                        !h.validado && (
-                          <Button variant="secondary" size="sm" type="button" disabled={update.isPending} onClick={() => validar(h)} aria-label={`Marcar «${h.name}» como validado`}>
-                            Marcar validado
-                          </Button>
-                        )
-                      )}
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <FilaAcciones
+                        label={`Acciones del festivo ${h.name}`}
+                        extra={[
+                          ...(h.aproximado
+                            ? [{ key: 'confirmar', label: 'Confirmar fecha', onSelect: () => { setFecha(h.date.slice(0, 10)); setConfirming(h); } }]
+                            : !h.validado
+                              ? [{ key: 'validar', label: 'Marcar validado', onSelect: () => validar(h) }]
+                              : [{ key: 'pendiente', label: 'Marcar como pendiente', onSelect: () => marcarPendiente(h) }]),
+                        ]}
+                        eliminar={{
+                          title: 'Eliminar festivo',
+                          message: `¿Eliminar el festivo «${h.name}» (${formatDate(h.date)}, ${a.nombre})? Queda registrado en la auditoría. Esta acción no se puede deshacer.`,
+                          disabledReason: h.validado ? 'Un festivo validado no se elimina: márcalo antes como pendiente.' : undefined,
+                          onConfirm: () => remove.mutateAsync(h.id),
+                        }}
+                      />
                     </td>
                   </tr>
                 );

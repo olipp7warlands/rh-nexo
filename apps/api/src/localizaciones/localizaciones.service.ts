@@ -1,6 +1,7 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { assertSinReferencias } from '../lib/delete-blockers';
 import { CreateLocalizacionDto, UpdateLocalizacionDto } from './localizacion.dto';
 
 @Injectable()
@@ -9,7 +10,7 @@ export class LocalizacionesService {
 
   findAll() {
     return this.db.localizacion.findMany({
-      include: { pais: true, _count: { select: { empleados: true } } },
+      include: { pais: true, _count: { select: { empleados: true, festivos: true } } },
       orderBy: { nombre: 'asc' },
     });
   }
@@ -50,14 +51,15 @@ export class LocalizacionesService {
   async remove(id: string) {
     const localizacion = await this.db.localizacion.findUnique({
       where: { id },
-      include: { _count: { select: { empleados: true } } },
+      include: { _count: { select: { empleados: true, festivos: true } } },
     });
     if (!localizacion) throw new NotFoundException('Localización no encontrada');
-    if (localizacion._count.empleados > 0) {
-      throw new ConflictException(
-        `No se puede eliminar: ${localizacion._count.empleados} persona(s) siguen asignadas a esta localización.`,
-      );
-    }
+    // Los festivos de una localización se borrarían en cascada (FK): se bloquea para que nunca se
+    // lleve por delante festivos —validados o no— sin una decisión consciente sobre ellos.
+    assertSinReferencias('la localización', [
+      { n: localizacion._count.empleados, singular: 'persona', plural: 'personas' },
+      { n: localizacion._count.festivos, singular: 'festivo', plural: 'festivos' },
+    ]);
     return this.db.localizacion.delete({ where: { id } });
   }
 

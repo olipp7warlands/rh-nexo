@@ -6,6 +6,7 @@ import { useEmployees, type EmployeeStatus, type Vinculo } from './useEmployees'
 import { useDepartments } from './useDepartments';
 import { usePaises, useProyectos, useSociedades } from '../estructura/useEstructura';
 import { EmployeeModal } from './EmployeeModal';
+import { PersonaAccionesMenu } from './PersonaAccionesMenu';
 import { formatDate } from '../../lib/format';
 
 const STATUS_KPIS: { key: EmployeeStatus | 'REMOTO'; label: string; dot: string }[] = [
@@ -252,6 +253,9 @@ export function EmpleadosPage() {
                     {h}
                   </th>
                 ))}
+                <th className="px-3 py-3">
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -283,11 +287,14 @@ export function EmpleadosPage() {
                   <td className="px-5 py-4">
                     <EmpStatus status={e.status} />
                   </td>
+                  <td className="px-3 py-4 text-right">
+                    <PersonaAccionesMenu employee={e} allEmployees={all ?? []} />
+                  </td>
                 </tr>
               ))}
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-[13px] text-[var(--ink-tertiary)]">
+                  <td colSpan={8} className="px-5 py-10 text-center text-[13px] text-[var(--ink-tertiary)]">
                     No hay personas con estos filtros.
                   </td>
                 </tr>

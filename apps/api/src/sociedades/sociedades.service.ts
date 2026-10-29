@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertSinReferencias } from '../lib/delete-blockers';
 import { CreateSociedadDto, UpdateSociedadDto } from './sociedad.dto';
 
 @Injectable()
@@ -8,7 +9,7 @@ export class SociedadesService {
 
   findAll() {
     return this.db.sociedad.findMany({
-      include: { pais: true, _count: { select: { empleados: true } } },
+      include: { pais: true, _count: { select: { empleados: true, jobs: true, registrosPuesto: true } } },
       orderBy: { nombre: 'asc' },
     });
   }
@@ -25,14 +26,15 @@ export class SociedadesService {
   async remove(id: string) {
     const sociedad = await this.db.sociedad.findUnique({
       where: { id },
-      include: { _count: { select: { empleados: true } } },
+      include: { _count: { select: { empleados: true, jobs: true, registrosPuesto: true } } },
     });
     if (!sociedad) throw new NotFoundException('Sociedad no encontrada');
-    if (sociedad._count.empleados > 0) {
-      throw new ConflictException(
-        `No se puede eliminar: ${sociedad._count.empleados} persona(s) siguen asignadas a esta sociedad.`,
-      );
-    }
+    const x = sociedad;
+    assertSinReferencias('la sociedad', [
+      { n: x._count.empleados, singular: 'persona', plural: 'personas' },
+      { n: x._count.jobs, singular: 'oferta', plural: 'ofertas' },
+      { n: x._count.registrosPuesto, singular: 'registro de puesto', plural: 'registros de puesto' },
+    ]);
     return this.db.sociedad.delete({ where: { id } });
   }
 

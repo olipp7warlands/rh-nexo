@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
 import { Button, Card } from '@nucleo/ui';
+import { FilaAcciones, razonEnUso } from '../_shared/AccionesMenu';
 import { useAuth } from '../auth/AuthContext';
 import { useSociedades, useDeleteSociedad, type Sociedad } from './useEstructura';
 import { SociedadModal } from './SociedadModal';
@@ -14,17 +14,7 @@ export function SociedadesPage() {
 
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Sociedad | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const onDelete = async (s: Sociedad) => {
-    if (!window.confirm(`¿Eliminar la sociedad "${s.nombre}"?`)) return;
-    setDeleteError(null);
-    try {
-      await remove.mutateAsync(s.id);
-    } catch (e) {
-      setDeleteError((e as Error).message);
-    }
-  };
 
   return (
     <div>
@@ -40,13 +30,6 @@ export function SociedadesPage() {
       {error && (
         <Card>
           <p className="text-[var(--danger)] text-[13px]">No se pudo cargar: {(error as Error).message}</p>
-        </Card>
-      )}
-      {deleteError && (
-        <Card className="mb-4">
-          <p role="alert" className="text-[var(--danger)] text-[13px]">
-            {deleteError}
-          </p>
         </Card>
       )}
       {isLoading && (
@@ -75,23 +58,16 @@ export function SociedadesPage() {
                   <td className="px-5 py-4 mono text-[var(--ink-secondary)]">{s._count.empleados}</td>
                   <td className="px-5 py-4">
                     {canManage && (
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setEditing(s)}
-                          aria-label={`Editar ${s.nombre}`}
-                          className="p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)]"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(s)}
-                          disabled={remove.isPending}
-                          aria-label={`Eliminar ${s.nombre}`}
-                          className="p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <FilaAcciones
+                        label={`Acciones de la sociedad ${s.nombre}`}
+                        onEdit={() => setEditing(s)}
+                        eliminar={{
+                          title: 'Eliminar la sociedad',
+                          message: `¿Eliminar la sociedad «${s.nombre}»? Esta acción no se puede deshacer.`,
+                          disabledReason: razonEnUso([[s._count.empleados, 'persona', 'personas'], [s._count.jobs, 'oferta', 'ofertas'], [s._count.registrosPuesto, 'registro de puesto', 'registros de puesto']]),
+                          onConfirm: () => remove.mutateAsync(s.id),
+                        }}
+                      />
                     )}
                   </td>
                 </tr>

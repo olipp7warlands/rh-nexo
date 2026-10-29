@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
 import { HolidaysService } from './holidays.service';
 import { UpdateHolidayDto } from './holidays.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -19,6 +19,13 @@ export class HolidaysController {
   @Get('manage')
   findAllForManagement() {
     return this.service.findAllForManagement();
+  }
+
+  /** Solo festivos pendientes (no validados): uno validado se marca como pendiente antes. */
+  @Roles('ADMIN', 'RRHH')
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.remove(id, user);
   }
 
   @Roles('ADMIN', 'RRHH')

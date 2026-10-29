@@ -23,7 +23,16 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function IniciarProcesoModal({ tipo, onClose }: { tipo: TipoProceso; onClose: () => void }) {
+export function IniciarProcesoModal({
+  tipo,
+  presetEmployeeId,
+  onClose,
+}: {
+  tipo: TipoProceso;
+  /** Persona ya elegida (al abrirlo desde su fila en Personas). */
+  presetEmployeeId?: string;
+  onClose: () => void;
+}) {
   const { data: employees } = useEmployees({});
   const { data: plantillas } = usePlantillas(tipo);
   const create = useCreateProceso();
@@ -35,7 +44,7 @@ export function IniciarProcesoModal({ tipo, onClose }: { tipo: TipoProceso; onCl
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { employeeId: '', buddyId: '', plantillaId: '', fechaInicio: todayISO(), fechaObjetivo: '' },
+    defaultValues: { employeeId: presetEmployeeId ?? '', buddyId: '', plantillaId: '', fechaInicio: todayISO(), fechaObjetivo: '' },
   });
 
   const onSubmit = handleSubmit(async (data) => {

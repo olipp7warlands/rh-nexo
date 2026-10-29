@@ -204,3 +204,16 @@ Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.t
 - [ ] **RRHH:** revisar `scripts/festivos-2026/REVISION-RRHH.md` (Karnataka sin fuente oficial: 10 filas fuera del JSON; 6 filas de EAU con fuente de prensa; criterios).
 - [ ] **Carga en producción:** espera a que RRHH cree las localizaciones (Madrid, Maharashtra, Delhi, Karnataka) y dé el visto bueno; backup nombrado + `dry` + confirmación expresa.
 - Nota dev: quedan los 54 festivos del ensayo, localizaciones Madrid/Maharashtra/Delhi/Karnataka y dos cuentas de prueba desactivadas (`@prueba-festivos.example.com`).
+
+# Menú ⋮ en listados · rama `feat/menu-acciones-listados` (2026-10-29, sin migración) · apilada sobre el PR #11
+- [x] Componente compartido `_shared/AccionesMenu.tsx` (menú ⋮ en portal con posición fija: no lo recortan tarjetas ni tablas; se abre hacia arriba si no cabe; mismo patrón accesible que Selección), `ConfirmarEliminarModal`, `FilaAcciones` (extra + Editar + Eliminar con modal de confirmación que muestra el error del servidor) y `razonEnUso`. Selección ahora importa el mismo componente. Adiós `window.confirm` en los catálogos.
+- [x] Personas: ⋮ (ADMIN/RRHH) Ver ficha · Editar · + Anotación · Iniciar onboarding (solo ONBOARDING) / offboarding (no de baja) · Gestionar acceso (solo ADMIN) · Dar de baja (oculto si ya está de baja). Nunca eliminar. Quien no gestiona conserva el clic de fila.
+- [x] Catálogos (Sociedades, Localizaciones, Departamentos, Proyectos, Tipos de contrato, Jornadas, Relaciones de emergencia, Idiomas): ⋮ Editar/Eliminar; «Eliminar» deshabilitado con motivo («En uso por 1 oferta…») según los conteos del listado.
+- [x] Servidor: borrado bloqueado con 409 + motivo si hay referencias secundarias (Sociedad: ofertas y registros de puesto; Proyecto y Departamento: ofertas; Localización: festivos, que antes se borraban en cascada). `GET` de los listados devuelve los conteos.
+- [x] Festivos: ⋮ Confirmar fecha / Marcar validado / Marcar como pendiente / Eliminar. `DELETE /holidays/:id` solo pendientes (un validado: 409, hay que marcarlo antes como pendiente), auditado.
+- [x] Cuentas: ⋮ Abrir ficha (si la hay) · Cambiar rol · Desactivar/Reactivar · Restablecer contraseña, con las protecciones del servidor adelantadas (no sobre uno mismo; no último ADMIN activo). Única vía de gestión de las cuentas sin ficha.
+- [x] Tests: `borrado-catalogos.e2e-spec.ts` (8). Verificado en navegador contra dev: menú de Personas (baja oculto), motivo de «Eliminar» deshabilitado y 409 en el modal, Cuentas (propia cuenta, sin ficha, reactivar/desactivar), Festivos (borrado real), Selección sin regresión.
+- [ ] **Segunda tanda corta:** Anotaciones (Marcar hecha/Reabrir/Editar/Eliminar de enlaces a ⋮) y Procesos (estado; plantillas editar/duplicar/archivar — comprobar qué hay ya en la UI).
+- Fuera por decisión: Nómina, Documentos (no se inventa un borrado), Ausencias.
+- Nota dev: persona «Kiran…» y cuentas `@prueba-festivos.example.com` de prueba siguen desactivadas.
+

@@ -11,7 +11,7 @@ export interface Sociedad {
   nombre: string;
   paisId: string;
   pais: Pais;
-  _count: { empleados: number };
+  _count: { empleados: number; jobs: number; registrosPuesto: number };
 }
 
 export interface Localizacion {
@@ -20,7 +20,7 @@ export interface Localizacion {
   /** Null en las localizaciones creadas antes de existir el campo (o por el alta de contratación). */
   paisId: string | null;
   pais: Pais | null;
-  _count: { empleados: number };
+  _count: { empleados: number; festivos: number };
 }
 
 export function usePaises() {
@@ -100,7 +100,8 @@ export function useDeleteLocalizacion() {
 export interface Catalogo {
   id: string;
   nombre: string;
-  _count: { empleados: number };
+  /** `jobs` solo lo devuelve Proyectos (las ofertas que lo usan). */
+  _count: { empleados: number; jobs?: number };
 }
 
 function makeCatalogHooks(resource: string, queryKey: string) {

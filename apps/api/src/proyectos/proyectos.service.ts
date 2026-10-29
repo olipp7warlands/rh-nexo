@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertSinReferencias } from '../lib/delete-blockers';
 import { CreateProyectoDto, UpdateProyectoDto } from './proyecto.dto';
 
 @Injectable()
@@ -8,7 +9,7 @@ export class ProyectosService {
 
   findAll() {
     return this.db.proyecto.findMany({
-      include: { _count: { select: { empleados: true } } },
+      include: { _count: { select: { empleados: true, jobs: true } } },
       orderBy: { nombre: 'asc' },
     });
   }
@@ -25,14 +26,13 @@ export class ProyectosService {
   async remove(id: string) {
     const proyecto = await this.db.proyecto.findUnique({
       where: { id },
-      include: { _count: { select: { empleados: true } } },
+      include: { _count: { select: { empleados: true, jobs: true } } },
     });
     if (!proyecto) throw new NotFoundException('Proyecto no encontrado');
-    if (proyecto._count.empleados > 0) {
-      throw new ConflictException(
-        `No se puede eliminar: ${proyecto._count.empleados} persona(s) siguen asignadas a este proyecto.`,
-      );
-    }
+    assertSinReferencias('el proyecto', [
+      { n: proyecto._count.empleados, singular: 'persona', plural: 'personas' },
+      { n: proyecto._count.jobs, singular: 'oferta', plural: 'ofertas' },
+    ]);
     return this.db.proyecto.delete({ where: { id } });
   }
 
