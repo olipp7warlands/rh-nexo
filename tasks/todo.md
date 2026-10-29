@@ -164,15 +164,15 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - Nota dev: las 4 cuentas demo de dev estaban desactivadas por el ensayo de la limpieza (script 01); reactivadas en dev el 2026-10-29. En producción siguen desactivadas a propósito.
 - [ ] Pendiente menor: el botón «Eliminar» del modal de confirmación sale negro, no rojo (variante `danger` de `Button`), también en los borrados de oferta/candidatura.
 
-# Tanda «Gestión de usuarios» · rama `feat/gestion-usuarios` (2026-10-29) · IMPLEMENTADA, ciclo de cierre pendiente
-- [x] Migración aditiva `20261029170000_gestion_usuarios_acceso`: `User.mustChangePassword BOOLEAN NOT NULL DEFAULT false` + `User.passwordChangedAt TIMESTAMP(3)`. Aplicada en **dev y test**. **Producción PENDIENTE.**
+# Tanda «Gestión de usuarios» · rama `feat/gestion-usuarios` (2026-10-29) · COMPLETADA (PR #10 mergeado)
+- [x] Migración aditiva `20261029170000_gestion_usuarios_acceso`: `User.mustChangePassword BOOLEAN NOT NULL DEFAULT false` + `User.passwordChangedAt TIMESTAMP(3)`. Aplicada en **dev, test y producción** (2026-10-29 16:28:03Z; backup Supabase 29 Oct 2026 06:21:28 +0000, anterior a la migración de las 13:14Z — lección #23; 13 migraciones, esquema al día, 0 tablas sin RLS).
 - [x] API (`users`, solo ADMIN): `GET /users`, `POST /users` (contraseña temporal una vez, `no-store`), `PATCH /users/:id` (rol), `POST /users/:id/deactivate|reactivate|reset-password`. Sin DELETE. Auth: `POST /auth/change-password` (actual + nueva ≥12 car., ≤72 bytes, ≠ actual, ≠ email; revoca todas las sesiones y emite par nuevo). `PasswordChangeGuard` global: con `mustChangePassword` todo da 403 `PASSWORD_CHANGE_REQUIRED` salvo `/auth/me` y el cambio.
 - [x] Invalidación de access tokens por versión de contraseña (`pwv` = `passwordChangedAt` en ms). Se descartó el `iat` (segundos): dejaba una ventana de 1 s y falló un test en la suite completa.
 - [x] Protecciones: no sobre uno mismo (desactivar, rol, restablecer); nunca sin ADMIN activo (FOR UPDATE en la transacción; unit test con BD simulada porque en e2e exigiría desactivar al admin del seed). Restablecer sobre otro ADMIN permitido y auditado.
 - [x] Auditoría entidad `User`: CREATE, UPDATE (rol), DEACTIVATE, REACTIVATE, PASSWORD_RESET, PASSWORD_CHANGE; lista blanca de campos, sin contraseñas ni hashes (test lo comprueba).
 - [x] Web: pestaña «Acceso» en la ficha (solo ADMIN), vista «Cuentas» en Configuración (solo ADMIN, solo lectura), `/cambiar-contrasena` (forzada: sin menú; voluntaria desde el menú lateral), modal de contraseña temporal no descartable, login sin distinguir mayúsculas.
 - [x] Tests: `users.e2e-spec.ts` (15) + `users.service.spec.ts` (5). Suite completa contra test: 33 ficheros, 264 tests. `tsc` limpio. Flujo completo verificado en navegador contra dev.
-- [ ] **Ciclo de cierre, EN ORDEN:** backup de producción verificado y NOMBRADO → `migrate deploy` → verificación en vivo (`_prisma_migrations`, 2 columnas en `User`) → merge (lo hace Oliver; lección #25).
+- [x] Ciclo de cierre en el orden correcto: backup nombrado → `migrate deploy` → verificación en vivo → merge (hecho por Oliver después del informe). Sin ciclo invertido esta vez.
 - Nota dev: queda la cuenta `prueba.acceso@example.com` (persona «Persona Prueba Acceso») DESACTIVADA; no se puede borrar porque el AuditLog referencia al usuario y el AuditLog no se toca.
 - Pendiente fuera de alcance: crear la primera cuenta MANAGER/EMPLEADO real en producción requiere que la persona exista en Personas con email; las cuentas reales actuales (ADMIN) no tienen persona vinculada, así que su pestaña «Acceso» no existe (se gestionan desde «Cuentas», solo lectura, o por script).
 
@@ -228,3 +228,21 @@ Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.t
 - [ ] **Aviso operativo:** el token va en la URL, así que aparece en los logs de acceso de la plataforma (Railway) aunque la app no lo registre. Mitigación: regenerar/revocar; no compartir. No hay migración, el despliegue es solo el merge.
 - [ ] Nivel 2 (futuro): invitaciones/escritura desde el calendario externo — fuera de alcance.
 
+# CIERRE DE SESIÓN · 2026-10-29 · estado consolidado
+**Mergeados a `master`:** #6 Feedback RRHH · #7 Pulido UX Selección · #8 Detalle de oferta colapsable · #9 Tanda 2 Bloque 1 (países/localizaciones) · #10 Gestión de usuarios · #11 Tanda 2 Bloque 2 (festivos + etapas) · #12 Menú ⋮ en listados.
+**Abierto:** #13 Tanda 3 — feed ICS (sin migración; el despliegue es solo el merge).
+**Producción (BD):** 13 migraciones aplicadas y verificadas (última `20261029170000_gestion_usuarios_acceso`, 2026-10-29 16:28Z). Datos (lectura en vivo 2026-10-29): 1 oferta, 2 candidatos, 0 empleados, 6 cuentas (2 activas, ADMIN sin ficha vinculada), 3 países, 0 localizaciones, 0 festivos.
+
+**Pendiente, por prioridad**
+1. **RRHH:** revisar `scripts/festivos-2026/REVISION-RRHH.md` y su CSV (decisiones: Karnataka sin fuente oficial → 10 filas fuera del JSON; 6 filas de EAU con fuente de prensa; festivos en fin de semana; Id-ul-Zuha 27 vs 28 may; nombres de los locales de Madrid) y **crear las localizaciones** (Madrid, Maharashtra, Delhi, Karnataka) con su país.
+2. **Carga de festivos en producción** (tras 1): backup nombrado + `dry` + confirmación expresa (`cargar-festivos.cjs`). Aborta si falta una localización.
+3. **Segunda tanda del menú ⋮:** Anotaciones (Marcar hecha/Reabrir/Editar/Eliminar) y Procesos (estado; plantillas editar/duplicar/archivar — comprobar qué hay ya en la UI). Fuera por decisión: Nómina, Documentos (no se inventa un borrado), Ausencias.
+4. **Analítica de etapas** (`ApplicationEtapa` ya acumula datos desde el Bloque 2): las candidaturas anteriores no tienen filas; decidir backfill o tolerarlo.
+5. **Alta por contratación:** ya exige país si la localización es nueva (hecho); revisar si conviene resolver el país por defecto desde la oferta.
+6. Vincular las 2 cuentas ADMIN reales a su ficha si se quiere la pestaña «Acceso» (hoy se gestionan desde Configuración → Cuentas).
+7. Tras el merge del #13: probar el feed en un cliente real (Outlook) y recordar el aviso: el token va en la URL y queda en los logs de acceso de Railway; mitigación = regenerar/revocar.
+8. Recordatorio: borrar `C:/Users/olcas/backups-humanx/prod-pre-limpieza-2026-10-28.sql` después del 2026-11-25.
+
+**Dev (residuos de pruebas, no tocar el AuditLog):** 54 festivos del ensayo de carga; localizaciones Madrid/Maharashtra/Delhi/Karnataka; cuentas `@prueba-festivos.example.com` y `prueba.acceso@example.com` DESACTIVADAS (no se pueden borrar: el AuditLog las referencia); las cuentas demo `*@grupo.com` de dev se reactivaron el 2026-10-29 (en producción siguen desactivadas a propósito).
+
+**Reglas que se han reforzado esta sesión (ver `lessons.md`):** #22 premisas del enunciado también se verifican; #23 backup posterior a la última migración; #25 ciclo migración → verificación → merge (cuarta vez: esta vez bien); #26 borrar = revisar todos los `onDelete`; #27 versionar claims en lugar de comparar `iat`.

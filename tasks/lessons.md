@@ -49,19 +49,15 @@
     periodo" en `payroll.e2e-spec.ts`, o infla los conteos de empleados). Tras cualquier sesión
     de verificación manual, limpiar explícitamente lo creado antes de volver a correr
     `pnpm --filter @nucleo/api test`.
+    Y el `AuditLog` NO se borra jamás (regla del producto; el clasificador de permisos también lo bloquea):
+    una cuenta/persona de prueba que ya generó auditoría no se puede eliminar (FK del actor) — se deja
+    DESACTIVADA y se nombra como dato de prueba; solo los tests contra `nucleo_test` limpian su propia auditoría.
 12. **`@nestjs/serve-static` + Express real: dos versiones de `path-to-regexp` conviven y cada
     una exige una sintaxis de comodín distinta.** `exclude` lo evalúa el propio paquete con su
     dependencia de `path-to-regexp` v8 (`'/api/{*splat}'`; `'/api/(.*)'` lanza excepción).
     `renderPath` lo registra Express con SU `path-to-regexp` v0.1.x bundlada (`'*'`; el default
     del paquete, `'{*any}'`, no coincide con nada bajo esa versión y el fallback de SPA nunca se
     dispara, sin ningún error visible). Detalle completo en `tasks/DEPLOY.md` §5.
-13. **Fijar `engines.node` en `package.json` cuando el hosting usa Nixpacks/Railpack.** Sin él,
-    Railway detectó Node 20 para el build aunque el local es 22 — `@supabase/supabase-js` v2
-    instancia un `RealtimeClient` interno (aunque no se use realtime) que exige el `WebSocket`
-    nativo de Node 22+, y la API crasheaba en el arranque real sin que los tests ni la
-    verificación local lo detectaran (mismo Node en ambos sitios oculta el problema). Poner
-    `"engines": {"node": ">=22"}` en el `package.json` raíz (y, por claridad, también en el del
-    servicio desplegado) en cuanto se fije una versión mínima de Node para producción.
 14. **El aislamiento de tests contra producción tiene que ser estructural, no un recordatorio.**
     Una mitigación manual ("acuérdate de sobreescribir X, Y, Z antes de correr los tests") se
     olvida — pasó de verdad (un test subió un fichero real al bucket de Supabase por no
@@ -78,6 +74,8 @@
     la suite entera si algo no cuadra — defensa adicional aunque el mecanismo de carga falle.
     Patrón reutilizable para cualquier proyecto con credenciales reales en `.env`. De paso,
     tener una `nucleo_test` separada de `nucleo` (dev) también resuelve la lección #11.
+    Corolario (antes #16): para comprobar que un `.env` no cambió, nunca `cat`/`diff` sobre el fichero real
+    (si no está trackeado, `diff <(git show …)` vuelca los secretos al transcript); usar `git status --short .env`.
 15. **Los specs `*.e2e-spec.ts` corriendo en paralelo (paralelismo de ficheros, default de
     Vitest) compiten por las mismas filas de `Employee`/`PayrollRun` en la BD compartida y
     fallan de forma intermitente (mismo origen que la lección #10, pero visto también en
@@ -85,13 +83,6 @@
     ficheros).** Sin envolver cada test en una transacción propia (cambio mayor, no hecho),
     la mitigación pragmática es `fileParallelism: false` en `vitest.config.ts` — serializa los
     ficheros, la suite deja de ser flaky a cambio de tardar más en total.
-16. **Cuidado con `diff <(git show HEAD:archivo) archivo` cuando el archivo no está trackeado
-    en git.** `git show` falla silenciosamente (el archivo no existe en HEAD) y `diff` acaba
-    volcando el contenido COMPLETO del archivo real a la salida — si es un `.env` con
-    secretos, quedan expuestos en la terminal/transcript aunque el archivo nunca se comitee.
-    Pasó de verdad con `DATABASE_URL`/`DIRECT_URL` reales de Supabase. Para comprobar que un
-    `.env` no cambió, usar `git status --short .env` (vacío = no trackeado = correcto) o
-    `git check-ignore -v .env`, nunca `cat`/`diff` directo sobre el fichero real.
 17. **Arranque local: Turborepo (modo `strict`, default desde Turbo 2.x) NO propaga las variables de entorno
     del proceso padre a las tareas hijas.** `dotenv -e .env.local -- turbo run dev` puede
     arrancar la API contra el `.env` real (producción) EN SILENCIO — Nest cae a su propio
@@ -153,12 +144,18 @@
     pendiente en un informe. Regla: antes de afirmar el estado de migraciones, datos o cuentas,
     consultarlo en vivo (`_prisma_migrations`, `information_schema`, conteos); el resumen de la
     sesión no es una fuente.
+    Vale igual para las premisas del enunciado: el 2026-10-29 se dio por «mergeado» el PR #11 y seguía
+    abierto (`gh pr view` lo mostró antes de ramificar). Ante «ya está mergeado/aplicado/desplegado»,
+    comprobarlo en vivo y, si no cuadra, avisar y apilar/adaptar en vez de actuar sobre la suposición.
 23. **backup verificado → commit, en ese orden y nombrando el backup.** El 2026-10-28 el
     `commit=true` de la limpieza de producción se ejecutó antes del backup programado acordado
     (confirmé con un backup descrito como «de esta noche», sin comprobar yo que fuera el programado).
     Sin consecuencias, pero el orden no es negociable: la confirmación de cualquier
     operación destructiva debe nombrar el backup concreto (fecha/origen) y yo lo cito de vuelta
     antes de ejecutar, en vez de dar por buena una descripción genérica.
+    Matiz (2026-10-29): se aceptó un backup de las 06:21Z, anterior a la migración de las 13:14Z. Vale para
+    una migración ADITIVA, pero un restore obligaría a reaplicar la anterior y perdería lo escrito después:
+    al pedir/citar el backup, comprobar que sea posterior a la última migración aplicada y decirlo.
 24. **Contraseñas: nunca por línea de comandos ni por el chat; solo entrada interactiva o variable
     de entorno tecleada por la persona.** Un argumento queda en el historial y la shell lo
     escapa; el chat las conserva. El 2026-10-28 creé `oliver.perez@wowinx.com` con una
@@ -175,3 +172,14 @@
     terminó a las 13:14:50Z, ~100 s de código sin esquema; salió bien solo por ser aditiva (columnas
     nullables). Tercer ciclo invertido: al reportar «migración lista», recordar el orden y esperar
     confirmación de que `_prisma_migrations` está al día ANTES de que se mergee.
+26. **Un `DELETE` expuesto debe revisar los `onDelete` de TODAS las relaciones, no solo contar personas.** Los
+    catálogos solo bloqueaban si había empleados; pero `Holiday.localizacion` es `Cascade` (borrar una
+    localización se llevaba sus festivos) y `Job.sociedad/proyecto/department` son `SetNull` (borrar
+    desvinculaba ofertas en silencio). Antes de poner un botón/menú de borrar: listar las relaciones
+    entrantes del modelo, bloquear con 409 + conteos por tipo (`lib/delete-blockers.ts`), devolver esos
+    conteos en el listado para deshabilitar la acción con su motivo y testear que NO se toca nada.
+27. **Para invalidar tokens tras un cambio de credenciales, versionar el claim; no comparar el `iat`.** El `iat`
+    de un JWT va en segundos: un token emitido en el mismo segundo que el cambio de contraseña sobrevivía y
+    el test del restablecimiento fallaba de forma intermitente solo en la suite completa. Solución en
+    `AuthService.issueTokens`/`JwtStrategy`: claim `pwv` = `passwordChangedAt` en ms, comparado por igualdad.
+    Regla general: ante un flaky que depende de la resolución temporal, arreglar el diseño, no meter esperas.
