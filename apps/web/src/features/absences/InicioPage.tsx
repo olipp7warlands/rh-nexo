@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Avatar, Card, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useEmployeeKpis } from '../employees/useEmployees';
-import { useSociedades, usePaises } from '../estructura/useEstructura';
+import { useSociedades } from '../estructura/useEstructura';
 import { useAlertas, TIPO_ALERTA_LABEL } from '../agenda/useAgenda';
 import { useAnotaciones } from '../anotaciones/useAnotaciones';
 import { formatDate } from '../../lib/format';
@@ -14,10 +14,11 @@ export function InicioPage() {
 
   const { data: kpis } = useEmployeeKpis();
   const { data: sociedades } = useSociedades();
-  const { data: paises } = usePaises();
   const { data: alertas } = useAlertas();
   const { data: anotaciones } = useAnotaciones({ estado: 'PENDIENTE' }, canManage);
 
+  // Solo cuentan los países en los que el grupo tiene sociedad (el catálogo Pais es más amplio).
+  const paisesConSociedad = new Set((sociedades ?? []).map((x) => x.paisId)).size;
   const plantilla = kpis?.plantilla ?? 0;
   const externos = kpis?.externos ?? 0;
 
@@ -26,25 +27,25 @@ export function InicioPage() {
       <PageHeader eyebrow={`Hola, ${name}`} title="Inicio" subtitle="El pulso de tu día en el grupo." />
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="stat-card">
+        <Link to="/personas" className="stat-card block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)] hover:border-[var(--line-strong)]">
           <div className="text-[12px] font-medium text-[var(--ink-secondary)]">Plantilla interna / Colaboradores externos</div>
           <div className="mono text-[28px] font-bold leading-none">
             {plantilla} <span className="text-[var(--ink-tertiary)]">/</span> {externos}
           </div>
           <div className="text-[11px] text-[var(--ink-tertiary)]">{kpis?.total ?? 0} personas en total</div>
-        </div>
-        <div className="stat-card">
+        </Link>
+        <Link to="/configuracion/sociedades" className="stat-card block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)] hover:border-[var(--line-strong)]">
           <div className="text-[12px] font-medium text-[var(--ink-secondary)]">Sociedades · Países</div>
           <div className="mono text-[28px] font-bold leading-none">
-            {(sociedades ?? []).length} <span className="text-[var(--ink-tertiary)]">·</span> {(paises ?? []).length}
+            {(sociedades ?? []).length} <span className="text-[var(--ink-tertiary)]">·</span> {paisesConSociedad}
           </div>
           <div className="text-[11px] text-[var(--ink-tertiary)]">grupo wowinX</div>
-        </div>
-        <div className="stat-card">
+        </Link>
+        <Link to="/agenda" className="stat-card block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)] hover:border-[var(--line-strong)]">
           <div className="text-[12px] font-medium text-[var(--ink-secondary)]">Alertas activas</div>
           <div className="mono text-[28px] font-bold leading-none">{(alertas ?? []).length}</div>
           <div className="text-[11px] text-[var(--ink-tertiary)]">fin de prueba y vencimientos, próximas 6 semanas</div>
-        </div>
+        </Link>
       </div>
 
       <div className={`grid ${canManage ? 'grid-cols-2' : 'grid-cols-1'} gap-5`}>

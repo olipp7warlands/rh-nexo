@@ -39,7 +39,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${wide ? 'max-w-3xl' : 'max-w-xl'} my-auto bg-[var(--bg-surface)] rounded-xl shadow-[var(--shadow-md)] outline-none`}
+        className={`w-full text-left ${wide ? 'max-w-3xl' : 'max-w-xl'} my-auto bg-[var(--bg-surface)] rounded-xl shadow-[var(--shadow-md)] outline-none`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[var(--line)]">

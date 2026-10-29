@@ -6,15 +6,14 @@ import { useEmployees } from '../employees/useEmployees';
 import { formatDate } from '../../lib/format';
 import {
   useCandidate,
-  useAddInterview,
-  useUpdateInterview,
   useAddEvaluation,
   useRejectApplication,
   useUpdateApplicationDates,
   type JobDetail,
 } from './useRecruitment';
 import { ApplicationStatusBadge } from './RecruitmentBadges';
-import { INTERVIEW_TYPE_OPTIONS, interviewTypeLabel, sourceText } from './fuentes';
+import { sourceText } from './fuentes';
+import { EntrevistasSection } from './EntrevistasSection';
 import { CandidaturaAccionesMenu } from './AccionesMenu';
 import { ContratarModal } from './ContratarModal';
 
@@ -35,8 +34,6 @@ export function CandidatePanel({
   const { user } = useAuth();
   const { data: candidate, isLoading } = useCandidate(candidateId);
   const { data: employees } = useEmployees();
-  const addInterview = useAddInterview();
-  const updateInterview = useUpdateInterview();
   const addEvaluation = useAddEvaluation();
   const reject = useRejectApplication();
   const updateDates = useUpdateApplicationDates();
@@ -46,9 +43,6 @@ export function CandidatePanel({
   const [datesError, setDatesError] = useState<string | null>(null);
 
   const [hiring, setHiring] = useState(false);
-  const [interviewType, setInterviewType] = useState('tecnica');
-  const [interviewerId, setInterviewerId] = useState('');
-  const [interviewAt, setInterviewAt] = useState('');
   const [evalScore, setEvalScore] = useState('');
   const [evalRecommendation, setEvalRecommendation] = useState('');
 
@@ -204,70 +198,7 @@ export function CandidatePanel({
             )}
           </div>
 
-          <div>
-            <h3 className="font-serif text-[13px] font-medium mb-2">Entrevistas</h3>
-            <div className="flex flex-col gap-2 mb-3">
-              {application.interviews.length === 0 && (
-                <p className="text-[12px] text-[var(--ink-tertiary)]">Sin entrevistas programadas.</p>
-              )}
-              {application.interviews.map((iv) => (
-                <div key={iv.id} className="flex items-center gap-3 text-[13px] px-3 py-2 bg-[var(--bg-subtle)] rounded-md">
-                  <Badge variant="neutral">{interviewTypeLabel(iv.type)}</Badge>
-                  <span className="flex-1 text-[var(--ink-secondary)]">
-                    {employees?.find((e) => e.id === iv.interviewerId)?.fullName ?? 'Sin entrevistador'} ·{' '}
-                    {iv.scheduledAt ? formatDate(iv.scheduledAt) : 'Sin fecha'}
-                    {iv.feedback ? ` · ${iv.feedback}` : ''}
-                  </span>
-                  <span className="text-[11px] text-[var(--ink-tertiary)]">{iv.status}</span>
-                  {canManage && iv.status !== 'COMPLETADA' && (
-                    <button
-                      className="text-[11px] text-[var(--accent-ink)] font-medium"
-                      onClick={() => updateInterview.mutate({ id: iv.id, status: 'COMPLETADA' })}
-                    >
-                      Marcar completada
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {canManage && (
-              <div className="flex items-end gap-2">
-                <select aria-label="Tipo de entrevista" className={selectClass} value={interviewType} onChange={(e) => setInterviewType(e.target.value)}>
-                  {INTERVIEW_TYPE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <select aria-label="Entrevistador" className={selectClass} value={interviewerId} onChange={(e) => setInterviewerId(e.target.value)}>
-                  <option value="">Entrevistador…</option>
-                  {employees?.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.fullName}
-                    </option>
-                  ))}
-                </select>
-                <Input aria-label="Fecha de la entrevista" type="date" value={interviewAt} onChange={(e) => setInterviewAt(e.target.value)} />
-                <Button
-                  variant="secondary"
-                  disabled={addInterview.isPending}
-                  onClick={() =>
-                    addInterview.mutate(
-                      { applicationId, type: interviewType, interviewerId: interviewerId || undefined, scheduledAt: interviewAt || undefined },
-                      {
-                        onSuccess: () => {
-                          setInterviewerId('');
-                          setInterviewAt('');
-                        },
-                      },
-                    )
-                  }
-                >
-                  Programar
-                </Button>
-              </div>
-            )}
-          </div>
+          <EntrevistasSection applicationId={applicationId} interviews={application.interviews} canManage={canManage} />
 
           <div>
             <h3 className="font-serif text-[13px] font-medium mb-2">Evaluaciones</h3>

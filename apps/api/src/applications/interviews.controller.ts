@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Param, Patch } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 import { UpdateInterviewDto } from './applications.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -12,5 +12,10 @@ export class InterviewsController {
   @Patch(':id')
   update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateInterviewDto) {
     return this.service.updateInterview(id, dto, user);
+  }
+
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.removeInterview(id, user);
   }
 }

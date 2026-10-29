@@ -1,4 +1,5 @@
-import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ContractType, JobStatus } from '@prisma/client';
 
 export class CreateJobDto {
@@ -28,8 +29,9 @@ export class CreateJobDto {
 }
 
 export class UpdateJobDto {
-  @IsOptional() @IsString() @MaxLength(200) title?: string;
-  @IsOptional() @IsString() departmentId?: string;
+  /** Si se envía, no puede quedar vacío (tras recortar espacios). */
+  @IsOptional() @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value)) @IsString() @IsNotEmpty({ message: 'El título del puesto no puede estar vacío' }) @MaxLength(200) title?: string;
+  @IsOptional() @IsString() @IsNotEmpty({ message: 'El departamento no puede estar vacío' }) departmentId?: string;
   @IsOptional() @IsString() @MaxLength(200) location?: string;
   @IsOptional() @IsBoolean() remote?: boolean;
   @IsOptional() @IsString() @MaxLength(50) level?: string;

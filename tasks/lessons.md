@@ -171,3 +171,7 @@
     sin backup nombrado (incumple #23). Hubo ~9 min de código sin esquema en producción. Regla:
     el merge a `master` (que despliega) solo ocurre DESPUÉS de verificar en `_prisma_migrations`
     de producción que la migración está aplicada; y el backup se nombra antes del `migrate deploy`.
+    **Repetido el 2026-10-29 (PR #6, Feedback RRHH):** el merge se hizo a las 13:13:10Z y la migración
+    terminó a las 13:14:50Z, ~100 s de código sin esquema; salió bien solo por ser aditiva (columnas
+    nullables). Tercer ciclo invertido: al reportar «migración lista», recordar el orden y esperar
+    confirmación de que `_prisma_migrations` está al día ANTES de que se mergee.

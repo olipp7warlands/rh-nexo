@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useProyectos } from '../estructura/useEstructura';
+import { useDepartments } from '../employees/useDepartments';
 import { useRemoveJobPdf, useUpdateJob, useUploadJobPdf, type JobDetail, type JobStatus } from './useRecruitment';
 import { DescripcionFields, PdfField, emptyDescripcion, pdfError, CAMPOS_DESCRIPCION } from './DescripcionOferta';
 
@@ -17,12 +18,16 @@ const day = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
  */
 export function EditarProcesoModal({ job, onClose }: { job: JobDetail; onClose: () => void }) {
   const { data: proyectos } = useProyectos();
+  const { data: departments } = useDepartments();
   const update = useUpdateJob();
   const uploadPdf = useUploadJobPdf();
   const removePdf = useRemoveJobPdf();
   const [descripcion, setDescripcion] = useState(() => emptyDescripcion(job));
   const [pdf, setPdf] = useState<File | null>(null);
   const [quitarPdf, setQuitarPdf] = useState(false);
+  const [title, setTitle] = useState(job.title);
+  const [departmentId, setDepartmentId] = useState(job.departmentId ?? '');
+  const [legado, setLegado] = useState(job.description ?? '');
   const [status, setStatus] = useState<JobStatus>(job.status);
   const [openedAt, setOpenedAt] = useState(day(job.openedAt));
   const [closedAt, setClosedAt] = useState(day(job.closedAt));
@@ -31,6 +36,7 @@ export function EditarProcesoModal({ job, onClose }: { job: JobDetail; onClose: 
 
   const submit = async () => {
     setError(null);
+    if (!title.trim()) return setError('El título del puesto no puede estar vacío.');
     if (!openedAt) return setError('La fecha de apertura es obligatoria.');
     if (status === 'CERRADA') {
       if (!closedAt) return setError('Indica la fecha de cierre.');
@@ -43,6 +49,9 @@ export function EditarProcesoModal({ job, onClose }: { job: JobDetail; onClose: 
     try {
       await update.mutateAsync({
         id: job.id,
+        title: title.trim(),
+        departmentId: departmentId || undefined,
+        ...(job.description != null ? { description: legado.trim() } : {}),
         status,
         openedAt,
         closedAt: status === 'CERRADA' ? closedAt : undefined,
@@ -79,6 +88,27 @@ export function EditarProcesoModal({ job, onClose }: { job: JobDetail; onClose: 
       }
     >
       <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="edit-titulo" className={labelClass}>
+              Título del puesto
+            </label>
+            <Input id="edit-titulo" value={title} maxLength={200} required onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="edit-departamento" className={labelClass}>
+              Departamento
+            </label>
+            <select id="edit-departamento" className={selectClass} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+              {!job.departmentId && <option value="">Sin departamento</option>}
+              {departments?.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label htmlFor="edit-estado" className={labelClass}>
@@ -125,12 +155,24 @@ export function EditarProcesoModal({ job, onClose }: { job: JobDetail; onClose: 
           </select>
         </div>
         <DescripcionFields values={descripcion} onChange={setDescripcion} />
-        {job.description && !CAMPOS_DESCRIPCION.some(({ key }) => job[key]) && (
-          <p className="text-[12px] text-[var(--ink-secondary)] bg-[var(--bg-subtle)] rounded-md px-3 py-2 whitespace-pre-line">
-            <strong className="font-medium">Descripción anterior (se mostrará hasta que rellenes los campos de arriba):</strong>
-            {'\n'}
-            {job.description}
-          </p>
+        {job.description && (
+          <div>
+            <label htmlFor="edit-legado" className={labelClass}>
+              Descripción anterior
+            </label>
+            <textarea
+              id="edit-legado"
+              className="w-full min-h-24 px-3 py-2 text-left bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none"
+              maxLength={5000}
+              value={legado}
+              onChange={(e) => setLegado(e.target.value)}
+              aria-describedby="edit-legado-ayuda"
+            />
+            <p id="edit-legado-ayuda" className="text-[11px] text-[var(--ink-tertiary)] mt-1">
+              Texto antiguo de la oferta. Corta y reparte su contenido en los campos de arriba; se muestra en el detalle solo mientras
+              los campos estructurados estén vacíos.
+            </p>
+          </div>
         )}
         <PdfField
           file={pdf}

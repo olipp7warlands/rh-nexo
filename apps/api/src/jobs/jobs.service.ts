@@ -126,6 +126,10 @@ export class JobsService {
   async update(id: string, dto: UpdateJobDto, viewer: AuthUser) {
     await this.assertSociedadExists(dto.sociedadId);
     await this.assertProyectoExists(dto.proyectoId);
+    if (dto.departmentId) {
+      const dep = await this.db.department.findUnique({ where: { id: dto.departmentId }, select: { id: true } });
+      if (!dep) throw new BadRequestException('El departamento indicado no existe');
+    }
     const before = await this.db.job.findUnique({ where: { id } });
     if (!before) throw new NotFoundException('Oferta no encontrada');
     const dates = resolveJobDates(before, dto);

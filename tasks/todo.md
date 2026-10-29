@@ -145,15 +145,24 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - [ ] Aviso: la pantalla de login de dev precarga `admin@grupo.com` (cuenta demo ya inactiva); revisar si el valor por defecto sigue haciendo falta.
 
 # Mini-tanda «Feedback RRHH» · rama `feat/feedback-rrhh-mini-tanda` (2026-10-29)
-- [x] Migración aditiva `20261029100000_feedback_rrhh_fuente_descripcion` (SQL aprobado tal cual): `CandidateSource` +6 valores, `Candidate.fuenteDetalle`, `Job` +5 campos de descripción +2 del PDF. Aplicada en **dev y test**. **Producción PENDIENTE.**
+- [x] Migración aditiva `20261029100000_feedback_rrhh_fuente_descripcion` (SQL aprobado tal cual): `CandidateSource` +6 valores, `Candidate.fuenteDetalle`, `Job` +5 campos de descripción +2 del PDF. Aplicada en **dev y test** y en **producción el 2026-10-29 13:14:50Z** (backup Supabase 28 Oct 2026 23:28:36 +0000 PHYSICAL; 12 migraciones, esquema al día). PR #6 mergeado a las 13:13:10Z, ~100 s ANTES de que terminara la migración (tercer ciclo invertido, lección #25; sin daño por ser aditiva).
 - [x] Fuente + detalle (modal, ficha, histórico), acciones rápidas (menú ⋮ en tarjetas y listado; `DELETE /jobs/:id` solo con 0 candidaturas; `DELETE /applications/:id` en CASCADA: candidatura + entrevistas + evaluaciones + decisiones, con aviso expreso en el modal y entrada DELETE/Application en AuditLog con conteos; el AuditLog nunca se borra), descripción estructurada + PDF adjunto (magic bytes, solo ADMIN/RRHH, ruta del storage nunca expuesta), entrevistas Telefónica/Cultural/Técnica/Final (ya admitían varias por candidatura; el cambio fue de UI y validación del tipo).
 - [x] Importador CSV y plantilla con fuente/detalle y los 5 campos de descripción (plantilla de 28 columnas).
 - [x] Suite completa contra test: 29 ficheros, 229 tests en verde (31 nuevos). `tsc` limpio en api y web.
 - [x] Arreglo colateral: `prisma/seed.ts` fallaba contra una base migrada (festivos sin `paisId` violan `Holiday_ambito_chk`); ahora los festivos demo llevan `paisId: 'p-es'`.
 - [x] Arreglo colateral: el nombre original del PDF llegaba en latin1 (Multer); se recompone a UTF-8.
-- [ ] **Ciclo de cierre pendiente, EN ORDEN:** backup de producción verificado y NOMBRADO → `migrate deploy` en producción → comprobar `_prisma_migrations` → merge (lección #25).
-- [ ] Verificación visual en navegador del menú ⋮ (teclado), los modales con PDF y la ficha: no ejecutada todavía.
+- [x] Ciclo de cierre ejecutado (backup nombrado → migrate deploy → verificación en vivo → merge del usuario; ver orden real arriba).
+- [x] Validación visual en dev hecha por el usuario.
 - [ ] Al eliminar una oferta con PDF se borra el fichero del storage; si el borrado falla queda huérfano (la base sigue coherente). Barrido periódico de `jobs/` en el storage si algún día importa.
+
+# Mini-tanda «Pulido UX Selección» · rama `feat/pulido-ux-seleccion` (2026-10-29, sin migración)
+- [x] Tarjetas de Inicio clicables (Plantilla→/personas, Sociedades·Países→/configuracion/sociedades, Alertas→/agenda), con foco visible; la de Sociedades·Países cuenta solo países con sociedad.
+- [x] «Editar proceso»: título (no vacío) y departamento editables (PATCH ya los aceptaba; ahora valida título no vacío y departamento existente; auditado como siempre).
+- [x] Descripción anterior: textarea editable. Causa del texto a la derecha: el modal se montaba dentro de una celda `text-right`; `Modal` ahora fuerza `text-left`.
+- [x] Entrevistas: «+ Añadir entrevista» (filas repetibles), lista debajo, `DELETE /interviews/:id` solo PROGRAMADA (409 si completada), auditado.
+- [x] Tests: `pulido-ux.e2e-spec.ts` (9). Suite completa contra test: 30 ficheros, 238 tests. Verificado en navegador contra dev como RRHH.
+- Nota dev: las 4 cuentas demo de dev estaban desactivadas por el ensayo de la limpieza (script 01); reactivadas en dev el 2026-10-29. En producción siguen desactivadas a propósito.
+- [ ] Pendiente menor: el botón «Eliminar» del modal de confirmación sale negro, no rojo (variante `danger` de `Button`), también en los borrados de oferta/candidatura.
 
 # Próxima tanda: «Dar acceso» (gestión de usuarios) · diseño propuesto
 Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.ts` y `scripts/create-admin-user.mjs` (que no vincula empleado ni asigna MANAGER).
