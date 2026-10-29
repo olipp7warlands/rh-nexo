@@ -3,7 +3,7 @@ import { Badge, Button, Card } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { formatDate } from '../../lib/format';
 import type { Employee } from '../employees/useEmployees';
-import { ConfirmarEliminarModal } from '../reclutamiento/AccionesMenu';
+import { ConfirmarEliminarModal } from '../_shared/AccionesMenu';
 import { TemporaryPasswordModal } from './TemporaryPasswordModal';
 import {
   ROLE_OPTIONS,

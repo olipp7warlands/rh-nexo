@@ -4,7 +4,7 @@ import { formatDate } from '../../lib/format';
 import { useEmployees } from '../employees/useEmployees';
 import { useAddInterview, useDeleteInterview, useUpdateInterview, type InterviewItem } from './useRecruitment';
 import { INTERVIEW_TYPE_OPTIONS, interviewTypeLabel } from './fuentes';
-import { ConfirmarEliminarModal } from './AccionesMenu';
+import { ConfirmarEliminarModal } from '../_shared/AccionesMenu';
 
 const selectClass =
   'w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none';

@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom';
 import { Badge, Card } from '@nucleo/ui';
 import { formatDate } from '../../lib/format';
 import { roleLabel, useUsers } from './useUsers';
+import { CuentaAccionesMenu } from './CuentaAccionesMenu';
 
 /** Cuentas con acceso a la app (solo ADMIN). Solo lectura: la gestión vive en la pestaña «Acceso» de cada ficha. */
 export function CuentasPage() {
   const { data: accounts, isLoading, error } = useUsers();
+  const adminsActivos = (accounts ?? []).filter((a) => a.role === 'ADMIN' && a.isActive).length;
 
   return (
     <div>
       <p className="text-[13px] text-[var(--ink-tertiary)] mb-5">
-        {accounts ? `${accounts.length} cuentas` : 'Cargando…'} · Para dar acceso, cambiar rol, desactivar o restablecer la contraseña, abre la
-        ficha de la persona y su pestaña «Acceso».
+        {accounts ? `${accounts.length} cuentas` : 'Cargando…'} · Cada cuenta tiene su menú de acciones; para dar acceso a una persona nueva, abre su ficha y la pestaña «Acceso».
       </p>
       {error && (
         <Card>
@@ -33,6 +34,9 @@ export function CuentasPage() {
                     {h}
                   </th>
                 ))}
+                <th className="px-3 py-3">
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -55,11 +59,14 @@ export function CuentasPage() {
                     </Badge>
                   </td>
                   <td className="px-5 py-3 mono text-[var(--ink-secondary)]">{a.lastLogin ? formatDate(a.lastLogin) : 'Nunca'}</td>
+                  <td className="px-3 py-3 text-right">
+                    <CuentaAccionesMenu account={a} adminsActivos={adminsActivos} />
+                  </td>
                 </tr>
               ))}
               {accounts.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-[13px] text-[var(--ink-tertiary)]">
+                  <td colSpan={6} className="px-5 py-10 text-center text-[13px] text-[var(--ink-tertiary)]">
                     No hay cuentas.
                   </td>
                 </tr>
