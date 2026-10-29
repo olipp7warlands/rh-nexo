@@ -19,6 +19,7 @@ import { CategoriasModule } from './categorias/categorias.module';
 import { AnotacionesModule } from './anotaciones/anotaciones.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { AbsencesModule } from './absences/absences.module';
+import { CalendarFeedModule } from './calendar-feed/calendar-feed.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { ProcesosModule } from './procesos/procesos.module';
 import { PerformanceModule } from './performance/performance.module';
@@ -76,6 +77,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AnotacionesModule,
     AgendaModule,
     AbsencesModule,
+    CalendarFeedModule,
     HolidaysModule,
     ProcesosModule,
     PerformanceModule,
