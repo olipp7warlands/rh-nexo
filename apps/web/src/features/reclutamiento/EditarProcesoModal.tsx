@@ -51,7 +51,7 @@ export function EditarProcesoModal({ job, onClose }: { job: JobDetail; onClose: 
         id: job.id,
         title: title.trim(),
         departmentId: departmentId || undefined,
-        description: legado.trim(),
+        ...(job.description != null ? { description: legado.trim() } : {}),
         status,
         openedAt,
         closedAt: status === 'CERRADA' ? closedAt : undefined,
