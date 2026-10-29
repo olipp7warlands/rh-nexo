@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Button } from '@nucleo/ui';
 import { downloadFile } from '../../lib/api';
 import type { JobDetail } from './useRecruitment';
@@ -130,31 +130,59 @@ export function PdfField({
 }
 
 /**
- * Detalle de la oferta: secciones con encabezado (estilo Editorial). `description` es LEGADO y solo
- * se muestra si no hay ningún campo estructurado. El PDF se descarga solo con `canDownloadPdf`.
+ * Detalle de la oferta, colapsado por defecto para no empujar el pipeline fuera de pantalla: un
+ * extracto de 3 líneas (Objetivo del puesto; si no, el primer campo con contenido; si no, el texto
+ * legado) y «Ver descripción completa», que despliega las secciones en la propia página. `description`
+ * es LEGADO y solo se muestra si no hay ningún campo estructurado. El PDF se descarga solo con
+ * `canDownloadPdf` y vive junto al extracto.
  */
 export function DescripcionOferta({ job, canDownloadPdf }: { job: JobDetail; canDownloadPdf: boolean }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   const secciones = CAMPOS_DESCRIPCION.filter(({ key }) => job[key]);
   const showPdf = canDownloadPdf && job.tienePdf;
-  if (secciones.length === 0 && !job.description && !showPdf) return null;
+  const extracto = secciones.length > 0 ? (job.objetivoPuesto || job[secciones[0]!.key]) : job.description;
+  if (!extracto && !showPdf) return null;
   return (
-    <section aria-label="Descripción de la oferta" className="mb-8 max-w-3xl">
-      {secciones.length > 0
-        ? secciones.map(({ key, label }) => (
-            <div key={key} className="mb-5">
-              <h2 className="font-serif text-[15px] font-medium mb-1.5 pb-1.5 border-b border-[var(--line-subtle)]">{label}</h2>
-              <p className="text-[13px] text-[var(--ink-secondary)] whitespace-pre-line leading-relaxed">{job[key]}</p>
-            </div>
-          ))
-        : job.description && <p className="text-[13px] text-[var(--ink-secondary)] whitespace-pre-line">{job.description}</p>}
+    <section aria-label="Descripción de la oferta" className="mb-6 max-w-3xl">
+      {extracto && (
+        <>
+          <p className={`text-[13px] text-[var(--ink-secondary)] leading-relaxed whitespace-pre-line ${open ? 'hidden' : 'line-clamp-3'}`}>
+            {extracto}
+          </p>
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setOpen((o) => !o)}
+            className="mt-1.5 text-[12px] font-medium text-[var(--accent-ink)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)] rounded"
+          >
+            {open ? 'Ocultar descripción' : 'Ver descripción completa'}
+          </button>
+          <div id={panelId} hidden={!open} className="mt-4">
+            {secciones.length > 0 ? (
+              secciones.map(({ key, label }) => (
+                <div key={key} className="mb-5">
+                  <h2 className="font-serif text-[15px] font-medium mb-1.5 pb-1.5 border-b border-[var(--line-subtle)]">{label}</h2>
+                  <p className="text-[13px] text-[var(--ink-secondary)] whitespace-pre-line leading-relaxed">{job[key]}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-[13px] text-[var(--ink-secondary)] whitespace-pre-line leading-relaxed">{job.description}</p>
+            )}
+          </div>
+        </>
+      )}
       {showPdf && (
-        <Button
-          variant="secondary"
-          type="button"
-          onClick={() => downloadFile(`/jobs/${job.id}/pdf`, job.descripcionPdfNombre ?? 'oferta.pdf')}
-        >
-          Descargar PDF{job.descripcionPdfNombre ? ` · ${job.descripcionPdfNombre}` : ''}
-        </Button>
+        <div className="mt-2">
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => downloadFile(`/jobs/${job.id}/pdf`, job.descripcionPdfNombre ?? 'oferta.pdf')}
+          >
+            Descargar PDF{job.descripcionPdfNombre ? ` · ${job.descripcionPdfNombre}` : ''}
+          </Button>
+        </div>
       )}
     </section>
   );
