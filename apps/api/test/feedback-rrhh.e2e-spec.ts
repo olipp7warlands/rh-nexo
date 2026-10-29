@@ -9,7 +9,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
  * Mini-tanda «Feedback RRHH»:
  *  - Fuente ampliada + fuenteDetalle del candidato (alta, ficha, histórico).
  *  - Descripción estructurada de la oferta y PDF adjunto (magic bytes, solo ADMIN/RRHH, auditado).
- *  - DELETE /jobs/:id solo con 0 candidaturas; DELETE /applications/:id solo sin actividad; ambos auditados.
+ *  - DELETE /jobs/:id solo con 0 candidaturas; DELETE /applications/:id en cascada (entrevistas, evaluaciones, decisiones); ambos auditados.
  *  - Entrevistas: tipos telefónica/cultural/técnica/final, varias por candidatura, cada una con su entrevistador.
  * Crea sus datos con un marcador único y los limpia. Requiere Postgres de TEST migrado y sembrado.
  */
@@ -66,6 +66,8 @@ describe('Feedback RRHH (integración)', () => {
     const apps = await db.application.findMany({ where: { jobId: { in: jobIds } }, select: { id: true } });
     const appIds = apps.map((a) => a.id);
     await db.interview.deleteMany({ where: { applicationId: { in: appIds } } }).catch(() => undefined);
+    await db.evaluation.deleteMany({ where: { applicationId: { in: appIds } } }).catch(() => undefined);
+    await db.auditDecision.deleteMany({ where: { applicationId: { in: appIds } } }).catch(() => undefined);
     await db.application.deleteMany({ where: { id: { in: appIds } } }).catch(() => undefined);
     await db.candidate.deleteMany({ where: { id: { in: candidateIds } } }).catch(() => undefined);
     await db.auditLog
@@ -268,7 +270,7 @@ describe('Feedback RRHH (integración)', () => {
     });
   });
 
-  describe('DELETE /applications/:id (solo sin actividad; el candidato permanece)', () => {
+  describe('DELETE /applications/:id (en cascada; el candidato permanece)', () => {
     it('elimina una candidatura recién creada, conserva al candidato y audita', async () => {
       const job = await newJob();
       const c = await newCandidate();
@@ -280,22 +282,41 @@ describe('Feedback RRHH (integración)', () => {
       expect(log).not.toBeNull();
     });
 
-    it('con una entrevista o una decisión responde 409 y no borra nada', async () => {
+    it('borra en cascada entrevistas, evaluaciones y decisiones de ESA candidatura y deja el resumen en AuditLog', async () => {
       const job = await newJob();
       const c = await newCandidate();
+      const other = await newCandidate();
       const app1 = await newApplication(job.id, c.id).expect(201);
-      await request(http)
-        .post(`/api/applications/${app1.body.id}/interviews`)
-        .set(auth(rrhhToken))
-        .send({ type: 'telefonica', interviewerId: 'e3' })
-        .expect(201);
-      await request(http).delete(`/api/applications/${app1.body.id}`).set(auth(rrhhToken)).expect(409);
+      const app2 = await newApplication(job.id, other.id).expect(201);
+      const id = app1.body.id as string;
+      for (const type of ['telefonica', 'tecnica']) {
+        await request(http).post(`/api/applications/${id}/interviews`).set(auth(rrhhToken)).send({ type, interviewerId: 'e3' }).expect(201);
+      }
+      await request(http).post(`/api/applications/${id}/evaluations`).set(auth(rrhhToken)).send({ score: 4, recommendation: 'contratar' }).expect(201);
+      await request(http).patch(`/api/applications/${id}/reject`).set(auth(rrhhToken)).send({ reason: 'No encaja' }).expect(200);
+      // actividad de la OTRA candidatura: no debe tocarse
+      await request(http).post(`/api/applications/${app2.body.id}/interviews`).set(auth(rrhhToken)).send({ type: 'cultural' }).expect(201);
 
-      const c2 = await newCandidate();
-      const app2 = await newApplication(job.id, c2.id).expect(201);
-      await request(http).patch(`/api/applications/${app2.body.id}/reject`).set(auth(rrhhToken)).send({}).expect(200);
-      await request(http).delete(`/api/applications/${app2.body.id}`).set(auth(rrhhToken)).expect(409);
-      expect(await db.application.count({ where: { id: { in: [app1.body.id, app2.body.id] } } })).toBe(2);
+      const res = await request(http).delete(`/api/applications/${id}`).set(auth(rrhhToken)).expect(200);
+      expect(res.body.borrado).toEqual({ entrevistas: 2, evaluaciones: 1, decisiones: 1, etapas: 0 });
+
+      expect(await db.application.count({ where: { id } })).toBe(0);
+      expect(await db.interview.count({ where: { applicationId: id } })).toBe(0);
+      expect(await db.evaluation.count({ where: { applicationId: id } })).toBe(0);
+      expect(await db.auditDecision.count({ where: { applicationId: id } })).toBe(0);
+      expect(await db.candidate.count({ where: { id: c.id } })).toBe(1);
+      expect(await db.interview.count({ where: { applicationId: app2.body.id } })).toBe(1);
+
+      const log = await db.auditLog.findFirst({ where: { entity: 'Application', entityId: id, action: 'DELETE' } });
+      expect(log).not.toBeNull();
+      expect(log!.actorId).not.toBeNull();
+      expect(log!.after).toEqual({ borrado: { entrevistas: 2, evaluaciones: 1, decisiones: 1, etapas: 0 } });
+      // El AuditLog nunca se borra: las entradas previas de esa candidatura (CREATE, REJECT) siguen ahí.
+      expect(await db.auditLog.count({ where: { entity: 'Application', entityId: id } })).toBeGreaterThanOrEqual(3);
+    });
+
+    it('si falla algo a mitad, no se borra nada (transacción): id inexistente responde 404 sin efectos', async () => {
+      await request(http).delete('/api/applications/no-existe').set(auth(rrhhToken)).expect(404);
     });
 
     it('MANAGER (incluso hiring manager) y EMPLEADO no pueden (403)', async () => {

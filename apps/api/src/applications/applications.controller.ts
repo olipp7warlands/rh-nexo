@@ -39,7 +39,7 @@ export class ApplicationsController {
     return this.service.updateDates(id, dto, user);
   }
 
-  /** Solo una candidatura sin actividad (entrevistas, evaluaciones, decisiones). El Candidate no se borra. */
+  /** Borrado en cascada (entrevistas, evaluaciones, decisiones). El Candidate no se borra. Auditado. */
   @Roles('ADMIN', 'RRHH')
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {

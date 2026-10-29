@@ -116,7 +116,12 @@ export function CandidatePanel({
                 <CandidaturaAccionesMenu
                   applicationId={applicationId}
                   candidateName={candidate.fullName}
-                  actividad={application.interviews.length + application.evaluations.length + application.decisions.length > 0}
+                  conteo={{
+                    entrevistas: application.interviews.length,
+                    evaluaciones: application.evaluations.length,
+                    decisiones: application.decisions.length,
+                  }}
+                  onDeleted={onClose}
                 />
               )}
             </div>

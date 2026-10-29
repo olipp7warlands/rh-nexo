@@ -238,12 +238,14 @@ export function OfertaAccionesMenu({ job }: { job: JobSummary }) {
 export function CandidaturaAccionesMenu({
   applicationId,
   candidateName,
-  actividad,
+  conteo,
+  onDeleted,
 }: {
   applicationId: string;
   candidateName: string;
-  /** Hay entrevistas, evaluaciones o decisiones: no se puede borrar. */
-  actividad: boolean;
+  /** Lo que se borrará en cascada junto con la candidatura. */
+  conteo: { entrevistas: number; evaluaciones: number; decisiones: number };
+  onDeleted?: () => void;
 }) {
   const remove = useDeleteApplication();
   const [confirming, setConfirming] = useState(false);
@@ -261,7 +263,6 @@ export function CandidaturaAccionesMenu({
               setError(null);
               setConfirming(true);
             },
-            disabledReason: actividad ? 'Tiene actividad registrada: recházala, el historial no se borra.' : undefined,
           },
         ]}
       />
@@ -269,13 +270,16 @@ export function CandidaturaAccionesMenu({
         <div onClick={(e) => e.stopPropagation()}>
           <ConfirmarEliminarModal
             title="Eliminar candidatura"
-            message={`¿Eliminar la candidatura de «${candidateName}» a esta oferta? La persona seguirá existiendo como candidato. Esta acción no se puede deshacer.`}
+            message={`¿Eliminar la candidatura de «${candidateName}» a esta oferta? Se borrará también la traza del proceso de esta candidatura: ${conteo.entrevistas} entrevistas, ${conteo.evaluaciones} evaluaciones y ${conteo.decisiones} decisiones. La persona seguirá existiendo como candidato y el registro de auditoría conserva una entrada de este borrado. Esta acción no se puede deshacer.`}
             pending={remove.isPending}
             error={error}
             onClose={() => setConfirming(false)}
             onConfirm={() =>
               remove.mutate(applicationId, {
-                onSuccess: () => setConfirming(false),
+                onSuccess: () => {
+                  setConfirming(false);
+                  onDeleted?.();
+                },
                 onError: (e) => setError((e as Error).message),
               })
             }

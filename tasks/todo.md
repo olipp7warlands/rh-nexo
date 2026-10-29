@@ -146,9 +146,9 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 
 # Mini-tanda «Feedback RRHH» · rama `feat/feedback-rrhh-mini-tanda` (2026-10-29)
 - [x] Migración aditiva `20261029100000_feedback_rrhh_fuente_descripcion` (SQL aprobado tal cual): `CandidateSource` +6 valores, `Candidate.fuenteDetalle`, `Job` +5 campos de descripción +2 del PDF. Aplicada en **dev y test**. **Producción PENDIENTE.**
-- [x] Fuente + detalle (modal, ficha, histórico), acciones rápidas (menú ⋮ en tarjetas y listado; `DELETE /jobs/:id` solo con 0 candidaturas; `DELETE /applications/:id` solo sin entrevistas/evaluaciones/decisiones), descripción estructurada + PDF adjunto (magic bytes, solo ADMIN/RRHH, ruta del storage nunca expuesta), entrevistas Telefónica/Cultural/Técnica/Final (ya admitían varias por candidatura; el cambio fue de UI y validación del tipo).
+- [x] Fuente + detalle (modal, ficha, histórico), acciones rápidas (menú ⋮ en tarjetas y listado; `DELETE /jobs/:id` solo con 0 candidaturas; `DELETE /applications/:id` en CASCADA: candidatura + entrevistas + evaluaciones + decisiones, con aviso expreso en el modal y entrada DELETE/Application en AuditLog con conteos; el AuditLog nunca se borra), descripción estructurada + PDF adjunto (magic bytes, solo ADMIN/RRHH, ruta del storage nunca expuesta), entrevistas Telefónica/Cultural/Técnica/Final (ya admitían varias por candidatura; el cambio fue de UI y validación del tipo).
 - [x] Importador CSV y plantilla con fuente/detalle y los 5 campos de descripción (plantilla de 28 columnas).
-- [x] Suite completa contra test: 29 ficheros, 228 tests en verde (30 nuevos). `tsc` limpio en api y web.
+- [x] Suite completa contra test: 29 ficheros, 229 tests en verde (31 nuevos). `tsc` limpio en api y web.
 - [x] Arreglo colateral: `prisma/seed.ts` fallaba contra una base migrada (festivos sin `paisId` violan `Holiday_ambito_chk`); ahora los festivos demo llevan `paisId: 'p-es'`.
 - [x] Arreglo colateral: el nombre original del PDF llegaba en latin1 (Multer); se recompone a UTF-8.
 - [ ] **Ciclo de cierre pendiente, EN ORDEN:** backup de producción verificado y NOMBRADO → `migrate deploy` en producción → comprobar `_prisma_migrations` → merge (lección #25).

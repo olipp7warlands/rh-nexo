@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ContractType, Job } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
@@ -90,31 +90,42 @@ export class ApplicationsService {
   }
 
   /**
-   * Elimina una candidatura creada por error. Solo si no tiene actividad: ninguna entrevista,
-   * evaluación ni decisión (AuditDecision es la traza de auditoría y no se borra). El Candidate
-   * permanece. Comprobación y borrado en una transacción; audita antes del borrado.
+   * Elimina una candidatura EN CASCADA: la candidatura, sus entrevistas, evaluaciones, decisiones
+   * (AuditDecision, la traza del proceso de ESA candidatura) e historial de etapas. El Candidate
+   * permanece. Todo en una transacción; el AuditLog nunca se borra y recibe una entrada
+   * DELETE/Application con los conteos por tipo de lo eliminado.
    */
   async remove(id: string, viewer: AuthUser) {
     await this.requireApplication(id, viewer);
-    await this.db.$transaction(async (tx) => {
+    return this.db.$transaction(async (tx) => {
       const app = await tx.application.findUnique({
         where: { id },
-        include: { _count: { select: { interviews: true, evaluations: true, decisions: true } } },
+        include: { _count: { select: { interviews: true, evaluations: true, decisions: true, etapas: true } } },
       });
       if (!app) throw new NotFoundException('Candidatura no encontrada');
-      const { interviews, evaluations, decisions } = app._count;
-      if (interviews + evaluations + decisions > 0) {
-        throw new ConflictException(
-          'La candidatura tiene entrevistas, evaluaciones o decisiones registradas: recházala, el historial no se borra.',
-        );
-      }
       const { _count, ...before } = app;
-      await tx.application.delete({ where: { id } });
+      const borrado = {
+        entrevistas: _count.interviews,
+        evaluaciones: _count.evaluations,
+        decisiones: _count.decisions,
+        etapas: _count.etapas,
+      };
+      await tx.interview.deleteMany({ where: { applicationId: id } });
+      await tx.evaluation.deleteMany({ where: { applicationId: id } });
+      await tx.auditDecision.deleteMany({ where: { applicationId: id } });
+      await tx.application.delete({ where: { id } }); // ApplicationEtapa cae en cascada (FK)
       await tx.auditLog.create({
-        data: { actorId: viewer.id, action: 'DELETE', entity: 'Application', entityId: id, before: before as object },
+        data: {
+          actorId: viewer.id,
+          action: 'DELETE',
+          entity: 'Application',
+          entityId: id,
+          before: before as object,
+          after: { borrado } as object,
+        },
       });
+      return { id, deleted: true, borrado };
     });
-    return { id, deleted: true };
   }
 
   /** Corrige fechas reales de una candidatura (postulación / incorporación). Audita antes y después. */
