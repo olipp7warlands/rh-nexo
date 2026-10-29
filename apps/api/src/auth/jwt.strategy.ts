@@ -7,6 +7,7 @@ import { AuthUser } from './decorators/current-user.decorator';
 
 interface JwtPayload {
   sub: string;
+  pwv?: number; // versión de contraseña con la que se emitió (ver AuthService.issueTokens)
 }
 
 /** Valida el access token (Bearer) y proyecta el usuario a `req.user`. */
@@ -32,9 +33,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload): Promise<AuthUser> {
     const user = await this.db.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, role: true, employeeId: true, isActive: true },
+      select: { id: true, email: true, role: true, employeeId: true, isActive: true, mustChangePassword: true, passwordChangedAt: true },
     });
     if (!user || !user.isActive) {
+      throw new UnauthorizedException('Sesión inválida');
+    }
+    // Un cambio/restablecimiento de contraseña invalida los access tokens anteriores. Se compara la
+    // versión exacta (ms) en vez del `iat`, que va en segundos y dejaba una ventana de 1 s. Los tokens
+    // emitidos antes de existir el claim cuentan como versión 0 (válidos mientras la contraseña no cambie).
+    if ((payload.pwv ?? 0) !== (user.passwordChangedAt?.getTime() ?? 0)) {
       throw new UnauthorizedException('Sesión inválida');
     }
     return {
@@ -42,6 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       role: user.role,
       employeeId: user.employeeId,
+      mustChangePassword: user.mustChangePassword,
     };
   }
 }

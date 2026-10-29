@@ -31,6 +31,11 @@ export const tokenStore = {
 
 // Callback que AuthContext registra para reaccionar a una sesión caducada.
 let onLogout: () => void = () => {};
+// Cuenta con contraseña inicial/restablecida: el servidor responde 403 PASSWORD_CHANGE_REQUIRED a todo salvo cambiarla.
+let onPasswordChangeRequired: () => void = () => {};
+export function setOnPasswordChangeRequired(cb: () => void) {
+  onPasswordChangeRequired = cb;
+}
 export function setOnLogout(cb: () => void) {
   onLogout = cb;
 }
@@ -70,6 +75,7 @@ async function request<T>(path: string, init: RequestInit = {}, retryOn401 = tru
     const body = await res.json().catch(() => ({}));
     // Los errores de validación llegan como lista (uno por campo); el resto, como texto.
     const message = Array.isArray(body.message) ? body.message.join('. ') : body.message;
+    if (res.status === 403 && body.code === 'PASSWORD_CHANGE_REQUIRED') onPasswordChangeRequired();
     throw new Error(message ?? `Error ${res.status}`);
   }
   return res.status === 204 ? (undefined as T) : res.json();
@@ -158,6 +164,12 @@ export const authApi = {
       { method: 'POST', body: JSON.stringify({ email, password }) },
       false,
     ),
+  // Cambio de contraseña propio: 400 si la actual no es correcta (nunca 401, que cerraría la sesión).
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<Tokens & { user: unknown }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
   // Revoca la familia de refresh tokens en el servidor (auditoría A3) — mejor esfuerzo: si
   // falla (red caída, token ya inválido...) el cliente limpia igual su sesión local.
   logout: (refreshToken: string) =>

@@ -7,6 +7,12 @@ export class LoginDto {
   @IsString() @MinLength(6) @MaxLength(72) password!: string;
 }
 
+export class ChangePasswordDto {
+  @IsString() @MinLength(1) @MaxLength(72) currentPassword!: string;
+  // La política real (12+ caracteres, ≤72 bytes, distinta de la actual y del email) vive en AuthService.
+  @IsString() @MaxLength(72) newPassword!: string;
+}
+
 export class RefreshDto {
   @IsString() @MaxLength(128) refreshToken!: string; // el token real son 64 chars hex (32 bytes)
 }

@@ -7,5 +7,9 @@ export function ProtectedRoute() {
   const location = useLocation();
 
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  // Contraseña inicial/restablecida: nada más que la pantalla de cambio hasta que la cambie.
+  if (user.mustChangePassword && location.pathname !== '/cambiar-contrasena') {
+    return <Navigate to="/cambiar-contrasena" replace />;
+  }
   return <Outlet />;
 }

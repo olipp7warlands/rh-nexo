@@ -8,6 +8,8 @@ import { TiposContratoPage } from './TiposContratoPage';
 import { JornadasPage } from './JornadasPage';
 import { RelacionesEmergenciaPage } from './RelacionesEmergenciaPage';
 import { IdiomasPage } from './IdiomasPage';
+import { CuentasPage } from '../usuarios/CuentasPage';
+import { useAuth } from '../auth/AuthContext';
 
 // humanX: los 8 catálogos de Estructura/Config Informaciones consolidados en una sola página
 // con pestañas (antes eran 8 entradas sueltas en el menú) — ver nav.ts, item "configuracion".
@@ -20,12 +22,16 @@ const TABS = [
   { key: 'jornadas', label: 'Jornadas', Component: JornadasPage },
   { key: 'relaciones-emergencia', label: 'Relaciones de emergencia', Component: RelacionesEmergenciaPage },
   { key: 'idiomas', label: 'Idiomas', Component: IdiomasPage },
+  { key: 'cuentas', label: 'Cuentas', Component: CuentasPage, adminOnly: true },
 ] as const;
 
 export function ConfiguracionInformacionPage() {
   const { tab: tabParam } = useParams();
   const navigate = useNavigate();
-  const active = TABS.find((t) => t.key === tabParam) ?? TABS[0];
+  const { user } = useAuth();
+  // «Cuentas» (acceso a la app) solo la ve un ADMIN; para el resto ni existe la pestaña.
+  const tabs = TABS.filter((t) => !('adminOnly' in t) || user?.role === 'ADMIN');
+  const active = tabs.find((t) => t.key === tabParam) ?? tabs[0]!;
 
   return (
     <div className="max-w-[1400px] mx-auto px-10 py-10">
@@ -37,7 +43,7 @@ export function ConfiguracionInformacionPage() {
 
       {/* Pestañas */}
       <div className="flex gap-1 border-b border-[var(--line)] mb-6 overflow-x-auto">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => navigate(`/configuracion/${t.key}`)}

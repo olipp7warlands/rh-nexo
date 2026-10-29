@@ -164,7 +164,19 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 - Nota dev: las 4 cuentas demo de dev estaban desactivadas por el ensayo de la limpieza (script 01); reactivadas en dev el 2026-10-29. En producción siguen desactivadas a propósito.
 - [ ] Pendiente menor: el botón «Eliminar» del modal de confirmación sale negro, no rojo (variante `danger` de `Button`), también en los borrados de oferta/candidatura.
 
-# Próxima tanda: «Dar acceso» (gestión de usuarios) · diseño propuesto
+# Tanda «Gestión de usuarios» · rama `feat/gestion-usuarios` (2026-10-29) · IMPLEMENTADA, ciclo de cierre pendiente
+- [x] Migración aditiva `20261029170000_gestion_usuarios_acceso`: `User.mustChangePassword BOOLEAN NOT NULL DEFAULT false` + `User.passwordChangedAt TIMESTAMP(3)`. Aplicada en **dev y test**. **Producción PENDIENTE.**
+- [x] API (`users`, solo ADMIN): `GET /users`, `POST /users` (contraseña temporal una vez, `no-store`), `PATCH /users/:id` (rol), `POST /users/:id/deactivate|reactivate|reset-password`. Sin DELETE. Auth: `POST /auth/change-password` (actual + nueva ≥12 car., ≤72 bytes, ≠ actual, ≠ email; revoca todas las sesiones y emite par nuevo). `PasswordChangeGuard` global: con `mustChangePassword` todo da 403 `PASSWORD_CHANGE_REQUIRED` salvo `/auth/me` y el cambio.
+- [x] Invalidación de access tokens por versión de contraseña (`pwv` = `passwordChangedAt` en ms). Se descartó el `iat` (segundos): dejaba una ventana de 1 s y falló un test en la suite completa.
+- [x] Protecciones: no sobre uno mismo (desactivar, rol, restablecer); nunca sin ADMIN activo (FOR UPDATE en la transacción; unit test con BD simulada porque en e2e exigiría desactivar al admin del seed). Restablecer sobre otro ADMIN permitido y auditado.
+- [x] Auditoría entidad `User`: CREATE, UPDATE (rol), DEACTIVATE, REACTIVATE, PASSWORD_RESET, PASSWORD_CHANGE; lista blanca de campos, sin contraseñas ni hashes (test lo comprueba).
+- [x] Web: pestaña «Acceso» en la ficha (solo ADMIN), vista «Cuentas» en Configuración (solo ADMIN, solo lectura), `/cambiar-contrasena` (forzada: sin menú; voluntaria desde el menú lateral), modal de contraseña temporal no descartable, login sin distinguir mayúsculas.
+- [x] Tests: `users.e2e-spec.ts` (15) + `users.service.spec.ts` (5). Suite completa contra test: 33 ficheros, 264 tests. `tsc` limpio. Flujo completo verificado en navegador contra dev.
+- [ ] **Ciclo de cierre, EN ORDEN:** backup de producción verificado y NOMBRADO → `migrate deploy` → verificación en vivo (`_prisma_migrations`, 2 columnas en `User`) → merge (lo hace Oliver; lección #25).
+- Nota dev: queda la cuenta `prueba.acceso@example.com` (persona «Persona Prueba Acceso») DESACTIVADA; no se puede borrar porque el AuditLog referencia al usuario y el AuditLog no se toca.
+- Pendiente fuera de alcance: crear la primera cuenta MANAGER/EMPLEADO real en producción requiere que la persona exista en Personas con email; las cuentas reales actuales (ADMIN) no tienen persona vinculada, así que su pestaña «Acceso» no existe (se gestionan desde «Cuentas», solo lectura, o por script).
+
+# (Diseño original de la tanda, ya implementado arriba) «Dar acceso» (gestión de usuarios)
 Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.ts` y `scripts/create-admin-user.mjs` (que no vincula empleado ni asigna MANAGER).
 - **Dónde:** botón «Dar acceso» en la ficha del empleado (solo ADMIN) cuando el empleado no tiene `User`; si lo tiene, bloque «Acceso» con rol, estado y acciones.
 - **API (`users` module, solo ADMIN):** `POST /users` `{ employeeId, role }` crea el `User` con el email de la ficha, `isActive`, `employeeId` vinculado (único) y un **enlace de activación de un solo uso** (token hash + caducidad) en vez de contraseña: la persona la define ella (lección #24, nada por chat/CLI). `PATCH /users/:id` cambia rol o desactiva (nunca DELETE); desactivar revoca los refresh tokens. `POST /users/:id/reset` reenvía el enlace.

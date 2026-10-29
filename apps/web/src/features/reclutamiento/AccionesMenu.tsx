@@ -130,6 +130,9 @@ export function ConfirmarEliminarModal({
   error,
   onConfirm,
   onClose,
+  confirmLabel = 'Eliminar',
+  pendingLabel = 'Eliminando…',
+  variant = 'danger',
 }: {
   title: string;
   message: string;
@@ -137,6 +140,10 @@ export function ConfirmarEliminarModal({
   error: string | null;
   onConfirm: () => void;
   onClose: () => void;
+  /** Por defecto es un borrado; se reutiliza para otras confirmaciones (p. ej. desactivar una cuenta). */
+  confirmLabel?: string;
+  pendingLabel?: string;
+  variant?: 'danger' | 'primary';
 }) {
   return (
     <Modal
@@ -147,8 +154,8 @@ export function ConfirmarEliminarModal({
           <Button variant="ghost" type="button" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="danger" type="button" onClick={onConfirm} disabled={pending}>
-            {pending ? 'Eliminando…' : 'Eliminar'}
+          <Button variant={variant} type="button" onClick={onConfirm} disabled={pending}>
+            {pending ? pendingLabel : confirmLabel}
           </Button>
         </>
       }

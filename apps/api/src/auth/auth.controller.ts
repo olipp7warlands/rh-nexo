@@ -1,9 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshDto } from './auth.dto';
+import { ChangePasswordDto, LoginDto, RefreshDto } from './auth.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser, AuthUser } from './decorators/current-user.decorator';
+import { AllowPasswordChange } from './decorators/allow-password-change.decorator';
 
 // 5 intentos por minuto por IP — mucho más estricto que el límite base de la API (auditoría
 // A1). Configurable por env (AUTH_THROTTLE_LIMIT) para poder relajarlo en tests, donde un
@@ -39,6 +40,16 @@ export class AuthController {
     return this.auth.logout(dto.refreshToken);
   }
 
+  // Accesible con `mustChangePassword`: es justo la ruta que la cuenta necesita para desbloquearse.
+  @AllowPasswordChange()
+  @Throttle(AUTH_THROTTLE)
+  @HttpCode(200)
+  @Post('change-password')
+  changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
+    return this.auth.changePassword(user.id, dto.currentPassword, dto.newPassword);
+  }
+
+  @AllowPasswordChange()
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.auth.me(user.id);

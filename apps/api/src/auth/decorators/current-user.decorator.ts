@@ -7,6 +7,7 @@ export interface AuthUser {
   email: string;
   role: Role;
   employeeId: string | null;
+  mustChangePassword: boolean;
 }
 
 /** Inyecta el usuario autenticado en un parámetro del handler. */

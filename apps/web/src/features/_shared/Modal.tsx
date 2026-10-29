@@ -9,6 +9,7 @@ export function Modal({
   children,
   footer,
   wide = false,
+  dismissible = true,
 }: {
   title: string;
   subtitle?: string;
@@ -16,22 +17,24 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  /** false: no se cierra con Esc, clic fuera ni la X (p. ej. una contraseña que solo se muestra una vez). */
+  dismissible?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && dismissible) onClose();
     };
     document.addEventListener('keydown', onKey);
     panelRef.current?.focus();
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, dismissible]);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(10,10,10,0.45)] p-4 sm:p-8"
-      onMouseDown={onClose}
+      onMouseDown={dismissible ? onClose : undefined}
     >
       <div
         ref={panelRef}
@@ -47,13 +50,15 @@ export function Modal({
             <h2 className="font-serif text-[16px] font-medium tracking-[-0.01em]">{title}</h2>
             {subtitle && <p className="text-[12px] text-[var(--ink-secondary)] mt-0.5">{subtitle}</p>}
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)]"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {dismissible && (
+            <button
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="p-1.5 rounded-md text-[var(--ink-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--ink-primary)]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="px-6 py-5">{children}</div>
         {footer && (
