@@ -217,3 +217,14 @@ Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.t
 - Fuera por decisión: Nómina, Documentos (no se inventa un borrado), Ausencias.
 - Nota dev: persona «Kiran…» y cuentas `@prueba-festivos.example.com` de prueba siguen desactivadas.
 
+# Tanda 3 · Feed ICS de calendario (nivel 1, solo lectura) · rama `feat/feed-ics-calendario` (2026-10-29, sin migración)
+- [x] `GET /api/calendar/feed/:token.ics` (público, autorizado por token): SHA-256 del token → usuario; rol e `isActive` evaluados en CADA petición; token mal formado/desconocido/revocado/cuenta desactivada → el MISMO 404. Token de 256 bits (64 hex); en BD solo el hash; la URL solo se devuelve al generar/regenerar.
+- [x] Gestión autenticada (cada usuario la suya): `GET/POST/DELETE /api/calendar/feed`. Regenerar invalida el anterior al instante; revocar o desactivar la cuenta lo corta. Auditoría `CalendarFeed` CREATE/UPDATE/DELETE (entityId = userId) sin token ni hash; las lecturas no se auditan.
+- [x] Contenido (mismo alcance que la Agenda; reutiliza `AbsencesService.scopeWhere` y `AgendaService.alertas`): ausencias aprobadas (nunca el motivo; tipo solo en las propias y para ADMIN/RRHH, el resto «Ausencia — Nombre»), alertas de contrato, entrevistas del entrevistador con el PUESTO y sin nombre del candidato. Día completo salvo entrevistas con hora (Europe/Madrid, VTIMEZONE). Ventana: −60/+365 días.
+- [x] `Cache-Control: private, max-age=0, must-revalidate` + ETag (304 con If-None-Match); throttle propio 60/min por IP (`FEED_THROTTLE_LIMIT`).
+- [x] Generador ICS propio `lib/ics.ts` (escapado, plegado a 75 octetos sin partir UTF-8, CRLF) con tests unitarios.
+- [x] UI: Agenda → «Suscribirse desde tu calendario» (URL una vez, Copiar, Regenerar, Revocar, instrucciones de Outlook y aviso de refresco no inmediato).
+- [x] Tests: `ics.spec.ts` (13), `calendar-feed.e2e-spec.ts` (13), `calendar-feed-throttle.e2e-spec.ts` (1). Verificación real: .ics descargado por HTTP de dev y parseado con `ical.js` (3 eventos correctos).
+- [ ] **Aviso operativo:** el token va en la URL, así que aparece en los logs de acceso de la plataforma (Railway) aunque la app no lo registre. Mitigación: regenerar/revocar; no compartir. No hay migración, el despliegue es solo el merge.
+- [ ] Nivel 2 (futuro): invitaciones/escritura desde el calendario externo — fuera de alcance.
+

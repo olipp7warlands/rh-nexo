@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button, Card, PageHeader } from '@nucleo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useCalendar, useHolidays } from './useAbsences';
 import { useAlertas, TIPO_ALERTA_LABEL, type Alerta } from '../agenda/useAgenda';
 import { useAnotaciones, type Anotacion } from '../anotaciones/useAnotaciones';
 import { formatDate } from '../../lib/format';
+import { SuscripcionCalendarioModal } from '../agenda/SuscripcionCalendarioModal';
 import { ambitoLabel, holidayMarks } from './HolidayMarks';
 import type { Holiday } from './useAbsences';
 
@@ -18,6 +19,7 @@ export function CalendarioPage() {
   const { user } = useAuth();
   const canSeeAnotaciones = user?.role === 'ADMIN' || user?.role === 'RRHH';
 
+  const [suscribiendo, setSuscribiendo] = useState(false);
   const today = new Date();
   const [cursor, setCursor] = useState({ y: today.getUTCFullYear(), m: today.getUTCMonth() });
 
@@ -124,7 +126,17 @@ export function CalendarioPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-10 py-10">
-      <PageHeader eyebrow="Principal" title="Agenda" subtitle="Hoy y el mes por delante." />
+      <PageHeader
+        eyebrow="Principal"
+        title="Agenda"
+        subtitle="Hoy y el mes por delante."
+        actions={
+          <Button variant="secondary" type="button" icon={<CalendarPlus />} onClick={() => setSuscribiendo(true)}>
+            Suscribirse desde tu calendario
+          </Button>
+        }
+      />
+      {suscribiendo && <SuscripcionCalendarioModal onClose={() => setSuscribiendo(false)} />}
 
       <Card padding="p-0" className="mb-6">
         <div className="px-5 py-4 border-b border-[var(--line)]">

@@ -12,8 +12,8 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 export class AbsencesService {
   constructor(private readonly db: PrismaService) {}
 
-  /** Alcance por rol: EMPLEADO ve lo suyo; MANAGER su equipo + lo suyo; RRHH/ADMIN todo. */
-  private scopeWhere(viewer: AuthUser): Prisma.AbsenceWhereInput {
+  /** Alcance por rol: EMPLEADO ve lo suyo; MANAGER su equipo + lo suyo; RRHH/ADMIN todo. Público: lo reutiliza el feed ICS (calendar-feed) para no duplicar la regla. */
+  scopeWhere(viewer: AuthUser): Prisma.AbsenceWhereInput {
     const own = viewer.employeeId ?? '__none__';
     if (viewer.role === 'ADMIN' || viewer.role === 'RRHH') return {};
     if (viewer.role === 'MANAGER') return { OR: [{ employeeId: own }, { employee: { managerId: own } }] };
