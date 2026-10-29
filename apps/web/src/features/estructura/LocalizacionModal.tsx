@@ -5,9 +5,16 @@ import { z } from 'zod';
 import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useCreateLocalizacion, useUpdateLocalizacion, type Localizacion } from './useEstructura';
+import { PaisSelectField } from './PaisSelectField';
 
-const schema = z.object({ nombre: z.string().min(1, 'Obligatorio') });
-type FormData = z.infer<typeof schema>;
+// El país es obligatorio al crear. Al editar queda opcional solo si la localización aún no lo tiene
+// (creadas antes de existir el campo): se puede renombrar sin forzar, pero el aviso invita a asignarlo.
+const schema = (mode: 'create' | 'edit') =>
+  z.object({
+    nombre: z.string().min(1, 'Obligatorio'),
+    paisId: mode === 'create' ? z.string().min(1, 'Obligatorio') : z.string(),
+  });
+type FormData = { nombre: string; paisId: string };
 
 export function LocalizacionModal({
   mode,
@@ -20,22 +27,24 @@ export function LocalizacionModal({
 }) {
   const create = useCreateLocalizacion();
   const update = useUpdateLocalizacion(localizacion?.id ?? '');
-  const mutation = mode === 'create' ? create : update;
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: localizacion ? { nombre: localizacion.nombre } : undefined,
+    resolver: zodResolver(schema(mode)),
+    defaultValues: { nombre: localizacion?.nombre ?? '', paisId: localizacion?.paisId ?? '' },
   });
+  const pending = create.isPending || update.isPending;
 
   const onSubmit = handleSubmit(async (data) => {
     setServerError(null);
     try {
-      await mutation.mutateAsync(data);
+      if (mode === 'create') await create.mutateAsync({ nombre: data.nombre, paisId: data.paisId });
+      else await update.mutateAsync({ nombre: data.nombre, ...(data.paisId ? { paisId: data.paisId } : {}) });
       onClose();
     } catch (e) {
       setServerError((e as Error).message);
@@ -51,20 +60,34 @@ export function LocalizacionModal({
           <Button variant="ghost" onClick={onClose} type="button">
             Cancelar
           </Button>
-          <Button variant="primary" onClick={onSubmit} disabled={mutation.isPending}>
-            {mutation.isPending ? 'Guardando…' : mode === 'create' ? 'Crear localización' : 'Guardar cambios'}
+          <Button variant="primary" onClick={onSubmit} disabled={pending}>
+            {pending ? 'Guardando…' : mode === 'create' ? 'Crear localización' : 'Guardar cambios'}
           </Button>
         </>
       }
     >
-      <form onSubmit={onSubmit} noValidate>
-        <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
-          Nombre <span className="text-[var(--danger)]">*</span>
-        </label>
-        <Input autoFocus {...register('nombre')} />
-        {errors.nombre && <p className="text-[12px] text-[var(--danger)] mt-1.5">{errors.nombre.message}</p>}
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+        <div>
+          <label htmlFor="loc-nombre" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+            Nombre <span className="text-[var(--danger)]">*</span>
+          </label>
+          <Input id="loc-nombre" autoFocus {...register('nombre')} />
+          {errors.nombre && <p className="text-[12px] text-[var(--danger)] mt-1.5">{errors.nombre.message}</p>}
+        </div>
+        <PaisSelectField
+          label="País"
+          required={mode === 'create' || !!localizacion?.paisId}
+          error={errors.paisId?.message}
+          registerReturn={register('paisId')}
+          onCreated={(id) => setValue('paisId', id, { shouldValidate: true })}
+        />
+        {mode === 'edit' && !localizacion?.paisId && (
+          <p className="text-[12px] text-[var(--ink-secondary)] bg-[var(--bg-subtle)] rounded-md px-3 py-2">
+            Esta localización se creó sin país. Asígnaselo para que los festivos y filtros por país la reconozcan.
+          </p>
+        )}
         {serverError && (
-          <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2 mt-4">
+          <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2">
             {serverError}
           </div>
         )}

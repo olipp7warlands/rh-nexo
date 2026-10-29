@@ -26,6 +26,8 @@ export function LocalizacionesPage() {
     }
   };
 
+  const sinPais = (localizaciones ?? []).filter((l) => !l.paisId);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
@@ -36,6 +38,13 @@ export function LocalizacionesPage() {
           </Button>
         )}
       </div>
+
+      {sinPais.length > 0 && (
+        <div role="status" className="mb-4 text-[12px] text-[var(--ink-secondary)] bg-[var(--bg-subtle)] border border-[var(--line)] rounded-md px-3 py-2">
+          {sinPais.length === 1 ? '1 localización no tiene país asignado' : `${sinPais.length} localizaciones no tienen país asignado`}
+          {canManage ? ': edítalas para asignárselo.' : '.'}
+        </div>
+      )}
 
       {error && (
         <Card>
@@ -60,7 +69,7 @@ export function LocalizacionesPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-[var(--bg-subtle)] border-b border-[var(--line)]">
-                {['Localización', 'Personas', ''].map((h) => (
+                {['Localización', 'País', 'Personas', ''].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-[10px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]">
                     {h}
                   </th>
@@ -71,6 +80,15 @@ export function LocalizacionesPage() {
               {localizaciones.map((l) => (
                 <tr key={l.id} className="border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--bg-subtle)]">
                   <td className="px-5 py-4 font-medium">{l.nombre}</td>
+                  <td className="px-5 py-4 text-[var(--ink-secondary)]">
+                    {l.pais ? (
+                      l.pais.nombre
+                    ) : (
+                      <span className="text-[12px] text-[var(--warning)]" title="Sin país asignado: edítala para asignárselo">
+                        ⚠ Sin país
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-4 mono text-[var(--ink-secondary)]">{l._count.empleados}</td>
                   <td className="px-5 py-4">
                     {canManage && (
@@ -97,7 +115,7 @@ export function LocalizacionesPage() {
               ))}
               {localizaciones.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-5 py-10 text-center text-[13px] text-[var(--ink-tertiary)]">
+                  <td colSpan={4} className="px-5 py-10 text-center text-[13px] text-[var(--ink-tertiary)]">
                     No hay localizaciones todavía.
                   </td>
                 </tr>
