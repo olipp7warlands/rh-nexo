@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { api, authApi, tokenStore, setOnLogout } from '../../lib/api';
+import { api, authApi, tokenStore, setOnLogout, setOnPasswordChangeRequired } from '../../lib/api';
 
 export type Role = 'ADMIN' | 'RRHH' | 'MANAGER' | 'EMPLEADO';
 
@@ -8,12 +8,15 @@ export interface SessionUser {
   email: string;
   role: Role;
   employeeId: string | null;
+  /** Contraseña inicial/restablecida: la app solo permite cambiarla hasta que lo haga. */
+  mustChangePassword?: boolean;
   employee?: { id: string; fullName: string; jobTitle: string } | null;
 }
 
 interface AuthContextValue {
   user: SessionUser | null;
   login: (email: string, password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Si el refresh falla en cualquier petición, cerramos sesión en el cliente.
     setOnLogout(() => setUser(null));
+    setOnPasswordChangeRequired(() => setUser((u) => (u ? { ...u, mustChangePassword: true } : u)));
 
     if (!tokenStore.access) return;
     api
@@ -74,6 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.get<SessionUser>('/auth/me').then(setUser).catch(() => {});
   };
 
+  /** Cambia la contraseña propia: el servidor revoca las demás sesiones y devuelve un par de tokens nuevo. */
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    const res = await authApi.changePassword(currentPassword, newPassword);
+    tokenStore.set(res);
+    setUser((u) => (u ? { ...u, ...(res.user as SessionUser), mustChangePassword: false } : (res.user as SessionUser)));
+  };
+
   const logout = () => {
     const refreshToken = tokenStore.refresh;
     if (refreshToken) void authApi.logout(refreshToken); // best-effort, no bloquea el logout local
@@ -81,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, login, changePassword, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

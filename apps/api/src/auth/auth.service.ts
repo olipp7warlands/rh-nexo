@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
@@ -7,6 +7,12 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días, igual que antes
+
+/** Política de contraseñas NUEVAS (cambio voluntario o forzado). Las del seed de dev siguen valiendo para entrar. */
+export const MIN_PASSWORD_LENGTH = 12;
+export const BCRYPT_ROUNDS = 10;
+/** bcrypt trunca en silencio a partir de 72 BYTES (no caracteres): con acentos/emojis hay que medir bytes. */
+const MAX_PASSWORD_BYTES = 72;
 
 @Injectable()
 export class AuthService {
@@ -18,7 +24,8 @@ export class AuthService {
 
   /** Login: valida credenciales (bcrypt) y estado de la cuenta, registra lastLogin y emite tokens. */
   async login(email: string, password: string) {
-    const user = await this.db.user.findUnique({ where: { email } });
+    // Sin distinguir mayúsculas: el email de la ficha puede tener otra capitalización que la que teclea la persona.
+    const user = await this.db.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
     if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -61,6 +68,54 @@ export class AuthService {
     if (stored) await this.revokeFamily(stored.familyId);
   }
 
+  /**
+   * Cambio de contraseña propio (voluntario o forzado por `mustChangePassword`). Exige la actual.
+   * Revoca TODAS las familias de refresh tokens del usuario (las demás sesiones mueren) y emite un
+   * par nuevo para que la sesión actual continúe. `passwordChangedAt` invalida los access tokens
+   * anteriores (ver JwtStrategy). La auditoría nunca recibe contraseñas ni hashes.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    // 400 y no 401: un 401 haría que el cliente intente renovar sesión y la cierre.
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      throw new BadRequestException(`La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`);
+    }
+    if (Buffer.byteLength(newPassword, 'utf8') > MAX_PASSWORD_BYTES) {
+      throw new BadRequestException('La nueva contraseña es demasiado larga (máximo 72 bytes)');
+    }
+    if (newPassword === currentPassword) {
+      throw new BadRequestException('La nueva contraseña debe ser distinta de la actual');
+    }
+    if (newPassword.toLowerCase() === user.email.toLowerCase()) {
+      throw new BadRequestException('La contraseña no puede ser tu email');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const updated = await this.db.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash, mustChangePassword: false, passwordChangedAt: new Date() },
+      });
+      const revoked = await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.auditLog.create({
+        data: {
+          actorId: userId,
+          action: 'PASSWORD_CHANGE',
+          entity: 'User',
+          entityId: userId,
+          before: { mustChangePassword: user.mustChangePassword },
+          after: { mustChangePassword: false, sessionsRevoked: revoked.count },
+        },
+      });
+      return u;
+    });
+    return this.issueTokens(updated, randomUUID());
+  }
+
   /** Datos del usuario autenticado (para hidratar la sesión en el cliente). */
   async me(userId: string) {
     const user = await this.db.user.findUnique({
@@ -70,6 +125,7 @@ export class AuthService {
         email: true,
         role: true,
         employeeId: true,
+        mustChangePassword: true,
         employee: { select: { id: true, fullName: true, jobTitle: true } },
       },
     });
@@ -89,7 +145,14 @@ export class AuthService {
   }
 
   private async issueTokens(user: User, familyId: string) {
-    const payload = { sub: user.id, email: user.email, role: user.role, employeeId: user.employeeId };
+    // `pwv` = versión de contraseña (ms de passwordChangedAt, 0 si nunca cambió): JwtStrategy rechaza el token si ya no coincide.
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      employeeId: user.employeeId,
+      pwv: user.passwordChangedAt?.getTime() ?? 0,
+    };
     const accessToken = await this.jwt.signAsync(payload, {
       secret: this.config.get<string>('JWT_SECRET'),
       expiresIn: this.config.get<string>('JWT_EXPIRES_IN') ?? '15m',
@@ -110,7 +173,13 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, role: user.role, employeeId: user.employeeId },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        employeeId: user.employeeId,
+        mustChangePassword: user.mustChangePassword,
+      },
     };
   }
 }

@@ -214,6 +214,8 @@ model User {
   lastLogin             DateTime?
   calendarFeedTokenHash String?         @unique // SHA-256 del token del feed ICS (Tanda 3); nunca el token en claro
   calendarFeedTokenAt   DateTime?
+  mustChangePassword    Boolean         @default(false) // contraseña inicial/restablecida: el servidor bloquea la API hasta que la cambie
+  passwordChangedAt     DateTime? // los access tokens emitidos antes de esta fecha dejan de valer
   createdAt             DateTime        @default(now())
   notifications         Notification[]
   auditLogs             AuditLog[]      @relation("AuditActor")

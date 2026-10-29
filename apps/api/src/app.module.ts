@@ -32,6 +32,8 @@ import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { PasswordChangeGuard } from './auth/guards/password-change.guard';
+import { UsersModule } from './users/users.module';
 import { RolesGuard } from './auth/guards/roles.guard';
 
 @Module({
@@ -63,6 +65,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     DepartmentsModule,
     PaisesModule,
     SociedadesModule,
+    UsersModule,
     LocalizacionesModule,
     TiposContratoModule,
     JornadasModule,
@@ -88,6 +91,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PasswordChangeGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })

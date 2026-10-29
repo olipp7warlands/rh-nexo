@@ -24,6 +24,7 @@ import { AbsenceStatusBadge, AbsenceTypeBadge } from '../absences/AbsenceBadges'
 import { useCycles, useCycle } from '../performance/usePerformance';
 import { age, birthdayLabel, formatDate, formatEuro, LEVEL_LABEL, seniority } from '../../lib/format';
 import { NACIONALIDAD_LABEL, SITUACION_IRPF_LABEL } from './listasFijas';
+import { AccesoTab } from '../usuarios/AccesoTab';
 
 function CategoriaDot({ color }: { color: string }) {
   return <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />;
@@ -63,6 +64,7 @@ const TAB_KEYS = [
   'Ausencias',
   'Documentos',
   'Desempeño',
+  'Acceso',
 ] as const;
 type Tab = (typeof TAB_KEYS)[number];
 
@@ -76,6 +78,7 @@ const TAB_SLUGS: Record<string, Tab> = {
   ausencias: 'Ausencias',
   documentos: 'Documentos',
   desempeno: 'Desempeño',
+  acceso: 'Acceso',
 };
 
 const TABS: { key: Tab; hidden?: boolean }[] = [
@@ -89,6 +92,7 @@ const TABS: { key: Tab; hidden?: boolean }[] = [
   { key: 'Ausencias', hidden: true },
   { key: 'Documentos' },
   { key: 'Desempeño' },
+  { key: 'Acceso' }, // solo ADMIN (se filtra abajo)
 ];
 
 export function EmployeeDetailPage() {
@@ -96,6 +100,7 @@ export function EmployeeDetailPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const canManage = user?.role === 'ADMIN' || user?.role === 'RRHH';
+  const isAdmin = user?.role === 'ADMIN';
 
   const { data: emp, isLoading, error } = useEmployee(id);
   const { data: all } = useEmployees({});
@@ -243,7 +248,7 @@ export function EmployeeDetailPage() {
 
       {/* Pestañas */}
       <div className="flex gap-1 border-b border-[var(--line)] mb-6 overflow-x-auto">
-        {TABS.filter((t) => !t.hidden && (t.key !== 'Anotaciones' || canManage)).map((t) => (
+        {TABS.filter((t) => !t.hidden && (t.key !== 'Anotaciones' || canManage) && (t.key !== 'Acceso' || isAdmin)).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -658,6 +663,8 @@ export function EmployeeDetailPage() {
           )}
         </Card>
       )}
+
+      {tab === 'Acceso' && isAdmin && <AccesoTab employee={emp} />}
 
       {tab === 'Desempeño' && (
         <div className="grid grid-cols-3 gap-5">

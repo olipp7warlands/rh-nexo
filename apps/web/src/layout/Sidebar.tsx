@@ -17,6 +17,7 @@ import {
   Home,
   Languages,
   Layers,
+  KeyRound,
   LogOut,
   MapPin,
   Network,
@@ -397,6 +398,14 @@ export function Sidebar() {
             <Avatar name={name} size="sm" />
           </IconTooltip>
           <button
+            onClick={() => navigate('/cambiar-contrasena')}
+            title="Cambiar contraseña"
+            aria-label="Cambiar contraseña"
+            className="p-1.5 rounded-md hover:bg-[var(--bg-sidebar-hover)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition-colors"
+          >
+            <KeyRound className="w-4 h-4" />
+          </button>
+          <button
             onClick={logout}
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
@@ -412,6 +421,14 @@ export function Sidebar() {
             <div className="text-[12px] font-semibold leading-tight truncate">{name}</div>
             <div className="mono text-[10px] text-[var(--ink-tertiary)] truncate">{roleLabel}</div>
           </div>
+          <button
+            onClick={() => navigate('/cambiar-contrasena')}
+            title="Cambiar contraseña"
+            aria-label="Cambiar contraseña"
+            className="p-1.5 rounded-md hover:bg-[var(--bg-sidebar-hover)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition-colors"
+          >
+            <KeyRound className="w-4 h-4" />
+          </button>
           <button
             onClick={logout}
             title="Cerrar sesión"

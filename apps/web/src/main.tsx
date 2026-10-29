@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import '@nucleo/ui/styles.css';
 import { AuthProvider } from './features/auth/AuthContext';
 import { ProtectedRoute } from './features/auth/ProtectedRoute';
+import { ChangePasswordPage } from './features/auth/ChangePasswordPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { AppShell } from './layout/AppShell';
 import { PlaceholderPage } from './features/_shared/PlaceholderPage';
@@ -80,6 +81,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
               {/* Todo lo demás exige sesión y vive dentro del AppShell. */}
               <Route element={<ProtectedRoute />}>
+                {/* Fuera del AppShell: con contraseña temporal no hay menú, solo esta pantalla y «Cerrar sesión». */}
+                <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
                 <Route element={<AppShell />}>
                   <Route path="/personas/:id" element={<EmployeeDetailPage />} />
                   {/* Subpestaña de Selección; la URL = nombre visible. Estática: gana a :jobId. */}
