@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { LocalizacionesService } from './localizaciones.service';
 import { CreateLocalizacionDto, UpdateLocalizacionDto } from './localizacion.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 
 // Lectura para cualquier usuario autenticado; mutaciones solo ADMIN/RRHH.
 @Controller('localizaciones')
@@ -15,14 +16,14 @@ export class LocalizacionesController {
 
   @Roles('ADMIN', 'RRHH')
   @Post()
-  create(@Body() dto: CreateLocalizacionDto) {
-    return this.service.create(dto);
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateLocalizacionDto) {
+    return this.service.create(dto, user);
   }
 
   @Roles('ADMIN', 'RRHH')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateLocalizacionDto) {
-    return this.service.update(id, dto);
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateLocalizacionDto) {
+    return this.service.update(id, dto, user);
   }
 
   @Roles('ADMIN', 'RRHH')

@@ -115,6 +115,7 @@ function CatalogSelectField({
   emptyLabel,
   canCreate,
   useCreateHook,
+  paises,
   onCreated,
   onError,
 }: {
@@ -125,21 +126,25 @@ function CatalogSelectField({
   options: { id: string; label: string }[];
   emptyLabel: string;
   canCreate: boolean;
-  useCreateHook: () => { mutateAsync: (data: { nombre: string }) => Promise<{ id: string }>; isPending: boolean };
+  useCreateHook: () => { mutateAsync: (data: { nombre: string; paisId: string }) => Promise<{ id: string }>; isPending: boolean };
+  /** Si se pasa, el alta en línea pide también el país (p. ej. Localización). */
+  paises?: { id: string; nombre: string }[];
   onCreated: (id: string) => void;
   onError: (message: string) => void;
 }) {
   const create = useCreateHook();
   const [creatingNew, setCreatingNew] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newPaisId, setNewPaisId] = useState('');
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || (paises && !newPaisId)) return;
     try {
-      const created = await create.mutateAsync({ nombre: newName.trim() });
+      const created = await create.mutateAsync({ nombre: newName.trim(), paisId: newPaisId });
       onCreated(created.id);
       setCreatingNew(false);
       setNewName('');
+      setNewPaisId('');
     } catch (e) {
       onError((e as Error).message);
     }
@@ -166,7 +171,17 @@ function CatalogSelectField({
       ) : (
         <div className="flex items-center gap-2">
           <Input autoFocus placeholder="Nombre" value={newName} onChange={(e) => setNewName(e.target.value)} />
-          <Button variant="secondary" type="button" size="sm" onClick={handleCreate} disabled={create.isPending}>
+          {paises && (
+            <select className={selectClass} value={newPaisId} onChange={(e) => setNewPaisId(e.target.value)} aria-label={`País de ${label.toLowerCase()} nueva`}>
+              <option value="">País…</option>
+              {paises.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+          <Button variant="secondary" type="button" size="sm" onClick={handleCreate} disabled={create.isPending || (!!paises && !newPaisId)}>
             Crear
           </Button>
           <Button variant="ghost" type="button" size="sm" onClick={() => setCreatingNew(false)}>
@@ -622,6 +637,7 @@ export function EmployeeModal({
               emptyLabel="Selecciona…"
               canCreate={canComp}
               useCreateHook={useCreateLocalizacion}
+              paises={paises}
               onCreated={(id) => setValue('localizacionId', id)}
               onError={setServerError}
             />

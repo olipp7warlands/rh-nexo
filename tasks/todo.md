@@ -172,3 +172,12 @@ Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.t
 - **Auditoría:** `AuditLog` en alta, cambio de rol, desactivación y reenvío (sin hashes ni tokens en `before/after`).
 - **Tests:** permisos (solo ADMIN), unicidad empleado↔usuario, último ADMIN, token de activación de un solo uso y caducado, refresh tokens revocados al desactivar.
 - **Requiere:** decidir el canal del enlace (email vs copiarlo ADMIN) — hoy no hay envío de correo en el producto.
+
+# Tanda 2 · Bloque 1 «Países, localizaciones y retoques» · rama `feat/tanda2-bloque1-paises-localizaciones` (2026-10-29, sin migración)
+- [x] `POST /paises` (ADMIN/RRHH, único sin distinguir mayúsculas, AuditLog CREATE/Pais) y «+ Nuevo país» en línea en el modal de Sociedad y en el de Localización (`PaisSelectField`).
+- [x] Localización con País: obligatorio al crear (API y form), asignable al editar las creadas sin él; columna País y aviso suave en la lista; auditoría CREATE/UPDATE de Localizacion. El alta en línea de localización en el expediente de Personas pide ahora también el país.
+- [x] Producción (solo lectura, 2026-10-29): 0 localizaciones (ninguna sin país); 3 países: España (7 sociedades), Emiratos Árabes Unidos (7), India (0).
+- [x] Botón «Ver/Ocultar descripción» del detalle de oferta: botón secundario con chevron que rota.
+- [x] Tests: `paises-localizaciones.e2e-spec.ts` (6). Suite completa contra test: 31 ficheros, 244 tests. Verificado en navegador contra dev.
+- [ ] Nota: el alta por contratación (`applications.service.hire`) puede crear una Localizacion sin país (texto libre de la oferta); el aviso de la lista la señala. Decidir si en el Bloque 2 se resuelve el país en ese punto.
+- [ ] Bloque 2 (pendiente, no tocado): festivos y cálculo de ausencias.

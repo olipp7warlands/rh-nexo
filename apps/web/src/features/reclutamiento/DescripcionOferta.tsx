@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@nucleo/ui';
 import { downloadFile } from '../../lib/api';
 import type { JobDetail } from './useRecruitment';
@@ -150,15 +151,18 @@ export function DescripcionOferta({ job, canDownloadPdf }: { job: JobDetail; can
           <p className={`text-[13px] text-[var(--ink-secondary)] leading-relaxed whitespace-pre-line ${open ? 'hidden' : 'line-clamp-3'}`}>
             {extracto}
           </p>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             type="button"
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => setOpen((o) => !o)}
-            className="mt-1.5 text-[12px] font-medium text-[var(--accent-ink)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)] rounded"
+            className="mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)]"
+            iconRight={<ChevronDown aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />}
           >
             {open ? 'Ocultar descripción' : 'Ver descripción completa'}
-          </button>
+          </Button>
           <div id={panelId} hidden={!open} className="mt-4">
             {secciones.length > 0 ? (
               secciones.map(({ key, label }) => (

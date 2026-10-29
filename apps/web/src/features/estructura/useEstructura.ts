@@ -17,11 +17,26 @@ export interface Sociedad {
 export interface Localizacion {
   id: string;
   nombre: string;
+  /** Null en las localizaciones creadas antes de existir el campo (o por el alta de contratación). */
+  paisId: string | null;
+  pais: Pais | null;
   _count: { empleados: number };
 }
 
 export function usePaises() {
   return useQuery({ queryKey: ['paises'], queryFn: () => api.get<Pais[]>('/paises'), staleTime: 10 * 60 * 1000 });
+}
+
+/** Alta de país (ADMIN/RRHH). Se añade a la caché al instante para poder seleccionarlo ya en el desplegable. */
+export function useCreatePais() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { nombre: string }) => api.post<Pais>('/paises', data),
+    onSuccess: (pais) => {
+      qc.setQueryData<Pais[]>(['paises'], (old) => [...(old ?? []), pais].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
+      qc.invalidateQueries({ queryKey: ['paises'] });
+    },
+  });
 }
 
 export function useSociedades() {
@@ -59,7 +74,7 @@ export function useLocalizaciones() {
 export function useCreateLocalizacion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { nombre: string }) => api.post<Localizacion>('/localizaciones', data),
+    mutationFn: (data: { nombre: string; paisId: string }) => api.post<Localizacion>('/localizaciones', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['localizaciones'] }),
   });
 }
@@ -67,7 +82,7 @@ export function useCreateLocalizacion() {
 export function useUpdateLocalizacion(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { nombre: string }) => api.patch<Localizacion>(`/localizaciones/${id}`, data),
+    mutationFn: (data: { nombre?: string; paisId?: string }) => api.patch<Localizacion>(`/localizaciones/${id}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['localizaciones'] }),
   });
 }

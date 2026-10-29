@@ -82,7 +82,7 @@ describe('Estructura + Personas (integración)', () => {
     const created = await request(http)
       .post('/api/localizaciones')
       .set('Authorization', `Bearer ${token}`)
-      .send({ nombre: 'Localización de prueba Fase C' })
+      .send({ nombre: 'Localización de prueba Fase C', paisId: 'p-es' })
       .expect(201);
     createdLocalizacionId = created.body.id;
 
