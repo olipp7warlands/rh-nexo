@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { ContractType } from '@prisma/client';
 
 export class CreateApplicationDto {
@@ -23,8 +23,11 @@ export class RejectApplicationDto {
   @IsOptional() @IsString() @MaxLength(1000) reason?: string;
 }
 
+/** Tipos de entrevista ofrecidos. Se conserva `final` por las ya registradas. */
+export const INTERVIEW_TYPES = ['telefonica', 'cultural', 'tecnica', 'final'] as const;
+
 export class AddInterviewDto {
-  @IsString() @MaxLength(50) type!: string; // telefonica | tecnica | cultural | final
+  @IsIn(INTERVIEW_TYPES, { message: 'Tipo de entrevista no válido (telefonica, cultural, tecnica, final).' }) type!: string;
   @IsOptional() @IsDateString() scheduledAt?: string;
   @IsOptional() @IsString() interviewerId?: string;
 }

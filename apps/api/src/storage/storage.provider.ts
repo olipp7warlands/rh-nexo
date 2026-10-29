@@ -8,6 +8,8 @@ export interface StorageProvider {
   upload(path: string, buffer: Buffer, mimeType: string): Promise<void>;
   /** URL de descarga temporal (firmada) o de streaming, válida un tiempo corto. */
   getDownloadUrl(path: string): Promise<string>;
+  /** Borra el objeto. No falla si no existe. */
+  remove(path: string): Promise<void>;
 }
 
 export const STORAGE_PROVIDER = 'STORAGE_PROVIDER';

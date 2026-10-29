@@ -27,4 +27,10 @@ export class LocalStorageProvider implements StorageProvider {
   async getDownloadUrl(filePath: string): Promise<string> {
     return `/api/storage/local/${encodeURIComponent(flattenStorageKey(filePath))}`;
   }
+
+  async remove(filePath: string): Promise<void> {
+    const key = flattenStorageKey(filePath);
+    await fs.rm(path.join(LOCAL_STORAGE_ROOT, key), { force: true });
+    await fs.rm(path.join(LOCAL_STORAGE_ROOT, `${key}.meta.json`), { force: true });
+  }
 }

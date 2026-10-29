@@ -36,4 +36,9 @@ export class SupabaseStorageProvider implements StorageProvider {
     if (error) throw new Error(`Error generando URL firmada: ${error.message}`);
     return data.signedUrl;
   }
+
+  async remove(path: string): Promise<void> {
+    const { error } = await this.client.storage.from(this.bucket).remove([path]);
+    if (error) throw new Error(`Error borrando de Supabase Storage: ${error.message}`);
+  }
 }

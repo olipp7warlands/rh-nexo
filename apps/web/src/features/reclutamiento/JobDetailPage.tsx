@@ -17,6 +17,7 @@ import { ApplicationStatusBadge, JobStatusBadge } from './RecruitmentBadges';
 import { NuevaCandidaturaModal } from './NuevaCandidaturaModal';
 import { CandidatePanel } from './CandidatePanel';
 import { EditarProcesoModal } from './EditarProcesoModal';
+import { DescripcionOferta } from './DescripcionOferta';
 
 export function JobDetailPage() {
   const { jobId = '' } = useParams();
@@ -119,7 +120,7 @@ export function JobDetailPage() {
           </>
         }
       />
-      {job.description && <p className="text-[13px] text-[var(--ink-secondary)] mb-6 max-w-2xl">{job.description}</p>}
+      <DescripcionOferta job={job} canDownloadPdf={canHire} />
       {screenResult && (
         <div className="mb-4 text-[12px] text-[var(--ink-secondary)] bg-[var(--bg-subtle)] rounded-md px-3 py-2">{screenResult}</div>
       )}

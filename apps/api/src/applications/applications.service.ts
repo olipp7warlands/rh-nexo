@@ -63,6 +63,7 @@ export class ApplicationsService {
         stage: true,
         interviews: { select: { id: true, type: true, status: true, scheduledAt: true } },
         evaluations: { select: { id: true, score: true, recommendation: true } },
+        _count: { select: { decisions: true } },
       },
       orderBy: { appliedAt: 'desc' },
     });
@@ -86,6 +87,45 @@ export class ApplicationsService {
     });
     await this.audit(viewer.id, 'CREATE', app.id, null, app);
     return app;
+  }
+
+  /**
+   * Elimina una candidatura EN CASCADA: la candidatura, sus entrevistas, evaluaciones, decisiones
+   * (AuditDecision, la traza del proceso de ESA candidatura) e historial de etapas. El Candidate
+   * permanece. Todo en una transacción; el AuditLog nunca se borra y recibe una entrada
+   * DELETE/Application con los conteos por tipo de lo eliminado.
+   */
+  async remove(id: string, viewer: AuthUser) {
+    await this.requireApplication(id, viewer);
+    return this.db.$transaction(async (tx) => {
+      const app = await tx.application.findUnique({
+        where: { id },
+        include: { _count: { select: { interviews: true, evaluations: true, decisions: true, etapas: true } } },
+      });
+      if (!app) throw new NotFoundException('Candidatura no encontrada');
+      const { _count, ...before } = app;
+      const borrado = {
+        entrevistas: _count.interviews,
+        evaluaciones: _count.evaluations,
+        decisiones: _count.decisions,
+        etapas: _count.etapas,
+      };
+      await tx.interview.deleteMany({ where: { applicationId: id } });
+      await tx.evaluation.deleteMany({ where: { applicationId: id } });
+      await tx.auditDecision.deleteMany({ where: { applicationId: id } });
+      await tx.application.delete({ where: { id } }); // ApplicationEtapa cae en cascada (FK)
+      await tx.auditLog.create({
+        data: {
+          actorId: viewer.id,
+          action: 'DELETE',
+          entity: 'Application',
+          entityId: id,
+          before: before as object,
+          after: { borrado } as object,
+        },
+      });
+      return { id, deleted: true, borrado };
+    });
   }
 
   /** Corrige fechas reales de una candidatura (postulación / incorporación). Audita antes y después. */

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
+import { SOURCE_OPTIONS } from './fuentes';
 import { useCandidates, useCreateApplication, useCreateCandidate, type CandidateSource } from './useRecruitment';
 
 const schema = z.object({
@@ -14,6 +15,7 @@ const schema = z.object({
   phone: z.string().optional(),
   location: z.string().optional(),
   source: z.string().optional(),
+  fuenteDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
   linkedinUrl: z.string().optional(),
   resumeUrl: z.string().optional(),
   appliedAt: z.string().optional(),
@@ -53,6 +55,7 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
           phone: data.phone || undefined,
           location: data.location || undefined,
           source: (data.source || 'PORTAL') as CandidateSource,
+          fuenteDetalle: data.fuenteDetalle?.trim() || undefined,
           linkedinUrl: data.linkedinUrl || undefined,
           resumeUrl: data.resumeUrl || undefined,
         });
@@ -125,15 +128,24 @@ export function NuevaCandidaturaModal({ jobId, onClose }: { jobId: string; onClo
                 <Input placeholder="+34 6·· ··· ···" {...register('phone')} />
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Fuente</label>
-                <select className={selectClass} {...register('source')}>
-                  <option value="PORTAL">Portal</option>
-                  <option value="REFERIDO">Referido</option>
-                  <option value="LINKEDIN">LinkedIn</option>
-                  <option value="AGENCIA">Agencia</option>
-                  <option value="OTRO">Otro</option>
+                <label htmlFor="cand-fuente" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                  Fuente
+                </label>
+                <select id="cand-fuente" className={selectClass} {...register('source')}>
+                  {SOURCE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
               </div>
+            </div>
+            <div>
+              <label htmlFor="cand-fuente-detalle" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">
+                Detalle de la fuente (opcional)
+              </label>
+              <Input id="cand-fuente-detalle" maxLength={200} placeholder="p. ej. qué universidad, quién lo refiere…" {...register('fuenteDetalle')} />
+              {errors.fuenteDetalle && <p className="text-[12px] text-[var(--danger)] mt-1.5">{errors.fuenteDetalle.message}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

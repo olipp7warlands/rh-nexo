@@ -1,9 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import { api, uploadForm } from '../../lib/api';
 
 export type JobStatus = 'BORRADOR' | 'ABIERTA' | 'PAUSADA' | 'CERRADA';
 export type ApplicationStatus = 'ACTIVO' | 'RECHAZADO' | 'CONTRATADO' | 'RETIRADO';
-export type CandidateSource = 'PORTAL' | 'REFERIDO' | 'LINKEDIN' | 'AGENCIA' | 'OTRO';
+export type CandidateSource =
+  | 'PORTAL'
+  | 'REFERIDO'
+  | 'LINKEDIN'
+  | 'AGENCIA'
+  | 'OTRO'
+  | 'STRATOS'
+  | 'IMPULSYN'
+  | 'UNIVERSIDAD'
+  | 'INFOJOBS'
+  | 'INDEED'
+  | 'WEB_EMPRESA';
 
 export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   BORRADOR: 'Borrador',
@@ -29,7 +40,16 @@ export interface JobSummary {
   contractType: string;
   status: JobStatus;
   openings: number;
+  /** LEGADO: solo se muestra si los campos estructurados están vacíos. */
   description: string | null;
+  objetivoPuesto: string | null;
+  funciones: string | null;
+  requisitosEducacion: string | null;
+  requisitosExperiencia: string | null;
+  seValorara: string | null;
+  /** El servidor no expone la ruta del storage, solo si hay PDF y su nombre original. */
+  tienePdf: boolean;
+  descripcionPdfNombre: string | null;
   hiringManagerId: string | null;
   hiringManager: { id: string; fullName: string } | null;
   sociedadId: string | null;
@@ -53,6 +73,7 @@ export interface CandidateRef {
   phone: string | null;
   location: string | null;
   source: CandidateSource;
+  fuenteDetalle: string | null;
   linkedinUrl: string | null;
   resumeUrl: string | null;
   createdAt: string;
@@ -103,6 +124,7 @@ export interface ApplicationItem {
   stage: Stage | null;
   interviews: Pick<InterviewItem, 'id' | 'type' | 'status' | 'scheduledAt'>[];
   evaluations: Pick<EvaluationItem, 'id' | 'score' | 'recommendation'>[];
+  _count: { decisions: number };
 }
 
 export interface CandidateApplicationDetail {
@@ -189,6 +211,11 @@ export function useCreateJob() {
       contractType?: string;
       openings?: number;
       description?: string;
+      objetivoPuesto?: string;
+      funciones?: string;
+      requisitosEducacion?: string;
+      requisitosExperiencia?: string;
+      seValorara?: string;
       hiringManagerId?: string;
       sociedadId?: string;
       proyectoId?: string;
@@ -204,8 +231,60 @@ export function useCreateJob() {
 export function useUpdateJob() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; status?: JobStatus; openedAt?: string; closedAt?: string; proyectoId?: string }) =>
-      api.patch<JobDetail>(`/jobs/${id}`, data),
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: string;
+      status?: JobStatus;
+      openedAt?: string;
+      closedAt?: string;
+      proyectoId?: string;
+      objetivoPuesto?: string;
+      funciones?: string;
+      requisitosEducacion?: string;
+      requisitosExperiencia?: string;
+      seValorara?: string;
+    }) => api.patch<JobDetail>(`/jobs/${id}`, data),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Elimina una oferta sin candidaturas (409 del servidor si las tiene). Solo ADMIN/RRHH. */
+export function useDeleteJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ id: string; deleted: true }>(`/jobs/${id}`),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Elimina una candidatura sin actividad; el candidato permanece. Solo ADMIN/RRHH. */
+export function useDeleteApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ id: string; deleted: true }>(`/applications/${id}`),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Sube (o reemplaza) el PDF adjunto de la oferta. */
+export function useUploadJobPdf() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => {
+      const form = new FormData();
+      form.append('file', file);
+      return uploadForm<JobDetail>(`/jobs/${id}/pdf`, form);
+    },
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+export function useRemoveJobPdf() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<JobDetail>(`/jobs/${id}/pdf`),
     onSuccess: () => invalidate(qc),
   });
 }
@@ -229,6 +308,7 @@ export function useCreateCandidate() {
       phone?: string;
       location?: string;
       source?: CandidateSource;
+      fuenteDetalle?: string;
       linkedinUrl?: string;
       resumeUrl?: string;
     }) => api.post<CandidateRef>('/candidates', data),
@@ -256,6 +336,8 @@ export interface HistoricoItem {
   resumeUrl: string | null;
   linkedinUrl: string | null;
   location: string | null;
+  source: CandidateSource;
+  fuenteDetalle: string | null;
   jobId: string;
   jobTitle: string;
   sociedad: { id: string; nombre: string } | null;

@@ -7,13 +7,14 @@ const crypto = require('node:crypto');
 const COLUMNS = [
   'oferta_titulo', 'oferta_sociedad', 'oferta_departamento', 'oferta_proyecto', 'oferta_ubicacion', 'oferta_nivel',
   'oferta_tipo_contrato', 'oferta_remoto', 'oferta_vacantes', 'oferta_apertura', 'oferta_cierre', 'oferta_estado',
-  'candidato_nombre', 'candidato_email', 'candidato_telefono', 'candidato_ubicacion', 'candidato_origen', 'candidato_linkedin',
+  'oferta_objetivo', 'oferta_funciones', 'oferta_req_educacion', 'oferta_req_experiencia', 'oferta_se_valorara',
+  'candidato_nombre', 'candidato_email', 'candidato_telefono', 'candidato_ubicacion', 'candidato_origen', 'candidato_fuente_detalle', 'candidato_linkedin',
   'postulacion_fecha', 'postulacion_estado', 'postulacion_etapa', 'incorporacion_fecha',
 ];
-const OFERTA_COLS = COLUMNS.slice(0, 12);
+const OFERTA_COLS = COLUMNS.slice(0, 17);
 const TIPOS_CONTRATO = ['INDEFINIDO', 'TEMPORAL', 'PRACTICAS', 'FREELANCE'];
 const ESTADOS_OFERTA = ['ABIERTA', 'PAUSADA', 'CERRADA'];
-const ORIGENES = ['PORTAL', 'REFERIDO', 'LINKEDIN', 'AGENCIA', 'OTRO'];
+const ORIGENES = ['PORTAL', 'REFERIDO', 'LINKEDIN', 'AGENCIA', 'OTRO', 'STRATOS', 'IMPULSYN', 'UNIVERSIDAD', 'INFOJOBS', 'INDEED', 'WEB_EMPRESA'];
 const ESTADOS_CANDIDATURA = ['ACTIVO', 'RECHAZADO', 'CONTRATADO', 'RETIRADO'];
 const ETAPAS = ['Nuevo', 'Cribado', 'Entrevista', 'Prueba técnica', 'Oferta', 'Contratado'];
 const DOMINIO_TECNICO = 'candidatos.humanx.invalid';
@@ -130,6 +131,10 @@ function validate(header, records) {
     if (r.candidato_email && r.candidato_email.length > 254) err(f, 'candidato_email', 'Máximo 254 caracteres.');
     if (r.candidato_telefono && r.candidato_telefono.length > 30) err(f, 'candidato_telefono', 'Máximo 30 caracteres.');
     if (r.candidato_ubicacion && r.candidato_ubicacion.length > 200) err(f, 'candidato_ubicacion', 'Máximo 200 caracteres.');
+    if (r.candidato_fuente_detalle && r.candidato_fuente_detalle.length > 200) err(f, 'candidato_fuente_detalle', 'Máximo 200 caracteres.');
+    for (const c of ['oferta_objetivo', 'oferta_funciones', 'oferta_req_educacion', 'oferta_req_experiencia', 'oferta_se_valorara']) {
+      if (r[c] && r[c].length > 5000) err(f, c, 'Máximo 5000 caracteres.');
+    }
     if (r.candidato_linkedin && r.candidato_linkedin.length > 500) err(f, 'candidato_linkedin', 'Máximo 500 caracteres.');
 
     if (!r.oferta_titulo || !r.oferta_sociedad || !apertura || !r.candidato_nombre || !postulacion) continue;
@@ -138,6 +143,8 @@ function validate(header, records) {
       titulo: r.oferta_titulo, sociedad: r.oferta_sociedad, departamento: r.oferta_departamento || null,
       proyecto: r.oferta_proyecto || null, ubicacion: r.oferta_ubicacion, nivel: r.oferta_nivel, tipo, remoto, vacantes,
       apertura, cierre, estado: estadoOferta,
+      objetivo: r.oferta_objetivo || null, funciones: r.oferta_funciones || null, reqEducacion: r.oferta_req_educacion || null,
+      reqExperiencia: r.oferta_req_experiencia || null, seValorara: r.oferta_se_valorara || null,
     };
     const prev = jobs.get(key);
     if (!prev) { jobs.set(key, { key, fila: f, oferta }); }
@@ -152,7 +159,7 @@ function validate(header, records) {
     set.add(email); seenInJob.set(key, set);
     apps.push({
       fila: f, key, email, tecnico: !emailReal,
-      candidato: { nombre: r.candidato_nombre, telefono: r.candidato_telefono || null, ubicacion: r.candidato_ubicacion || null, origen, linkedin: r.candidato_linkedin || null },
+      candidato: { nombre: r.candidato_nombre, telefono: r.candidato_telefono || null, ubicacion: r.candidato_ubicacion || null, origen, fuenteDetalle: r.candidato_fuente_detalle || null, linkedin: r.candidato_linkedin || null },
       postulacion, estado: estadoApp, etapa: r.postulacion_etapa, incorporacion: r.incorporacion_fecha || null,
     });
   }
@@ -206,6 +213,8 @@ async function applyImport(db, plan, { commit, fileHash = null } = {}) {
             status: o.estado, openedAt, closedAt: o.cierre ? new Date(o.cierre + 'T00:00:00Z') : null,
             sociedadId: soc.get(o.sociedad), departmentId: o.departamento ? dep.get(o.departamento) : null,
             proyectoId: o.proyecto ? proy.get(o.proyecto) : null,
+            objetivoPuesto: o.objetivo, funciones: o.funciones, requisitosEducacion: o.reqEducacion,
+            requisitosExperiencia: o.reqExperiencia, seValorara: o.seValorara,
           },
           select: { id: true },
         });
@@ -226,7 +235,7 @@ async function applyImport(db, plan, { commit, fileHash = null } = {}) {
         if (candId) summary.candidatos.existentes++;
         else {
           const c = await tx.candidate.create({
-            data: { fullName: a.candidato.nombre, email: a.email, phone: a.candidato.telefono, location: a.candidato.ubicacion, source: a.candidato.origen, linkedinUrl: a.candidato.linkedin },
+            data: { fullName: a.candidato.nombre, email: a.email, phone: a.candidato.telefono, location: a.candidato.ubicacion, source: a.candidato.origen, fuenteDetalle: a.candidato.fuenteDetalle, linkedinUrl: a.candidato.linkedin },
             select: { id: true },
           });
           candId = c.id; candByEmail.set(a.email, candId); summary.candidatos.nuevos++;

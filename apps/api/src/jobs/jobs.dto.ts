@@ -10,6 +10,12 @@ export class CreateJobDto {
   @IsOptional() @IsEnum(ContractType) contractType?: ContractType;
   @IsOptional() @IsInt() @Min(1) openings?: number;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
+  /** Descripción estructurada (Feedback RRHH). `description` queda como legado. */
+  @IsOptional() @IsString() @MaxLength(5000) objetivoPuesto?: string;
+  @IsOptional() @IsString() @MaxLength(5000) funciones?: string;
+  @IsOptional() @IsString() @MaxLength(5000) requisitosEducacion?: string;
+  @IsOptional() @IsString() @MaxLength(5000) requisitosExperiencia?: string;
+  @IsOptional() @IsString() @MaxLength(5000) seValorara?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
   @IsOptional() @IsString() sociedadId?: string;
   @IsOptional() @IsString() proyectoId?: string;
@@ -31,6 +37,11 @@ export class UpdateJobDto {
   @IsOptional() @IsEnum(JobStatus) status?: JobStatus;
   @IsOptional() @IsInt() @Min(1) openings?: number;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
+  @IsOptional() @IsString() @MaxLength(5000) objetivoPuesto?: string;
+  @IsOptional() @IsString() @MaxLength(5000) funciones?: string;
+  @IsOptional() @IsString() @MaxLength(5000) requisitosEducacion?: string;
+  @IsOptional() @IsString() @MaxLength(5000) requisitosExperiencia?: string;
+  @IsOptional() @IsString() @MaxLength(5000) seValorara?: string;
   @IsOptional() @IsString() hiringManagerId?: string;
   @IsOptional() @IsString() sociedadId?: string;
   @IsOptional() @IsString() proyectoId?: string;

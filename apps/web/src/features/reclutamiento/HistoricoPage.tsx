@@ -7,7 +7,8 @@ import { formatDate } from '../../lib/format';
 import { useHistorico, useJob, useJobs, type ApplicationStatus, type HistoricoItem } from './useRecruitment';
 import { ApplicationStatusBadge } from './RecruitmentBadges';
 import { CandidatePanel } from './CandidatePanel';
-import { SeleccionTabs } from './SeleccionTabs';
+import { SeleccionTabs } from './SeleccionTabs';
+import { sourceText } from './fuentes';
 
 const PAGE_SIZE = 25;
 
@@ -22,7 +23,7 @@ const fieldClass =
   'w-full h-9 px-3 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none';
 const labelClass = 'block text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)] mb-1.5';
 
-const COLUMNS = ['Nombre', 'CV', 'LinkedIn', 'Ubicación', 'Puesto', 'Sociedad', 'Proyecto', 'Postulación', 'Incorporación', 'Estado'];
+const COLUMNS = ['Nombre', 'CV', 'LinkedIn', 'Ubicación', 'Fuente', 'Puesto', 'Sociedad', 'Proyecto', 'Postulación', 'Incorporación', 'Estado'];
 
 /** Abre la ficha del candidato (CandidatePanel necesita la oferta de esa candidatura). */
 function HistoricoCandidatePanel({ item, onClose }: { item: HistoricoItem; onClose: () => void }) {
@@ -283,6 +284,7 @@ export function HistoricoPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-[var(--ink-secondary)]">{it.location ?? '—'}</td>
+                  <td className="px-4 py-3 text-[var(--ink-secondary)]">{sourceText(it.source, it.fuenteDetalle)}</td>
                   <td className="px-4 py-3">
                     <Link to={`/seleccion/${it.jobId}`} className="hover:underline">
                       {it.jobTitle}

@@ -136,10 +136,30 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 
 
 # Selección II · Tanda 1 · rama `feat/seleccion-ii-tanda-1` (2026-10-28)
-- [x] Migración consolidada `20261028214546_seleccion_ii_fechas_proyecto_festivos_feed` aplicada en dev y test (producción PENDIENTE: backup verificado y nombrado → `migrate deploy` → merge). Objetos manuales y deriva esperada documentados en su README.
+- [x] Migración consolidada `20261028214546_seleccion_ii_fechas_proyecto_festivos_feed` aplicada en dev, test y **producción** (verificado en vivo: `finished_at` 2026-10-28 21:18:35Z, 1 paso, RLS de `ApplicationEtapa` activo, 0 tablas sin RLS). **Sin backup nombrado** (incumplimiento de la lección #23, anotado) y con el ciclo invertido: PR #5 mergeado a las 21:09Z, ~9 min de código sin esquema (lección #25). Tanda 1 DESPLEGADA.
 - [x] Fechas reales: `Job.openedAt`/`closedAt` (cierre solo con CERRADA, cierre >= apertura, reabrir => NULL), `Application.appliedAt` editable, `fechaIncorporacion` (hire + PATCH). UI: Nueva oferta, Editar proceso, fecha de postulación, edición de fechas en la ficha, columna «Apertura».
 - [x] Histórico: filtros ubicación y proyecto (URL + auditoría) y columnas Proyecto/Incorporación.
 - [x] Importación: `scripts/importacion-procesos/` (dry-run/commit, idempotente, email técnico `@candidatos.humanx.invalid`). Plantilla CSV pendiente de entregar a Blanca; CSV real fuera del repo y se borra tras la carga.
 - [x] Tests: 24 nuevos; suite e2e 198/198 contra test.
 - [ ] Tanda 2: analítica + `ApplicationEtapa` en `moveStage` + festivos (leaveDays, /holidays, calendario) + calendarios 2026. Tanda 3: feed ICS (columnas del token ya en la migración).
 - [ ] Aviso: la pantalla de login de dev precarga `admin@grupo.com` (cuenta demo ya inactiva); revisar si el valor por defecto sigue haciendo falta.
+
+# Mini-tanda «Feedback RRHH» · rama `feat/feedback-rrhh-mini-tanda` (2026-10-29)
+- [x] Migración aditiva `20261029100000_feedback_rrhh_fuente_descripcion` (SQL aprobado tal cual): `CandidateSource` +6 valores, `Candidate.fuenteDetalle`, `Job` +5 campos de descripción +2 del PDF. Aplicada en **dev y test**. **Producción PENDIENTE.**
+- [x] Fuente + detalle (modal, ficha, histórico), acciones rápidas (menú ⋮ en tarjetas y listado; `DELETE /jobs/:id` solo con 0 candidaturas; `DELETE /applications/:id` en CASCADA: candidatura + entrevistas + evaluaciones + decisiones, con aviso expreso en el modal y entrada DELETE/Application en AuditLog con conteos; el AuditLog nunca se borra), descripción estructurada + PDF adjunto (magic bytes, solo ADMIN/RRHH, ruta del storage nunca expuesta), entrevistas Telefónica/Cultural/Técnica/Final (ya admitían varias por candidatura; el cambio fue de UI y validación del tipo).
+- [x] Importador CSV y plantilla con fuente/detalle y los 5 campos de descripción (plantilla de 28 columnas).
+- [x] Suite completa contra test: 29 ficheros, 229 tests en verde (31 nuevos). `tsc` limpio en api y web.
+- [x] Arreglo colateral: `prisma/seed.ts` fallaba contra una base migrada (festivos sin `paisId` violan `Holiday_ambito_chk`); ahora los festivos demo llevan `paisId: 'p-es'`.
+- [x] Arreglo colateral: el nombre original del PDF llegaba en latin1 (Multer); se recompone a UTF-8.
+- [ ] **Ciclo de cierre pendiente, EN ORDEN:** backup de producción verificado y NOMBRADO → `migrate deploy` en producción → comprobar `_prisma_migrations` → merge (lección #25).
+- [ ] Verificación visual en navegador del menú ⋮ (teclado), los modales con PDF y la ficha: no ejecutada todavía.
+- [ ] Al eliminar una oferta con PDF se borra el fichero del storage; si el borrado falla queda huérfano (la base sigue coherente). Barrido periódico de `jobs/` en el storage si algún día importa.
+
+# Próxima tanda: «Dar acceso» (gestión de usuarios) · diseño propuesto
+Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.ts` y `scripts/create-admin-user.mjs` (que no vincula empleado ni asigna MANAGER).
+- **Dónde:** botón «Dar acceso» en la ficha del empleado (solo ADMIN) cuando el empleado no tiene `User`; si lo tiene, bloque «Acceso» con rol, estado y acciones.
+- **API (`users` module, solo ADMIN):** `POST /users` `{ employeeId, role }` crea el `User` con el email de la ficha, `isActive`, `employeeId` vinculado (único) y un **enlace de activación de un solo uso** (token hash + caducidad) en vez de contraseña: la persona la define ella (lección #24, nada por chat/CLI). `PATCH /users/:id` cambia rol o desactiva (nunca DELETE); desactivar revoca los refresh tokens. `POST /users/:id/reset` reenvía el enlace.
+- **Reglas:** no puedes quitarte tu propio ADMIN ni desactivarte; siempre queda al menos un ADMIN activo; MANAGER exige ficha vinculada (el alcance de equipo sale de `Employee.managerId`).
+- **Auditoría:** `AuditLog` en alta, cambio de rol, desactivación y reenvío (sin hashes ni tokens en `before/after`).
+- **Tests:** permisos (solo ADMIN), unicidad empleado↔usuario, último ADMIN, token de activación de un solo uso y caducado, refresh tokens revocados al desactivar.
+- **Requiere:** decidir el canal del enlace (email vs copiarlo ADMIN) — hoy no hay envío de correo en el producto.
