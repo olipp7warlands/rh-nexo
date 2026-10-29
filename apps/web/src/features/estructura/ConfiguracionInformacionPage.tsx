@@ -8,6 +8,7 @@ import { TiposContratoPage } from './TiposContratoPage';
 import { JornadasPage } from './JornadasPage';
 import { RelacionesEmergenciaPage } from './RelacionesEmergenciaPage';
 import { IdiomasPage } from './IdiomasPage';
+import { FestivosPage } from './FestivosPage';
 import { CuentasPage } from '../usuarios/CuentasPage';
 import { useAuth } from '../auth/AuthContext';
 
@@ -22,6 +23,7 @@ const TABS = [
   { key: 'jornadas', label: 'Jornadas', Component: JornadasPage },
   { key: 'relaciones-emergencia', label: 'Relaciones de emergencia', Component: RelacionesEmergenciaPage },
   { key: 'idiomas', label: 'Idiomas', Component: IdiomasPage },
+  { key: 'festivos', label: 'Festivos', Component: FestivosPage, manageOnly: true },
   { key: 'cuentas', label: 'Cuentas', Component: CuentasPage, adminOnly: true },
 ] as const;
 
@@ -30,7 +32,11 @@ export function ConfiguracionInformacionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // «Cuentas» (acceso a la app) solo la ve un ADMIN; para el resto ni existe la pestaña.
-  const tabs = TABS.filter((t) => !('adminOnly' in t) || user?.role === 'ADMIN');
+  const tabs = TABS.filter(
+    (t) =>
+      (!('adminOnly' in t) || user?.role === 'ADMIN') &&
+      (!('manageOnly' in t) || user?.role === 'ADMIN' || user?.role === 'RRHH'),
+  );
   const active = tabs.find((t) => t.key === tabParam) ?? tabs[0]!;
 
   return (

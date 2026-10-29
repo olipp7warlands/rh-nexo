@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { CreateAbsenceDto } from './absence.dto';
 import { csvSafe } from '../lib/csv-safe';
+import { holidayScopeWhere, resolveHolidayScope, type HolidayScope } from '../lib/holiday-scope';
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -55,13 +56,15 @@ export class AbsencesService {
     });
   }
 
-  /** Días laborables del rango (excluye fines de semana y festivos de la ubicación). */
-  private async leaveDays(start: Date, end: Date, location: string | null): Promise<number> {
+  /**
+   * Días laborables del rango: excluye fines de semana y SOLO los festivos que aplican a la persona
+   * (los de su país y los de su localización concreta; ver holiday-scope.ts). Un festivo de otro
+   * país o de otra localización no resta días.
+   */
+  private async leaveDays(start: Date, end: Date, scope: HolidayScope): Promise<number> {
     const holidays = await this.db.holiday.findMany({
-      where: {
-        date: { gte: start, lte: end },
-        OR: [{ location: null }, ...(location ? [{ location }] : [])],
-      },
+      where: { date: { gte: start, lte: end }, ...holidayScopeWhere(scope) },
+      select: { date: true },
     });
     const hset = new Set(holidays.map((h) => iso(h.date)));
     let count = 0;
@@ -80,11 +83,7 @@ export class AbsencesService {
     const end = new Date(dto.endDate);
     if (end < start) throw new BadRequestException('La fecha de fin es anterior al inicio.');
 
-    const employee = await this.db.employee.findUnique({
-      where: { id: viewer.employeeId },
-      include: { localizacion: true },
-    });
-    const days = await this.leaveDays(start, end, employee?.localizacion?.nombre ?? null);
+    const days = await this.leaveDays(start, end, await resolveHolidayScope(this.db, viewer.employeeId));
     if (days < 1) throw new BadRequestException('El rango no incluye días laborables.');
 
     const year = start.getUTCFullYear();

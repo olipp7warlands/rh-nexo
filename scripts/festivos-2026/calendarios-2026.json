@@ -1,0 +1,763 @@
+{
+  "anio": 2026,
+  "_aviso": "BORRADOR PARA REVISION DE RRHH. No cargar hasta su visto bueno. Todo entra con validado=false. Los festivos locales se enlazan por NOMBRE de localizacion (ver aliasLocalizaciones) y la carga ABORTA si la localizacion no existe.",
+  "aliasLocalizaciones": {},
+  "festivos": [
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-01-01",
+      "name": "Año Nuevo",
+      "aproximado": false,
+      "fuente": "https://u.ae/en/information-and-services/public-holidays-and-religious-affairs/public-holidays",
+      "fuenteOficial": true,
+      "notas": "Fecha fija."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-19",
+      "name": "Día 30 de Ramadán (festivo previo a Eid Al Fitr)",
+      "aproximado": true,
+      "fuente": "https://mohre.gov.ae/en/media-center/news/23/2/2026/eid-al-fitr-holiday-announced-for-private-sector",
+      "fuenteOficial": true,
+      "notas": "Festivo solo si Ramadán dura 30 días, lo que ocurrió en 2026. MoHRE: sector privado 19-21 mar, ampliado al 22 mar si Ramadán tenía 30 días. Eid Al Fitr: 1-3 Shawwal (3 días) más el día 30 de Ramadán si Ramadán dura 30 días; se confirma por avistamiento de la luna. En 2026 el comité no avistó la luna el 18-mar, Ramadán completó 30 días y el 1 de Shawwal fue el viernes 20-mar (Corte Presidencial vía WAM)."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-20",
+      "name": "Eid Al Fitr (día 1)",
+      "aproximado": true,
+      "fuente": "https://mohre.gov.ae/en/media-center/news/23/2/2026/eid-al-fitr-holiday-announced-for-private-sector",
+      "fuenteOficial": true,
+      "notas": "Eid Al Fitr: 1-3 Shawwal (3 días) más el día 30 de Ramadán si Ramadán dura 30 días; se confirma por avistamiento de la luna. En 2026 el comité no avistó la luna el 18-mar, Ramadán completó 30 días y el 1 de Shawwal fue el viernes 20-mar (Corte Presidencial vía WAM)."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-21",
+      "name": "Eid Al Fitr (día 2)",
+      "aproximado": true,
+      "fuente": "https://mohre.gov.ae/en/media-center/news/23/2/2026/eid-al-fitr-holiday-announced-for-private-sector",
+      "fuenteOficial": true,
+      "notas": "Eid Al Fitr: 1-3 Shawwal (3 días) más el día 30 de Ramadán si Ramadán dura 30 días; se confirma por avistamiento de la luna. En 2026 el comité no avistó la luna el 18-mar, Ramadán completó 30 días y el 1 de Shawwal fue el viernes 20-mar (Corte Presidencial vía WAM)."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-22",
+      "name": "Eid Al Fitr (día 3)",
+      "aproximado": true,
+      "fuente": "https://mohre.gov.ae/en/media-center/news/23/2/2026/eid-al-fitr-holiday-announced-for-private-sector",
+      "fuenteOficial": true,
+      "notas": "Eid Al Fitr: 1-3 Shawwal (3 días) más el día 30 de Ramadán si Ramadán dura 30 días; se confirma por avistamiento de la luna. En 2026 el comité no avistó la luna el 18-mar, Ramadán completó 30 días y el 1 de Shawwal fue el viernes 20-mar (Corte Presidencial vía WAM)."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-26",
+      "name": "Día de Arafat (Arafah Day)",
+      "aproximado": true,
+      "fuente": "https://www.emirates247.com/uae/eid-al-adha-holidays-for-private-sector-announced/1706",
+      "fuenteOficial": false,
+      "notas": "9 Dhu Al Hijjah, 1 día; fecha según avistamiento lunar. MoHRE anunció el 18-may-2026 festivo pagado del sector privado del 26 al 29 mayo (Arafat + Eid Al Adha). Sector público: FAHR anunció 5 días (no verificado en fuente primaria)."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-27",
+      "name": "Eid Al Adha (día 1)",
+      "aproximado": true,
+      "fuente": "https://www.emirates247.com/uae/eid-al-adha-holidays-for-private-sector-announced/1706",
+      "fuenteOficial": false,
+      "notas": "10-12 Dhu Al Hijjah, 3 días; se confirma por avistamiento de la luna. Fecha según anuncio MoHRE 18-may-2026."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-28",
+      "name": "Eid Al Adha (día 2)",
+      "aproximado": true,
+      "fuente": "https://www.emirates247.com/uae/eid-al-adha-holidays-for-private-sector-announced/1706",
+      "fuenteOficial": false,
+      "notas": "10-12 Dhu Al Hijjah, 3 días; se confirma por avistamiento de la luna. Fecha según anuncio MoHRE 18-may-2026."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-29",
+      "name": "Eid Al Adha (día 3)",
+      "aproximado": true,
+      "fuente": "https://www.emirates247.com/uae/eid-al-adha-holidays-for-private-sector-announced/1706",
+      "fuenteOficial": false,
+      "notas": "10-12 Dhu Al Hijjah, 3 días; se confirma por avistamiento de la luna. Fecha según anuncio MoHRE 18-may-2026."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-06-15",
+      "name": "Año Nuevo Islámico (Hijri 1448)",
+      "aproximado": true,
+      "fuente": "https://en.aletihad.ae/amp/news/uae/4670030/uae-announces-hijri-new-year-holiday-on-june-15",
+      "fuenteOficial": false,
+      "notas": "1 Muharram, 1 día; se confirma por avistamiento lunar. FAHR y MoHRE anunciaron el 3-jun-2026 el lunes 15-jun para sector público y privado."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-08-28",
+      "name": "Cumpleaños del Profeta Mahoma (Mawlid)",
+      "aproximado": true,
+      "fuente": "https://www.khaleejtimes.com/uae/uae-announces-public-private-sector-holiday-for-prophets-birthday",
+      "fuenteOficial": false,
+      "notas": "12 Rabi' Al Awwal, 1 día; se confirma por avistamiento lunar. Khaleej Times informa que el Gobierno anunció el viernes 28-ago (esperado inicialmente el 25-ago). Fuente secundaria, no se pudo ver el comunicado oficial."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-12-02",
+      "name": "Día Nacional (Eid Al Etihad, día 1)",
+      "aproximado": false,
+      "fuente": "https://u.ae/en/information-and-services/public-holidays-and-religious-affairs/public-holidays",
+      "fuenteOficial": true,
+      "notas": "2 y 3 de diciembre, fecha fija. Según u.ae son 2 días."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "Emiratos Árabes Unidos",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-12-03",
+      "name": "Día Nacional (Eid Al Etihad, día 2)",
+      "aproximado": false,
+      "fuente": "https://u.ae/en/information-and-services/public-holidays-and-religious-affairs/public-holidays",
+      "fuenteOficial": true,
+      "notas": "2 y 3 de diciembre, fecha fija. Según u.ae son 2 días."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-01-01",
+      "name": "Año Nuevo",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible. Jueves."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-01-06",
+      "name": "Epifanía del Señor",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "Sustituible, Madrid no ejerció la sustitución (aplica en Madrid; BOCM D.75/2025). Martes."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-04-03",
+      "name": "Viernes Santo",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-01",
+      "name": "Fiesta del Trabajo",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible. Viernes."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-08-15",
+      "name": "Asunción de la Virgen",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible. Cae en sábado; Madrid no lo traslada (BOCM lo lista el sábado 15)."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-10-12",
+      "name": "Fiesta Nacional de España",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible. Lunes."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-12-08",
+      "name": "Inmaculada Concepción",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible. Martes."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "España",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-12-25",
+      "name": "Natividad del Señor",
+      "aproximado": false,
+      "fuente": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667",
+      "fuenteOficial": true,
+      "notas": "No sustituible. Viernes."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "España",
+        "localizacion": "Madrid"
+      },
+      "nivel": "AUTONOMICO",
+      "date": "2026-04-02",
+      "name": "Jueves Santo",
+      "aproximado": false,
+      "fuente": "https://www.bocm.es/boletin/CM_Orden_BOCM/2025/09/25/BOCM-20250925-16.PDF",
+      "fuenteOficial": true,
+      "notas": "Sustituible, Madrid no ejerció la sustitución (BOE col. Madrid **). Fuente adicional: https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667"
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "España",
+        "localizacion": "Madrid"
+      },
+      "nivel": "AUTONOMICO",
+      "date": "2026-05-02",
+      "name": "Fiesta de la Comunidad de Madrid",
+      "aproximado": false,
+      "fuente": "https://www.bocm.es/boletin/CM_Orden_BOCM/2025/09/25/BOCM-20250925-16.PDF",
+      "fuenteOficial": true,
+      "notas": "Cae en sábado; el decreto no la traslada. Ley 8/1984."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "España",
+        "localizacion": "Madrid"
+      },
+      "nivel": "LOCAL",
+      "date": "2026-05-15",
+      "name": "San Isidro",
+      "aproximado": false,
+      "fuente": "https://www.bocm.es/boletin/CM_Orden_BOCM/2025/12/12/BOCM-20251212-34.PDF",
+      "fuenteOficial": true,
+      "notas": "Fiesta local de Madrid capital. Viernes. Sin modificaciones posteriores para Madrid en BOCM 29-12-2025 ni 08-01-2026 (no aparece Madrid)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "España",
+        "localizacion": "Madrid"
+      },
+      "nivel": "AUTONOMICO",
+      "date": "2026-11-02",
+      "name": "Traslado de Todos los Santos",
+      "aproximado": false,
+      "fuente": "https://www.bocm.es/boletin/CM_Orden_BOCM/2025/09/25/BOCM-20250925-16.PDF",
+      "fuenteOficial": true,
+      "notas": "Todos los Santos (1 nov) cae en domingo; trasladado al lunes 2 nov. BOE: sustituible no ejercida. Fuente adicional: https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667"
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "España",
+        "localizacion": "Madrid"
+      },
+      "nivel": "LOCAL",
+      "date": "2026-11-09",
+      "name": "Nuestra Señora de la Almudena",
+      "aproximado": false,
+      "fuente": "https://www.bocm.es/boletin/CM_Orden_BOCM/2025/12/12/BOCM-20251212-34.PDF",
+      "fuenteOficial": true,
+      "notas": "Fiesta local de Madrid capital. Lunes. Sin modificaciones posteriores para Madrid."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "España",
+        "localizacion": "Madrid"
+      },
+      "nivel": "AUTONOMICO",
+      "date": "2026-12-07",
+      "name": "Traslado del Día de la Constitución Española",
+      "aproximado": false,
+      "fuente": "https://www.bocm.es/boletin/CM_Orden_BOCM/2025/09/25/BOCM-20250925-16.PDF",
+      "fuenteOficial": true,
+      "notas": "6 dic cae en domingo; trasladado al lunes 7 dic. BOE: sustituible no ejercida. Fuente adicional: https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-21667"
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-01-26",
+      "name": "Día de la República (Republic Day)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-04",
+      "name": "Holi",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Maharashtra observa el segundo día de Holi el 03-03 (ver fila estatal). Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-21",
+      "name": "Id-ul-Fitr",
+      "aproximado": true,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Depende del avistamiento de la luna; el documento oficial indica 21-mar. Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-26",
+      "name": "Ram Navami",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-03-31",
+      "name": "Mahavir Jayanti",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-04-03",
+      "name": "Viernes Santo (Good Friday)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-01",
+      "name": "Buda Purnima (Buddha Purnima)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Coincide con el Día de Maharashtra / Día del Trabajo. Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-05-27",
+      "name": "Id-ul-Zuha (Bakrid)",
+      "aproximado": true,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Moon-dependent. DoPT/Delhi indican 27-may; Maharashtra y Karnataka publican 28-may (ver filas estatales). Confirmar. Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-06-26",
+      "name": "Muharram",
+      "aproximado": true,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Moon-dependent; fecha oficial 26-jun (Maharashtra y Karnataka coinciden). Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-08-15",
+      "name": "Día de la Independencia (Independence Day)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Coincide con Año Nuevo Parsi en Maharashtra. Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-08-26",
+      "name": "Milad-un-Nabi / Id-e-Milad",
+      "aproximado": true,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Moon-dependent; fecha oficial 26-ago. Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-09-04",
+      "name": "Janmashtami (Vaishnav)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-10-02",
+      "name": "Natalicio de Mahatma Gandhi (Gandhi Jayanti)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-10-20",
+      "name": "Dussehra",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-11-08",
+      "name": "Diwali (Deepavali)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Cae en domingo. Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-11-24",
+      "name": "Natalicio de Guru Nanak (Guru Nanak Jayanti)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "PAIS",
+        "pais": "India",
+        "localizacion": null
+      },
+      "nivel": "NACIONAL",
+      "date": "2026-12-25",
+      "name": "Navidad (Christmas Day)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Lista central DoPT (OM F.No.12/2/2023-JCA, 03.07.2025, Annexure-I, closed holidays). El PDF DoPT no fue accesible; fecha confirmada con la notificación oficial del Gobierno NCT de Delhi (GAD 04.12.2025), que coincide."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Delhi"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-10-26",
+      "name": "Natalicio de Maharishi Valmiki (Valmiki Jayanti)",
+      "aproximado": false,
+      "fuente": "https://edudel.nic.in/upload/upload_2025_26/344_349_dt_10122025.PDF",
+      "fuenteOficial": true,
+      "notas": "Notificación GAD GNCT Delhi F.53/812/GAD/CN/2025/4540-4576 de 04.12.2025, festivo general nº15. Único festivo de Delhi no incluido en la lista nacional; el resto de los 18 festivos de Delhi coincide con el nacional."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-02-15",
+      "name": "Maha Shivaratri",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Cae en domingo. Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-02-19",
+      "name": "Chhatrapati Shivaji Maharaj Jayanti",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-03-03",
+      "name": "Holi (segundo día / Dhulivandan)",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "El festivo nacional Holi es 04-mar; Maharashtra fija 03-mar. Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-03-19",
+      "name": "Gudi Padwa",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-04-14",
+      "name": "Dr. Babasaheb Ambedkar Jayanti",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-05-01",
+      "name": "Día de Maharashtra (Maharashtra Din)",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Coincide con Buda Purnima (nacional) el mismo día. Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-05-28",
+      "name": "Bakri Eid (Id-ul-Zuha)",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Maharashtra fija 28-may; DoPT/Delhi 27-may. Duplicado de fecha distinta; RRHH decide. Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-09-14",
+      "name": "Ganesh Chaturthi",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    },
+    {
+      "ambito": {
+        "tipo": "LOCALIZACION",
+        "pais": "India",
+        "localizacion": "Maharashtra"
+      },
+      "nivel": "ESTATAL",
+      "date": "2026-11-10",
+      "name": "Diwali (Balipratipada)",
+      "aproximado": false,
+      "fuente": "https://cdn.s3waas.gov.in/s344c4c17332cace2124a1a836d9fc4b6f/uploads/2025/12/17671002949025.pdf",
+      "fuenteOficial": true,
+      "notas": "Gazette Maharashtra, GAD, notificación 'Sarvajanik Suttya 2026' de 05.12.2025 (parte A, 24 festivos públicos)."
+    }
+  ]
+}

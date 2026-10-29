@@ -6,6 +6,8 @@ import { Button, Input } from '@nucleo/ui';
 import { Modal } from '../_shared/Modal';
 import { useDepartments } from '../employees/useDepartments';
 import { useEmployees } from '../employees/useEmployees';
+import { useLocalizaciones } from '../estructura/useEstructura';
+import { PaisSelectField } from '../estructura/PaisSelectField';
 import { useHireApplication, type JobDetail } from './useRecruitment';
 
 const schema = z.object({
@@ -13,6 +15,7 @@ const schema = z.object({
   jobTitle: z.string().optional(),
   level: z.string().optional(),
   location: z.string().optional(),
+  paisId: z.string().optional(),
   departmentId: z.string().optional(),
   managerId: z.string().optional(),
   salary: z.coerce.number().int().min(0).optional(),
@@ -39,10 +42,14 @@ export function ContratarModal({
   const { data: departments } = useDepartments();
   const { data: employees } = useEmployees();
   const hire = useHireApplication();
+  const { data: localizaciones } = useLocalizaciones();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    setValue,
+    setError,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -55,8 +62,19 @@ export function ContratarModal({
     },
   });
 
+  // Si la ubicación no coincide con ninguna localización existente, el servidor la crea: hace falta su país.
+  const ubicacion = (watch('location') ?? '').trim();
+  const nuevaLocalizacion =
+    ubicacion.length > 0 &&
+    !!localizaciones &&
+    !localizaciones.some((l) => l.nombre.trim().toLowerCase() === ubicacion.toLowerCase());
+
   const onSubmit = handleSubmit(async (data) => {
     setServerError(null);
+    if (nuevaLocalizacion && !data.paisId) {
+      setError('paisId', { message: 'Indica el país de la nueva localización' });
+      return;
+    }
     try {
       await hire.mutateAsync({
         applicationId,
@@ -64,6 +82,7 @@ export function ContratarModal({
         jobTitle: data.jobTitle || undefined,
         level: data.level || undefined,
         location: data.location || undefined,
+        paisId: nuevaLocalizacion ? data.paisId || undefined : undefined,
         departmentId: data.departmentId || undefined,
         managerId: data.managerId || undefined,
         salary: data.salary,
@@ -109,14 +128,28 @@ export function ContratarModal({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Ubicación</label>
-            <Input {...register('location')} />
+            <label htmlFor="hire-ubicacion" className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Ubicación</label>
+            <Input id="hire-ubicacion" {...register('location')} />
           </div>
           <div>
             <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Salario bruto anual (opcional)</label>
             <Input type="number" min="0" {...register('salary')} />
           </div>
         </div>
+        {nuevaLocalizacion && (
+          <div className="rounded-md bg-[var(--bg-subtle)] px-3 py-3">
+            <p className="text-[12px] text-[var(--ink-secondary)] mb-3">
+              «{ubicacion}» no existe como localización: se creará con el país que indiques (sin país no se pueden aplicar sus festivos).
+            </p>
+            <PaisSelectField
+              label="País de la nueva localización"
+              required
+              error={errors.paisId?.message}
+              registerReturn={register('paisId')}
+              onCreated={(id) => setValue('paisId', id, { shouldValidate: true })}
+            />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Departamento</label>

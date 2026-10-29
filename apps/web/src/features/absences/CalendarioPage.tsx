@@ -7,6 +7,8 @@ import { useCalendar, useHolidays } from './useAbsences';
 import { useAlertas, TIPO_ALERTA_LABEL, type Alerta } from '../agenda/useAgenda';
 import { useAnotaciones, type Anotacion } from '../anotaciones/useAnotaciones';
 import { formatDate } from '../../lib/format';
+import { ambitoLabel, holidayMarks } from './HolidayMarks';
+import type { Holiday } from './useAbsences';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DOW = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -28,8 +30,11 @@ export function CalendarioPage() {
 
   // Mapa día(ISO) → festivo y → ausencias que lo cubren.
   const holidayByDay = useMemo(() => {
-    const map = new Map<string, string>();
-    (holidays ?? []).forEach((h) => map.set(h.date.slice(0, 10), h.name));
+    const map = new Map<string, Holiday[]>();
+    (holidays ?? []).forEach((h) => {
+      const day = h.date.slice(0, 10);
+      map.set(day, [...(map.get(day) ?? []), h]);
+    });
     return map;
   }, [holidays]);
 
@@ -149,6 +154,10 @@ export function CalendarioPage() {
         </div>
       </div>
 
+      <p className="text-[12px] text-[var(--ink-secondary)] mb-3">
+        Festivos de tu ámbito (tu localización y tu país). <span aria-hidden="true">○</span> pendiente de validación ·{' '}
+        <span aria-hidden="true">●</span> validado · <span aria-hidden="true">◇</span> fecha aproximada.
+      </p>
       <Card padding="p-0">
         <div className="grid grid-cols-7 border-b border-[var(--line)]">
           {DOW.map((d, i) => (
@@ -163,7 +172,7 @@ export function CalendarioPage() {
         <div className="grid grid-cols-7">
           {cells.map((c, i) => {
             const weekend = i % 7 >= 5;
-            const holiday = c && holidayByDay.get(c.date);
+            const dayHolidays = c ? holidayByDay.get(c.date) ?? [] : [];
             const dayAbs = c ? absOnDay(c.date) : [];
             const dayAlertas = c ? alertasByDay.get(c.date) ?? [] : [];
             const dayAnotaciones = c ? anotacionesByDay.get(c.date) ?? [] : [];
@@ -184,11 +193,21 @@ export function CalendarioPage() {
                             title={dayAlertas.map((a) => `${a.empleado.fullName} · ${TIPO_ALERTA_LABEL[a.tipo]}`).join(', ')}
                           />
                         )}
-                        {holiday && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--warning-soft)] text-[var(--warning)]" title={holiday}>
-                            festivo
-                          </span>
-                        )}
+                        {dayHolidays.map((h) => {
+                          const a = ambitoLabel(h);
+                          const marks = holidayMarks(h);
+                          const detail = `${h.name} — ${a.nombre} (${a.tipo.toLowerCase()}) · ${marks.map((m) => m.label).join(', ')}`;
+                          return (
+                            <span
+                              key={h.id}
+                              className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--warning-soft)] text-[var(--warning)]"
+                              title={detail}
+                              aria-label={detail}
+                            >
+                              festivo {marks.map((m) => m.glyph).join('')}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                     <div className="mt-1 flex flex-col gap-1">

@@ -193,3 +193,14 @@ Hoy no hay UI ni endpoint para crear cuentas ni asignar rol: solo `prisma/seed.t
 - [x] Tests: `paises-localizaciones.e2e-spec.ts` (6). Suite completa contra test: 31 ficheros, 244 tests. Verificado en navegador contra dev.
 - [ ] Nota: el alta por contratación (`applications.service.hire`) puede crear una Localizacion sin país (texto libre de la oferta); el aviso de la lista la señala. Decidir si en el Bloque 2 se resuelve el país en ese punto.
 - [ ] Bloque 2 (pendiente, no tocado): festivos y cálculo de ausencias.
+
+# Tanda 2 · Bloque 2 «Festivos reales + historial de etapas» · rama `feat/tanda2-bloque2-festivos-etapas` (2026-10-29, sin migración)
+- [x] Cálculo por ámbito: `leaveDays` solo descuenta festivos de su país (`paisId` de su localización; si esta no tiene país, el de su sociedad; si tampoco, ninguno) + los de su localización. `GET /holidays` filtra igual (ADMIN/RRHH sin ficha ven todos). Helper único `lib/holiday-scope.ts`.
+- [x] `GET /holidays/manage` + `PATCH /holidays/:id` (ADMIN/RRHH, auditado): validar y confirmar fecha de los aproximados. UI: Configuración → **Festivos** (ámbito, estado por forma ○ pendiente · ● validado · ◇ aproximado, filtros) y marcas en el calendario de Agenda.
+- [x] Contratación: no crea localizaciones sin país (`paisId` obligatorio si la localización es nueva; ContratarModal lo pide con «+ Nuevo país»; auditado `CREATE/Localizacion`).
+- [x] `ApplicationEtapa`: se escribe al crear candidatura (con la fecha real de postulación), `moveStage`, cribado automático y contratar. Sin UI. **Las candidaturas anteriores NO tienen filas** (la analítica debe tolerarlo o hacer un backfill aparte).
+- [x] Calendarios 2026 en `scripts/festivos-2026/` (JSON cargable 54 festivos + CSV y MD de revisión para RRHH) y script de carga (`cargar-festivos.cjs`: dry/commit, guarda de ref, idempotente, transaccional, aborta si falta localización). Ensayo completo en dev OK.
+- [x] Tests: `festivos`, `festivos-carga`, `etapas-hire` e2e; suite completa contra test. Navegador contra dev: calendario por ámbito, ausencias Madrid vs Maharashtra, Festivos (validar y confirmar fecha), modal de contratación.
+- [ ] **RRHH:** revisar `scripts/festivos-2026/REVISION-RRHH.md` (Karnataka sin fuente oficial: 10 filas fuera del JSON; 6 filas de EAU con fuente de prensa; criterios).
+- [ ] **Carga en producción:** espera a que RRHH cree las localizaciones (Madrid, Maharashtra, Delhi, Karnataka) y dé el visto bueno; backup nombrado + `dry` + confirmación expresa.
+- Nota dev: quedan los 54 festivos del ensayo, localizaciones Madrid/Maharashtra/Delhi/Karnataka y dos cuentas de prueba desactivadas (`@prueba-festivos.example.com`).
