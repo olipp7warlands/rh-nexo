@@ -136,7 +136,7 @@ arreglarlo requiere tocar código de Fase 5, fuera del alcance de Fase 6.
 
 
 # Selección II · Tanda 1 · rama `feat/seleccion-ii-tanda-1` (2026-10-28)
-- [x] Migración consolidada `20261028214546_seleccion_ii_fechas_proyecto_festivos_feed` aplicada en dev y test (producción PENDIENTE: backup verificado y nombrado → `migrate deploy` → merge). Objetos manuales y deriva esperada documentados en su README.
+- [x] Migración consolidada `20261028214546_seleccion_ii_fechas_proyecto_festivos_feed` aplicada en dev, test y **producción** (verificado en vivo: `finished_at` 2026-10-28 21:18:35Z, 1 paso, RLS de `ApplicationEtapa` activo, 0 tablas sin RLS). **Sin backup nombrado** (incumplimiento de la lección #23, anotado) y con el ciclo invertido: PR #5 mergeado a las 21:09Z, ~9 min de código sin esquema (lección #25). Tanda 1 DESPLEGADA.
 - [x] Fechas reales: `Job.openedAt`/`closedAt` (cierre solo con CERRADA, cierre >= apertura, reabrir => NULL), `Application.appliedAt` editable, `fechaIncorporacion` (hire + PATCH). UI: Nueva oferta, Editar proceso, fecha de postulación, edición de fechas en la ficha, columna «Apertura».
 - [x] Histórico: filtros ubicación y proyecto (URL + auditoría) y columnas Proyecto/Incorporación.
 - [x] Importación: `scripts/importacion-procesos/` (dry-run/commit, idempotente, email técnico `@candidatos.humanx.invalid`). Plantilla CSV pendiente de entregar a Blanca; CSV real fuera del repo y se borra tras la carga.

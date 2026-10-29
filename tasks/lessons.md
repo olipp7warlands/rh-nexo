@@ -169,3 +169,8 @@
     El diagnóstico demostró que el hash sí coincidía (el fallo estaba en lo tecleado en el
     login, no en el escapado), pero la regla sigue: `scripts/create-admin-user.mjs` lee
     `ADMIN_PASSWORD` o prompt enmascarado; la persona lo ejecuta en su terminal.
+25. **El ciclo es migración → merge, nunca al revés.** El 2026-10-28 la Tanda 1 de Selección II se
+    ejecutó invertida: PR #5 mergeado a las 21:09Z y `migrate deploy` en producción a las 21:18Z,
+    sin backup nombrado (incumple #23). Hubo ~9 min de código sin esquema en producción. Regla:
+    el merge a `master` (que despliega) solo ocurre DESPUÉS de verificar en `_prisma_migrations`
+    de producción que la migración está aplicada; y el backup se nombra antes del `migrate deploy`.
