@@ -30,7 +30,14 @@ export interface Holiday {
   id: string;
   date: string;
   name: string;
-  location: string | null;
+  /** Ámbito: país (sin localización) o localización concreta (con su país). */
+  pais: { id: string; nombre: string } | null;
+  localizacion: { id: string; nombre: string; pais: { id: string; nombre: string } | null } | null;
+  /** false = pendiente de validación por RRHH. */
+  validado: boolean;
+  /** true = fecha por confirmar (p. ej. festivos lunares). */
+  aproximado: boolean;
+  fuente: string | null;
 }
 
 export const ABSENCE_TYPE_LABEL: Record<AbsenceType, string> = {
@@ -64,9 +71,23 @@ export function useCalendar(from: string, to: string) {
   });
 }
 
-export function useHolidays(location?: string) {
-  const qs = location ? `?location=${encodeURIComponent(location)}` : '';
-  return useQuery({ queryKey: ['holidays', location ?? 'all'], queryFn: () => api.get<Holiday[]>(`/holidays${qs}`) });
+/** Festivos que aplican al usuario (su localización y su país); el servidor filtra por ámbito. */
+export function useHolidays() {
+  return useQuery({ queryKey: ['holidays', 'mine'], queryFn: () => api.get<Holiday[]>('/holidays') });
+}
+
+/** Todos los festivos con su ámbito y estado de revisión (solo ADMIN/RRHH). */
+export function useHolidaysManage() {
+  return useQuery({ queryKey: ['holidays', 'manage'], queryFn: () => api.get<Holiday[]>('/holidays/manage') });
+}
+
+export function useUpdateHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; validado?: boolean; aproximado?: boolean; date?: string }) =>
+      api.patch<Holiday>(`/holidays/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['holidays'] }),
+  });
 }
 
 export function useCreateAbsence() {

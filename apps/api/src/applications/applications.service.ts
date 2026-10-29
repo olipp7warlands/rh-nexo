@@ -76,14 +76,22 @@ export class ApplicationsService {
     if (dto.appliedAt && dto.appliedAt.slice(0, 10) < job.openedAt.toISOString().slice(0, 10)) {
       throw new BadRequestException('La fecha de postulación no puede ser anterior a la apertura de la oferta.');
     }
-    const app = await this.db.application.create({
-      data: {
-        jobId: dto.jobId,
-        candidateId: dto.candidateId,
-        stageId: nuevo.id,
-        ...(dto.appliedAt ? { appliedAt: new Date(dto.appliedAt) } : {}),
-      },
-      include: { job: true, candidate: true, stage: true },
+    // La etapa inicial entra en el historial con la fecha real de postulación (si se indicó), para que
+    // la analítica de tiempos por etapa parta del momento real y no del de grabación.
+    const app = await this.db.$transaction(async (tx) => {
+      const created = await tx.application.create({
+        data: {
+          jobId: dto.jobId,
+          candidateId: dto.candidateId,
+          stageId: nuevo.id,
+          ...(dto.appliedAt ? { appliedAt: new Date(dto.appliedAt) } : {}),
+        },
+        include: { job: true, candidate: true, stage: true },
+      });
+      await tx.applicationEtapa.create({
+        data: { applicationId: created.id, stageId: nuevo.id, enteredAt: created.appliedAt, byUserId: viewer.id },
+      });
+      return created;
     });
     await this.audit(viewer.id, 'CREATE', app.id, null, app);
     return app;
@@ -167,10 +175,14 @@ export class ApplicationsService {
     const stage = await this.db.stage.findUnique({ where: { id: dto.stageId } });
     if (!stage) throw new NotFoundException('Etapa no encontrada');
 
-    const updated = await this.db.application.update({
-      where: { id },
-      data: { stageId: stage.id },
-      include: { job: true, candidate: true, stage: true },
+    const updated = await this.db.$transaction(async (tx) => {
+      const u = await tx.application.update({
+        where: { id },
+        data: { stageId: stage.id },
+        include: { job: true, candidate: true, stage: true },
+      });
+      await tx.applicationEtapa.create({ data: { applicationId: id, stageId: stage.id, byUserId: viewer.id } });
+      return u;
     });
     await this.audit(viewer.id, 'UPDATE', id, { stageId: app.stageId }, { stageId: stage.id });
     await this.decide(id, 'ADVANCE_STAGE', false, viewer.id, `Avanza a "${stage.name}"`);
@@ -208,7 +220,10 @@ export class ApplicationsService {
     let rejected = 0;
     for (const app of candidatas) {
       if (app.candidate.resumeUrl) {
-        await this.db.application.update({ where: { id: app.id }, data: { stageId: cribado.id } });
+        await this.db.$transaction([
+          this.db.application.update({ where: { id: app.id }, data: { stageId: cribado.id } }),
+          this.db.applicationEtapa.create({ data: { applicationId: app.id, stageId: cribado.id, byUserId: viewer.id } }),
+        ]);
         await this.decide(app.id, 'AUTO_SCREEN', true, undefined, 'Cribado automático: CV recibido, avanza a Cribado');
         advanced++;
       } else {
@@ -312,9 +327,25 @@ export class ApplicationsService {
       // ahora vive como `localizacionId`/`tipoContratoId` (catálogos). El puente vive aquí, sin
       // tocar HireDto/Job (siguen mandando texto libre/enum, igual que siempre).
       const locationName = (dto.location ?? app.job.location).trim();
-      const localizacion =
-        (await tx.localizacion.findFirst({ where: { nombre: { equals: locationName, mode: 'insensitive' } } })) ??
-        (await tx.localizacion.create({ data: { nombre: locationName } }));
+      let localizacion = await tx.localizacion.findFirst({ where: { nombre: { equals: locationName, mode: 'insensitive' } } });
+      if (!localizacion) {
+        // Nunca se crea una localización sin país: sin país no se pueden aplicar sus festivos.
+        if (!dto.paisId) {
+          throw new BadRequestException(`La localización «${locationName}» no existe todavía: indica su país para crearla.`);
+        }
+        const pais = await tx.pais.findUnique({ where: { id: dto.paisId }, select: { id: true } });
+        if (!pais) throw new BadRequestException('El país indicado no existe');
+        localizacion = await tx.localizacion.create({ data: { nombre: locationName, paisId: pais.id } });
+        await tx.auditLog.create({
+          data: {
+            actorId: viewer.id,
+            action: 'CREATE',
+            entity: 'Localizacion',
+            entityId: localizacion.id,
+            after: { nombre: localizacion.nombre, paisId: localizacion.paisId, origen: 'contratación' },
+          },
+        });
+      }
 
       const contractType = dto.contractType ?? app.job.contractType;
       const tipoContrato = await tx.tipoContrato.findFirst({ where: { nombre: CONTRACT_TYPE_LABEL[contractType] } });
@@ -363,6 +394,9 @@ export class ApplicationsService {
         where: { id: applicationId },
         data: { status: 'CONTRATADO', stageId: contratado?.id, fechaIncorporacion: new Date(dto.startDate) },
       });
+      if (contratado) {
+        await tx.applicationEtapa.create({ data: { applicationId, stageId: contratado.id, byUserId: viewer.id } });
+      }
 
       await tx.auditLog.create({
         data: {

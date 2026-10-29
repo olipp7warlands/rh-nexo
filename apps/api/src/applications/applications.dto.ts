@@ -50,6 +50,8 @@ export class HireDto {
   @IsOptional() @IsString() @MaxLength(200) jobTitle?: string;
   @IsOptional() @IsString() @MaxLength(50) level?: string;
   @IsOptional() @IsString() @MaxLength(200) location?: string;
+  /** País de la localización; obligatorio solo si `location` no existe todavía y hay que crearla. */
+  @IsOptional() @IsString() paisId?: string;
   @IsOptional() @IsString() departmentId?: string;
   @IsOptional() @IsString() managerId?: string;
   @IsOptional() @IsEnum(ContractType) contractType?: ContractType;

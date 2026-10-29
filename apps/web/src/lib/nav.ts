@@ -38,6 +38,10 @@ export const NAV = [
       { key: 'jornadas', label: 'Jornadas', path: '/configuracion/jornadas' },
       { key: 'relaciones-emergencia', label: 'Relaciones de emergencia', path: '/configuracion/relaciones-emergencia' },
       { key: 'idiomas', label: 'Idiomas', path: '/configuracion/idiomas' },
+      // Mismo orden que las pestañas de ConfiguracionInformacionPage. `roles`: solo esos roles ven la entrada
+      // (la pestaña y la API lo exigen igual; ocultarla aquí evita un enlace que solo daría 403).
+      { key: 'festivos', label: 'Festivos', path: '/configuracion/festivos', roles: ['ADMIN', 'RRHH'] },
+      { key: 'cuentas', label: 'Cuentas', path: '/configuracion/cuentas', roles: ['ADMIN'] },
     ]},
   ]},
 ] as const;

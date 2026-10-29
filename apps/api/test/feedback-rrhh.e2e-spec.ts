@@ -298,7 +298,7 @@ describe('Feedback RRHH (integración)', () => {
       await request(http).post(`/api/applications/${app2.body.id}/interviews`).set(auth(rrhhToken)).send({ type: 'cultural' }).expect(201);
 
       const res = await request(http).delete(`/api/applications/${id}`).set(auth(rrhhToken)).expect(200);
-      expect(res.body.borrado).toEqual({ entrevistas: 2, evaluaciones: 1, decisiones: 1, etapas: 0 });
+      expect(res.body.borrado).toEqual({ entrevistas: 2, evaluaciones: 1, decisiones: 1, etapas: 1 });  // la etapa inicial «Nuevo» (historial de etapas) se borra en cascada con la candidatura
 
       expect(await db.application.count({ where: { id } })).toBe(0);
       expect(await db.interview.count({ where: { applicationId: id } })).toBe(0);
@@ -310,7 +310,7 @@ describe('Feedback RRHH (integración)', () => {
       const log = await db.auditLog.findFirst({ where: { entity: 'Application', entityId: id, action: 'DELETE' } });
       expect(log).not.toBeNull();
       expect(log!.actorId).not.toBeNull();
-      expect(log!.after).toEqual({ borrado: { entrevistas: 2, evaluaciones: 1, decisiones: 1, etapas: 0 } });
+      expect(log!.after).toEqual({ borrado: { entrevistas: 2, evaluaciones: 1, decisiones: 1, etapas: 1 } });
       // El AuditLog nunca se borra: las entradas previas de esa candidatura (CREATE, REJECT) siguen ahí.
       expect(await db.auditLog.count({ where: { entity: 'Application', entityId: id } })).toBeGreaterThanOrEqual(3);
     });

@@ -148,6 +148,8 @@ export interface HireInput {
   jobTitle?: string;
   level?: string;
   location?: string;
+  /** País de la localización; obligatorio solo si `location` aún no existe y hay que crearla. */
+  paisId?: string;
   departmentId?: string;
   managerId?: string;
   contractType?: string;
