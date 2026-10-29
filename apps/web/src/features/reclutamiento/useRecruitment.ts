@@ -236,6 +236,10 @@ export function useUpdateJob() {
       ...data
     }: {
       id: string;
+      title?: string;
+      departmentId?: string;
+      /** LEGADO: editable para que RRHH reparta el texto en los campos estructurados. */
+      description?: string;
       status?: JobStatus;
       openedAt?: string;
       closedAt?: string;
@@ -408,6 +412,15 @@ export function useAddInterview() {
   return useMutation({
     mutationFn: ({ applicationId, ...data }: { applicationId: string; type: string; scheduledAt?: string; interviewerId?: string }) =>
       api.post<InterviewItem>(`/applications/${applicationId}/interviews`, data),
+    onSuccess: () => invalidate(qc),
+  });
+}
+
+/** Elimina una entrevista PROGRAMADA (409 si ya está completada). Auditado en servidor. */
+export function useDeleteInterview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ id: string; deleted: true }>(`/interviews/${id}`),
     onSuccess: () => invalidate(qc),
   });
 }

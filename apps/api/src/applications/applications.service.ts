@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ContractType, Job } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
@@ -254,6 +254,30 @@ export class ApplicationsService {
     });
     await this.audit(viewer.id, 'UPDATE', id, before, updated, 'Interview');
     return updated;
+  }
+
+  /**
+   * Elimina una entrevista PROGRAMADA (p. ej. creada por error o cancelada). Una completada
+   * conserva su feedback como traza del proceso y no se borra. El borrado queda en AuditLog.
+   */
+  async removeInterview(id: string, viewer: AuthUser) {
+    const interview = await this.db.interview.findUnique({
+      where: { id },
+      include: { application: { include: { job: true } } },
+    });
+    if (!interview) throw new NotFoundException('Entrevista no encontrada');
+    this.assertJobAccess(interview.application.job, viewer);
+    if (interview.status !== 'PROGRAMADA') {
+      throw new ConflictException('Solo se pueden eliminar entrevistas programadas; una completada conserva su feedback.');
+    }
+    const { application, ...before } = interview;
+    await this.db.$transaction([
+      this.db.interview.delete({ where: { id } }),
+      this.db.auditLog.create({
+        data: { actorId: viewer.id, action: 'DELETE', entity: 'Interview', entityId: id, before: before as object },
+      }),
+    ]);
+    return { id, deleted: true };
   }
 
   async addEvaluation(applicationId: string, dto: AddEvaluationDto, viewer: AuthUser) {
