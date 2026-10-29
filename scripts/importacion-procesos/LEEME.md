@@ -23,11 +23,17 @@ lo rechaza). Separador `;`, UTF-8 (con BOM, abre bien en Excel), fechas `AAAA-MM
 | `oferta_apertura` | sí | Fecha real de apertura del proceso. |
 | `oferta_cierre` | cond. | Fecha de cierre. **Obligatoria si `oferta_estado` = CERRADA**; vacía en las demás. Debe ser ≥ apertura. |
 | `oferta_estado` | sí | `ABIERTA`, `PAUSADA` o `CERRADA` (no se importan borradores). |
+| `oferta_objetivo` | no | Objetivo del puesto (texto, máx. 5000). |
+| `oferta_funciones` | no | Funciones y responsabilidades (máx. 5000). |
+| `oferta_req_educacion` | no | Requisitos: educación (máx. 5000). |
+| `oferta_req_experiencia` | no | Requisitos: experiencia (máx. 5000). |
+| `oferta_se_valorara` | no | Se valorará (máx. 5000). |
 | `candidato_nombre` | sí | Nombre completo. |
 | `candidato_email` | no | Email real si existe. **Si falta**, el script genera un email técnico único `importado+<hash>@candidatos.humanx.invalid` (dominio reservado `.invalid`, nunca entregable); es la marca «importado» que la fase RGPD de emails debe excluir. Un mismo email real en varias filas = la misma persona. |
 | `candidato_telefono` | no | Texto libre. |
 | `candidato_ubicacion` | no | Texto libre (filtro «ubicación» del histórico). |
-| `candidato_origen` | no | `PORTAL`, `REFERIDO`, `LINKEDIN`, `AGENCIA`, `OTRO` (por defecto `OTRO`). |
+| `candidato_origen` | no | `PORTAL`, `REFERIDO`, `LINKEDIN`, `AGENCIA`, `OTRO` (por defecto `OTRO`), `STRATOS`, `IMPULSYN`, `UNIVERSIDAD`, `INFOJOBS`, `INDEED`, `WEB_EMPRESA`. |
+| `candidato_fuente_detalle` | no | Detalle libre de la fuente (p. ej. qué universidad), máx. 200. |
 | `candidato_linkedin` | no | URL. |
 | `postulacion_fecha` | sí | Fecha real de postulación. No puede ser anterior a `oferta_apertura`. |
 | `postulacion_estado` | sí | `ACTIVO`, `RECHAZADO`, `CONTRATADO`, `RETIRADO`. |

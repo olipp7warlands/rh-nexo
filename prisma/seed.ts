@@ -414,7 +414,7 @@ async function main() {
 
   // Festivos
   for (const h of HOLIDAYS)
-    await db.holiday.create({ data: { date: D(h.date), name: h.name, location: h.location ?? undefined } });
+    await db.holiday.create({ data: { date: D(h.date), name: h.name, location: h.location ?? undefined, paisId: 'p-es' } });
 
   // Procesos — plantilla maestra de Onboarding (fase G: fase es texto libre, no enum)
   const ONB_PHASE_LABEL: Record<string, string> = {

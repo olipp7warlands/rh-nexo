@@ -7,7 +7,8 @@ import { Modal } from '../_shared/Modal';
 import { useDepartments } from '../employees/useDepartments';
 import { useEmployees } from '../employees/useEmployees';
 import { useProyectos, useSociedades } from '../estructura/useEstructura';
-import { useCreateJob } from './useRecruitment';
+import { useCreateJob, useUploadJobPdf } from './useRecruitment';
+import { DescripcionFields, PdfField, descripcionPayload, emptyDescripcion, pdfError } from './DescripcionOferta';
 
 const schema = z.object({
   title: z.string().min(1, 'Obligatorio'),
@@ -19,7 +20,6 @@ const schema = z.object({
   hiringManagerId: z.string().optional(),
   sociedadId: z.string().optional(),
   proyectoId: z.string().optional(),
-  description: z.string().optional(),
   status: z.enum(['ABIERTA', 'PAUSADA', 'CERRADA']),
   openedAt: z.string().min(1, 'Obligatoria'),
   closedAt: z.string().optional(),
@@ -42,6 +42,9 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const { data: sociedades } = useSociedades();
   const { data: proyectos } = useProyectos();
   const create = useCreateJob();
+  const uploadPdf = useUploadJobPdf();
+  const [descripcion, setDescripcion] = useState(() => emptyDescripcion());
+  const [pdf, setPdf] = useState<File | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -56,8 +59,13 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
 
   const onSubmit = handleSubmit(async (data) => {
     setServerError(null);
+    if (pdf) {
+      const msg = pdfError(pdf);
+      if (msg) return setServerError(msg);
+    }
+    let created: { id: string };
     try {
-      await create.mutateAsync({
+      created = await create.mutateAsync({
         title: data.title,
         departmentId: data.departmentId || undefined,
         location: data.location,
@@ -67,14 +75,20 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
         hiringManagerId: data.hiringManagerId || undefined,
         sociedadId: data.sociedadId || undefined,
         proyectoId: data.proyectoId || undefined,
-        description: data.description || undefined,
+        ...descripcionPayload(descripcion),
         status: data.status,
         openedAt: data.openedAt,
         closedAt: data.status === 'CERRADA' ? data.closedAt : undefined,
       });
+    } catch (e) {
+      return setServerError((e as Error).message);
+    }
+    try {
+      if (pdf) await uploadPdf.mutateAsync({ id: created.id, file: pdf });
       onClose();
     } catch (e) {
-      setServerError((e as Error).message);
+      // La oferta ya existe: se avisa para no duplicarla al reintentar.
+      setServerError(`La oferta se creó, pero el PDF falló: ${(e as Error).message}. Adjúntalo desde «Editar proceso».`);
     }
   });
 
@@ -88,8 +102,8 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <Button variant="ghost" type="button" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={onSubmit} disabled={create.isPending}>
-            {create.isPending ? 'Creando…' : 'Crear oferta'}
+          <Button variant="primary" onClick={onSubmit} disabled={create.isPending || uploadPdf.isPending}>
+            {create.isPending || uploadPdf.isPending ? 'Creando…' : 'Crear oferta'}
           </Button>
         </>
       }
@@ -198,13 +212,8 @@ export function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-[12px] font-medium text-[var(--ink-secondary)] mb-1.5">Descripción (opcional)</label>
-          <textarea
-            className="w-full min-h-20 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--line-strong)] rounded-md text-[13px] text-[var(--ink-primary)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] focus:outline-none"
-            {...register('description')}
-          />
-        </div>
+        <DescripcionFields values={descripcion} onChange={setDescripcion} />
+        <PdfField file={pdf} onFile={setPdf} />
         {serverError && (
           <div role="alert" className="text-[12px] text-[var(--danger)] bg-[var(--danger-soft)] rounded-md px-3 py-2">
             {serverError}

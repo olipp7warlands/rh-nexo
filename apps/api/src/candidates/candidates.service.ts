@@ -122,7 +122,7 @@ export class CandidatesService {
           status: true,
           appliedAt: true,
           fechaIncorporacion: true,
-          candidate: { select: { id: true, fullName: true, resumeUrl: true, linkedinUrl: true, location: true } },
+          candidate: { select: { id: true, fullName: true, resumeUrl: true, linkedinUrl: true, location: true, source: true, fuenteDetalle: true } },
           job: {
             select: {
               id: true,
@@ -173,6 +173,8 @@ export class CandidatesService {
         resumeUrl: a.candidate.resumeUrl,
         linkedinUrl: a.candidate.linkedinUrl,
         location: a.candidate.location,
+        source: a.candidate.source,
+        fuenteDetalle: a.candidate.fuenteDetalle,
         jobId: a.job.id,
         jobTitle: a.job.title,
         sociedad: a.job.sociedad,

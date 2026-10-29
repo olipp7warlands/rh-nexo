@@ -104,4 +104,38 @@ describe('Importación de procesos históricos: parser y validación (unit)', ()
     const errs = run([{ ...base, candidato_nombre: 'Persona Secreta', candidato_email: 'secreto@privado.es', postulacion_fecha: 'ayer' }]).errors;
     expect(JSON.stringify(errs)).not.toMatch(/Secreta|secreto@/);
   });
+
+  it('acepta las fuentes nuevas, el detalle de fuente y los campos de descripción de la oferta', () => {
+    const plan = run([
+      {
+        ...base,
+        candidato_origen: 'UNIVERSIDAD', candidato_fuente_detalle: 'UPM',
+        oferta_objetivo: 'Objetivo', oferta_funciones: 'Funciones', oferta_req_educacion: 'Grado',
+        oferta_req_experiencia: '5 años', oferta_se_valorara: 'Inglés',
+      },
+    ]);
+    expect(plan.errors).toEqual([]);
+    expect(plan.apps[0].candidato).toMatchObject({ origen: 'UNIVERSIDAD', fuenteDetalle: 'UPM' });
+    expect([...plan.jobs.values()][0].oferta).toMatchObject({
+      objetivo: 'Objetivo', funciones: 'Funciones', reqEducacion: 'Grado', reqExperiencia: '5 años', seValorara: 'Inglés',
+    });
+    for (const origen of ['STRATOS', 'IMPULSYN', 'UNIVERSIDAD', 'INFOJOBS', 'INDEED', 'WEB_EMPRESA']) {
+      expect(run([{ ...base, candidato_origen: origen }]).errors).toEqual([]);
+    }
+  });
+
+  it('rechaza una fuente desconocida, un detalle > 200 y un campo de descripción > 5000', () => {
+    const campos = (o: Record<string, string>) => run([{ ...base, ...o }]).errors.map((e: { campo: string }) => e.campo);
+    expect(campos({ candidato_origen: 'TWITTER' })).toContain('candidato_origen');
+    expect(campos({ candidato_fuente_detalle: 'a'.repeat(201) })).toContain('candidato_fuente_detalle');
+    expect(campos({ oferta_funciones: 'a'.repeat(5001) })).toContain('oferta_funciones');
+  });
+
+  it('dos filas de la misma oferta con descripciones distintas se rechazan (los campos oferta_* deben coincidir)', () => {
+    const errs = run([
+      { ...base, oferta_funciones: 'A' },
+      { ...base, candidato_nombre: 'Otra Persona', candidato_email: 'otra@example.com', oferta_funciones: 'B' },
+    ]).errors;
+    expect(errs.some((e: { campo: string }) => e.campo.includes('oferta_funciones'))).toBe(true);
+  });
 });

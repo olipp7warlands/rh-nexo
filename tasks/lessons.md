@@ -92,7 +92,7 @@
     Pasó de verdad con `DATABASE_URL`/`DIRECT_URL` reales de Supabase. Para comprobar que un
     `.env` no cambió, usar `git status --short .env` (vacío = no trackeado = correcto) o
     `git check-ignore -v .env`, nunca `cat`/`diff` directo sobre el fichero real.
-17. **Turborepo (modo `strict`, default desde Turbo 2.x) NO propaga las variables de entorno
+17. **Arranque local: Turborepo (modo `strict`, default desde Turbo 2.x) NO propaga las variables de entorno
     del proceso padre a las tareas hijas.** `dotenv -e .env.local -- turbo run dev` puede
     arrancar la API contra el `.env` real (producción) EN SILENCIO — Nest cae a su propio
     fallback de `ConfigModule` sin ningún error visible hasta que una query falla con "table
@@ -101,14 +101,11 @@
     del padre. Además, nunca fiarse solo del wrapper: `apps/api/src/main.ts` tiene una guarda
     en el propio proceso (`assertNotAccidentalProduction`, independiente de cómo se arrancó)
     que aborta si `DATABASE_URL` es de producción y `NODE_ENV !== 'production'`.
-18. **No asumir puertos fijos en local — otro proyecto de la máquina puede ocuparlos.** El
-    puerto 3000 de la API chocó con otro proyecto (`stackly`, Next.js) ya corriendo en esta
-    máquina: la API no pudo hacer bind (`EADDRINUSE`), y el proxy de Vite a `/api`, con el
-    puerto hardcodeado, siguió reenviando en silencio al servidor equivocado (404 en cualquier
-    llamada a la API, sin pista clara del motivo). Arreglo: `vite.config.ts` lee `PORT` de
-    `process.env` (con fallback a 3000) en vez de hardcodearlo, y `.env.local` usa 3001. Antes
-    de asumir que un fallo "en dev" es de código, comprobar `Get-NetTCPConnection -State
-    Listen` (PowerShell) por si el puerto ya está ocupado por otra cosa.
+    Mismo origen (arranque local que apunta a lo equivocado): tampoco asumir puertos fijos — otro
+    proyecto de la máquina puede ocupar el 3000 (`EADDRINUSE`) y el proxy de Vite sigue reenviando
+    en silencio al servidor equivocado (404 sin pista). `vite.config.ts` lee `PORT` del entorno
+    (`.env.local` usa 3001); ante un fallo «en dev», mirar primero `Get-NetTCPConnection -State Listen`.
+    (Antigua lección #18, fusionada aquí; la numeración del resto no cambia.)
 19. **`pnpm db:seed` NUNCA se ejecuta contra producción — la excepción del 2026-07-21 fue
     puntual y no sienta precedente.** `prisma/seed.ts` hace `deleteMany()` de todas las tablas
     de negocio antes de reinsertar; es un reset completo, no un upsert idempotente. El

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, BadRequestException } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 import {
   AddEvaluationDto,
@@ -37,6 +37,13 @@ export class ApplicationsController {
   @Patch(':id')
   update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateApplicationDto) {
     return this.service.updateDates(id, dto, user);
+  }
+
+  /** Solo una candidatura sin actividad (entrevistas, evaluaciones, decisiones). El Candidate no se borra. */
+  @Roles('ADMIN', 'RRHH')
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.remove(id, user);
   }
 
   @Patch(':id/stage')

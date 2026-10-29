@@ -14,6 +14,8 @@ import {
   type JobDetail,
 } from './useRecruitment';
 import { ApplicationStatusBadge } from './RecruitmentBadges';
+import { INTERVIEW_TYPE_OPTIONS, interviewTypeLabel, sourceText } from './fuentes';
+import { CandidaturaAccionesMenu } from './AccionesMenu';
 import { ContratarModal } from './ContratarModal';
 
 const selectClass =
@@ -46,6 +48,7 @@ export function CandidatePanel({
   const [hiring, setHiring] = useState(false);
   const [interviewType, setInterviewType] = useState('tecnica');
   const [interviewerId, setInterviewerId] = useState('');
+  const [interviewAt, setInterviewAt] = useState('');
   const [evalScore, setEvalScore] = useState('');
   const [evalRecommendation, setEvalRecommendation] = useState('');
 
@@ -78,6 +81,7 @@ export function CandidatePanel({
           <div className="flex items-start justify-between">
             <div className="text-[13px] text-[var(--ink-secondary)] space-y-1">
               <div>{candidate.email}</div>
+              <div>Fuente: {sourceText(candidate.source, candidate.fuenteDetalle)}</div>
               {candidate.phone && <div>{candidate.phone}</div>}
               {candidate.location && <div>{candidate.location}</div>}
               {candidate.linkedinUrl && (
@@ -107,6 +111,13 @@ export function CandidatePanel({
                     </Button>
                   )}
                 </div>
+              )}
+              {canHire && (
+                <CandidaturaAccionesMenu
+                  applicationId={applicationId}
+                  candidateName={candidate.fullName}
+                  actividad={application.interviews.length + application.evaluations.length + application.decisions.length > 0}
+                />
               )}
             </div>
           </div>
@@ -196,8 +207,9 @@ export function CandidatePanel({
               )}
               {application.interviews.map((iv) => (
                 <div key={iv.id} className="flex items-center gap-3 text-[13px] px-3 py-2 bg-[var(--bg-subtle)] rounded-md">
-                  <Badge variant="neutral">{iv.type}</Badge>
+                  <Badge variant="neutral">{interviewTypeLabel(iv.type)}</Badge>
                   <span className="flex-1 text-[var(--ink-secondary)]">
+                    {employees?.find((e) => e.id === iv.interviewerId)?.fullName ?? 'Sin entrevistador'} ·{' '}
                     {iv.scheduledAt ? formatDate(iv.scheduledAt) : 'Sin fecha'}
                     {iv.feedback ? ` · ${iv.feedback}` : ''}
                   </span>
@@ -215,13 +227,14 @@ export function CandidatePanel({
             </div>
             {canManage && (
               <div className="flex items-end gap-2">
-                <select className={selectClass} value={interviewType} onChange={(e) => setInterviewType(e.target.value)}>
-                  <option value="telefonica">Telefónica</option>
-                  <option value="tecnica">Técnica</option>
-                  <option value="cultural">Cultural</option>
-                  <option value="final">Final</option>
+                <select aria-label="Tipo de entrevista" className={selectClass} value={interviewType} onChange={(e) => setInterviewType(e.target.value)}>
+                  {INTERVIEW_TYPE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
-                <select className={selectClass} value={interviewerId} onChange={(e) => setInterviewerId(e.target.value)}>
+                <select aria-label="Entrevistador" className={selectClass} value={interviewerId} onChange={(e) => setInterviewerId(e.target.value)}>
                   <option value="">Entrevistador…</option>
                   {employees?.map((e) => (
                     <option key={e.id} value={e.id}>
@@ -229,11 +242,20 @@ export function CandidatePanel({
                     </option>
                   ))}
                 </select>
+                <Input aria-label="Fecha de la entrevista" type="date" value={interviewAt} onChange={(e) => setInterviewAt(e.target.value)} />
                 <Button
                   variant="secondary"
                   disabled={addInterview.isPending}
                   onClick={() =>
-                    addInterview.mutate({ applicationId, type: interviewType, interviewerId: interviewerId || undefined })
+                    addInterview.mutate(
+                      { applicationId, type: interviewType, interviewerId: interviewerId || undefined, scheduledAt: interviewAt || undefined },
+                      {
+                        onSuccess: () => {
+                          setInterviewerId('');
+                          setInterviewAt('');
+                        },
+                      },
+                    )
                   }
                 >
                   Programar

@@ -8,6 +8,8 @@ export class CreateCandidateDto {
   @IsOptional() @IsString() @MaxLength(30) phone?: string;
   @IsOptional() @IsString() @MaxLength(200) location?: string;
   @IsOptional() @IsEnum(CandidateSource) source?: CandidateSource;
+  /** Detalle libre de la fuente (p. ej. la universidad o quien refiere). */
+  @IsOptional() @IsString() @MaxLength(200) fuenteDetalle?: string;
   @IsOptional() @IsString() @MaxLength(500) linkedinUrl?: string;
   @IsOptional() @IsString() @MaxLength(500) resumeUrl?: string;
 }

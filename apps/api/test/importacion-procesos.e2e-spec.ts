@@ -28,9 +28,12 @@ describe('Importación de procesos históricos (integración, BD de test)', () =
   const off = () => ({
     oferta_titulo: `${tag} Oferta`, oferta_sociedad: sociedad, oferta_departamento: departamento, oferta_ubicacion: 'Madrid',
     oferta_nivel: 'Senior', oferta_apertura: '2025-03-03', oferta_cierre: '2025-05-16', oferta_estado: 'CERRADA',
+    oferta_objetivo: 'Objetivo importado', oferta_funciones: 'Funciones importadas', oferta_req_educacion: 'Grado',
+    oferta_req_experiencia: '3 años', oferta_se_valorara: 'Inglés',
   });
   const rows = () => [
     { ...off(), candidato_nombre: `${tag} Contratada`, candidato_email: `${tag.toLowerCase()}.c@example.com`, candidato_ubicacion: 'Valencia',
+      candidato_origen: 'UNIVERSIDAD', candidato_fuente_detalle: 'UPM',
       postulacion_fecha: '2025-03-10', postulacion_estado: 'CONTRATADO', postulacion_etapa: 'Contratado', incorporacion_fecha: '2025-06-02' },
     { ...off(), candidato_nombre: `${tag} Sin Email`, postulacion_fecha: '2025-03-12', postulacion_estado: 'RECHAZADO', postulacion_etapa: 'Entrevista' },
   ];
@@ -71,6 +74,12 @@ describe('Importación de procesos históricos (integración, BD de test)', () =
     expect(job).toMatchObject({ status: 'CERRADA', level: 'Senior' });
     expect(job.openedAt.toISOString()).toBe('2025-03-03T00:00:00.000Z');
     expect(job.closedAt?.toISOString()).toBe('2025-05-16T00:00:00.000Z');
+    expect(job).toMatchObject({
+      objetivoPuesto: 'Objetivo importado', funciones: 'Funciones importadas', requisitosEducacion: 'Grado',
+      requisitosExperiencia: '3 años', seValorara: 'Inglés',
+    });
+    const contratada = await db.candidate.findFirstOrThrow({ where: { fullName: `${tag} Contratada` } });
+    expect(contratada).toMatchObject({ source: 'UNIVERSIDAD', fuenteDetalle: 'UPM' });
 
     const apps = await db.application.findMany({ where: { jobId: job.id }, include: { candidate: true, stage: true } });
     expect(apps).toHaveLength(2);

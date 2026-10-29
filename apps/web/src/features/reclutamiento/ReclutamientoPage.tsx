@@ -6,6 +6,7 @@ import { useJobs, type JobStatus, type JobSummary } from './useRecruitment';
 import { JobStatusBadge } from './RecruitmentBadges';
 import { NuevaOfertaModal } from './NuevaOfertaModal';
 import { SeleccionTabs } from './SeleccionTabs';
+import { OfertaAccionesMenu } from './AccionesMenu';
 
 const FILTERS: { key: JobStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'Todas' },
@@ -50,6 +51,7 @@ const COLUMNS: { key: SortKey | null; label: string }[] = [
   { key: null, label: 'Pipeline' },
   { key: null, label: 'Hiring manager' },
   { key: 'openedAt', label: 'Apertura' },
+  { key: null, label: 'Acciones' },
 ];
 
 function sortValue(j: JobSummary, key: SortKey): string | number {
@@ -57,7 +59,7 @@ function sortValue(j: JobSummary, key: SortKey): string | number {
   return j[key];
 }
 
-function JobsTable({ jobs }: { jobs: JobSummary[] }) {
+function JobsTable({ jobs, canManage }: { jobs: JobSummary[]; canManage: boolean }) {
   const navigate = useNavigate();
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'openedAt', dir: 'desc' });
 
@@ -136,6 +138,7 @@ function JobsTable({ jobs }: { jobs: JobSummary[] }) {
               <td className="px-4 py-3 mono text-[12px] text-[var(--ink-secondary)]">
                 {new Date(job.openedAt).toLocaleDateString('es-ES')}
               </td>
+              <td className="px-4 py-3 text-right">{canManage && <OfertaAccionesMenu job={job} />}</td>
             </tr>
           ))}
         </tbody>
@@ -224,7 +227,7 @@ export function ReclutamientoPage() {
         <Card><p className="text-[13px] text-[var(--ink-tertiary)]">No hay ofertas en este filtro.</p></Card>
       )}
 
-      {view === 'listado' && filtered.length > 0 && <JobsTable jobs={filtered} />}
+      {view === 'listado' && filtered.length > 0 && <JobsTable jobs={filtered} canManage={canManage} />}
 
       {view === 'tarjetas' && (
         <div className="grid grid-cols-2 gap-5">
@@ -235,7 +238,10 @@ export function ReclutamientoPage() {
                   <div className="text-[11px] text-[var(--ink-tertiary)] uppercase tracking-wider">
                     {job.department?.name ?? 'Sin departamento'}
                   </div>
-                  <JobStatusBadge status={job.status} />
+                  <div className="flex items-center gap-1">
+                    <JobStatusBadge status={job.status} />
+                    {canManage && <OfertaAccionesMenu job={job} />}
+                  </div>
                 </div>
                 <h3 className="font-serif text-[18px] font-medium mb-1">{job.title}</h3>
                 <div className="flex items-center gap-3 text-[12px] text-[var(--ink-secondary)] mb-4">

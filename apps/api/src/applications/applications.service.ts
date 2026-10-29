@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ContractType, Job } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
@@ -63,6 +63,7 @@ export class ApplicationsService {
         stage: true,
         interviews: { select: { id: true, type: true, status: true, scheduledAt: true } },
         evaluations: { select: { id: true, score: true, recommendation: true } },
+        _count: { select: { decisions: true } },
       },
       orderBy: { appliedAt: 'desc' },
     });
@@ -86,6 +87,34 @@ export class ApplicationsService {
     });
     await this.audit(viewer.id, 'CREATE', app.id, null, app);
     return app;
+  }
+
+  /**
+   * Elimina una candidatura creada por error. Solo si no tiene actividad: ninguna entrevista,
+   * evaluación ni decisión (AuditDecision es la traza de auditoría y no se borra). El Candidate
+   * permanece. Comprobación y borrado en una transacción; audita antes del borrado.
+   */
+  async remove(id: string, viewer: AuthUser) {
+    await this.requireApplication(id, viewer);
+    await this.db.$transaction(async (tx) => {
+      const app = await tx.application.findUnique({
+        where: { id },
+        include: { _count: { select: { interviews: true, evaluations: true, decisions: true } } },
+      });
+      if (!app) throw new NotFoundException('Candidatura no encontrada');
+      const { interviews, evaluations, decisions } = app._count;
+      if (interviews + evaluations + decisions > 0) {
+        throw new ConflictException(
+          'La candidatura tiene entrevistas, evaluaciones o decisiones registradas: recházala, el historial no se borra.',
+        );
+      }
+      const { _count, ...before } = app;
+      await tx.application.delete({ where: { id } });
+      await tx.auditLog.create({
+        data: { actorId: viewer.id, action: 'DELETE', entity: 'Application', entityId: id, before: before as object },
+      });
+    });
+    return { id, deleted: true };
   }
 
   /** Corrige fechas reales de una candidatura (postulación / incorporación). Audita antes y después. */
