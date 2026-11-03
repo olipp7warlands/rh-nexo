@@ -28,6 +28,7 @@ const NominaPage = lazy(() => import('./features/payroll/NominaPage').then((m) =
 const DocumentosPage = lazy(() => import('./features/documents/DocumentosPage').then((m) => ({ default: m.DocumentosPage })));
 const ReclutamientoPage = lazy(() => import('./features/reclutamiento/ReclutamientoPage').then((m) => ({ default: m.ReclutamientoPage })));
 const HistoricoPage = lazy(() => import('./features/reclutamiento/HistoricoPage').then((m) => ({ default: m.HistoricoPage })));
+const SeleccionAnaliticaPage = lazy(() => import('./features/reclutamiento/SeleccionAnaliticaPage').then((m) => ({ default: m.SeleccionAnaliticaPage })));
 const JobDetailPage = lazy(() => import('./features/reclutamiento/JobDetailPage').then((m) => ({ default: m.JobDetailPage })));
 const AnotacionesPage = lazy(() => import('./features/anotaciones/AnotacionesPage').then((m) => ({ default: m.AnotacionesPage })));
 // humanX: los 8 catálogos (antes rutas sueltas en /estructura/*) viven consolidados en pestañas
@@ -87,6 +88,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   <Route path="/personas/:id" element={<EmployeeDetailPage />} />
                   {/* Subpestaña de Selección; la URL = nombre visible. Estática: gana a :jobId. */}
                   <Route path="/seleccion/historico" element={<HistoricoPage />} />
+                  <Route path="/seleccion/analitica" element={<SeleccionAnaliticaPage />} />
                   <Route path="/seleccion/:jobId" element={<JobDetailPage />} />
                   <Route path="/configuracion/:tab" element={<ConfiguracionInformacionPage />} />
                   {NAV.flatMap((section) =>

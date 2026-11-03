@@ -1,3 +1,19 @@
+# Tanda «Analítica de procesos» (bloque B de Selección II) · rama `feat/analitica-procesos`
+
+- [x] GET /reports/seleccion (year, sociedadId, proyectoId) · ADMIN/RRHH · solo agregados, sin nombres
+- [x] Resumen por año/mes (abiertas/cerradas), media y mediana de cierre, estado actual, embudo
+- [x] Línea temporal por oferta con hitos reales (ApplicationEtapa si existe; nada inventado en históricos)
+- [x] Un componente `ProcesosAnalitica` en pestaña Selección → Analítica y en Informes (mismo endpoint)
+- [x] Auditoría: una entrada VIEW (`SeleccionReport`) por consulta, con filtros
+- [x] Tests `seleccion-report.e2e-spec.ts` (14) · suite completa 341/341 · builds api+web OK
+- [x] Verificado en navegador contra dev (2025 y 2026 agrupados, filtro de año, línea temporal)
+
+**Decisiones:** con `year`, el alcance son las ofertas abiertas O cerradas ese año; el tiempo de cierre se
+atribuye al año de `closedAt`; closedAt < openedAt se excluye de las medias; meses en UTC.
+Sin migración.
+
+---
+
 # Fase 6 — Reclutamiento (VITAE) como módulo interno · rama `fase-6-vitae`
 
 > Fases 0–5 en `master` (`c26a654`, incluye Fase 4 Nómina+Documentos ya fusionada). El modelo
