@@ -240,6 +240,19 @@ Ver `.env.example` para la lista completa con comentarios. Resumen de qué lee c
 | `SIGNATURE_PROVIDER` / `SIGNATURE_API_KEY` | `apps/api/src/documents/signature.provider.ts` | sin implementar todavía (mock siempre); no afecta a este despliegue |
 | `VITE_API_URL` | `apps/web/src/lib/api.ts` | **no la definas en Railway** — un solo servicio usa rutas relativas |
 
+## 7b. Accesos: humanX no usa Supabase Auth
+
+humanX **no usa Supabase Auth**: el login es JWT propio (`apps/api/src/auth`) y las cuentas se
+crean desde la app (Usuarios → alta con contraseña temporal + cambio obligatorio al entrar). La
+app no envía emails ni tiene callback de Auth.
+
+- **Los accesos se dan siempre desde la app.** No uses *Authentication → Users → Invite user* del
+  panel de Supabase: el correo usa el Site URL del proyecto (por defecto `http://localhost:3000`),
+  caduca a las 24 h y crea un usuario de Auth que humanX ignora.
+- Si alguna vez se activara Supabase Auth, antes de invitar a nadie hay que fijar, por entorno,
+  *Authentication → URL Configuration* (Site URL = dominio público) y revisar *Email Templates*.
+- Incidente 2026-10-31: invitación enviada desde el panel con enlace a `localhost:3000`, caducada.
+
 ## 8. Advertencias
 
 - `.env` está en `.gitignore` — nunca lo commitees. Las claves de producción viven **solo**
