@@ -77,6 +77,50 @@ function Timeline({ hitos }: { hitos: Hito[] }) {
   );
 }
 
+const ROW_GRID = 'grid grid-cols-[minmax(0,1fr)_220px_190px_70px_32px] items-center gap-4';
+
+/**
+ * Fila de oferta desplegable. Toda la fila es clicable (atajo) y además lleva un botón explícito al final
+ * (círculo con «+»/«−», aria-expanded). El clic del botón burbujea a la fila, así que alterna una sola vez;
+ * con teclado, Enter/Espacio sobre el botón dispara ese mismo clic. La duración va ANTES del botón para que
+ * el «—» de las ofertas sin cierre no se confunda con un control.
+ */
+function OfertaFila({ oferta: o }: { oferta: SeleccionReport['ofertas'][number] }) {
+  const [open, setOpen] = useState(false);
+  const panelId = `oferta-${o.id}`;
+  return (
+    <li className="py-3">
+      <div className={`${ROW_GRID} text-[13px] cursor-pointer`} onClick={() => setOpen((v) => !v)}>
+        <span className="font-medium min-w-0 truncate">{o.title}</span>
+        <span className="text-[var(--ink-tertiary)] text-[12px] truncate">{[o.sociedad, o.proyecto].filter(Boolean).join(' · ') || '—'}</span>
+        <span className="mono text-[12px] text-[var(--ink-secondary)] text-right">
+          {formatDate(o.openedAt)} → {formatDate(o.closedAt)}
+        </span>
+        <span className="mono text-[12px] text-right">{dias(o.diasCierre)}</span>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={`${open ? 'Contraer' : 'Desplegar'} línea temporal de ${o.title}`}
+          className="h-7 w-7 rounded-full border border-[var(--line-strong)] text-[16px] leading-none text-[var(--ink-primary)] flex items-center justify-center hover:bg-[var(--bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)] focus-visible:border-[var(--accent)]"
+        >
+          <span aria-hidden="true">{open ? '−' : '+'}</span>
+        </button>
+      </div>
+      {open && (
+        <div id={panelId} className="mt-4 ml-1">
+          <Timeline hitos={o.hitos} />
+          {!o.tieneHistorialEtapas && (
+            <p className="text-[11px] text-[var(--ink-tertiary)] mt-4">
+              Sin historial de etapas (proceso histórico importado): solo se muestran los hitos disponibles.
+            </p>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 /**
  * Analítica de procesos de selección. Un solo componente para la pestaña «Analítica» de Selección y la
  * sección de Informes: mismo endpoint (GET /reports/seleccion), sin lógica duplicada. Solo agregados;
@@ -207,28 +251,16 @@ export function ProcesosAnalitica() {
 
           <h3 className="font-serif text-[14px] font-medium mb-3">Línea temporal por oferta</h3>
           <Card>
+            <div role="row" className={`${ROW_GRID} pb-2 border-b border-[var(--line)] text-[11px] uppercase tracking-wider font-medium text-[var(--ink-tertiary)]`}>
+              <span>Oferta</span>
+              <span>Sociedad · Proyecto</span>
+              <span className="text-right">Fechas</span>
+              <span className="text-right">Duración</span>
+              <span className="sr-only">Detalle</span>
+            </div>
             <ul className="divide-y divide-[var(--line-subtle)]">
               {data.ofertas.map((o) => (
-                <li key={o.id}>
-                  <details className="group py-3">
-                    <summary className="cursor-pointer list-none flex items-center gap-4 text-[13px]">
-                      <span className="font-medium flex-1 min-w-0 truncate">{o.title}</span>
-                      <span className="text-[var(--ink-tertiary)] text-[12px]">{[o.sociedad, o.proyecto].filter(Boolean).join(' · ')}</span>
-                      <span className="mono text-[12px] text-[var(--ink-secondary)] w-[170px] text-right">
-                        {formatDate(o.openedAt)} → {formatDate(o.closedAt)}
-                      </span>
-                      <span className="mono text-[12px] w-[60px] text-right">{dias(o.diasCierre)}</span>
-                    </summary>
-                    <div className="mt-4 ml-1">
-                      <Timeline hitos={o.hitos} />
-                      {!o.tieneHistorialEtapas && (
-                        <p className="text-[11px] text-[var(--ink-tertiary)] mt-4">
-                          Sin historial de etapas (proceso histórico importado): solo se muestran los hitos disponibles.
-                        </p>
-                      )}
-                    </div>
-                  </details>
-                </li>
+                <OfertaFila key={o.id} oferta={o} />
               ))}
             </ul>
           </Card>
