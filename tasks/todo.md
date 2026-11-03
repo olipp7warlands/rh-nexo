@@ -12,6 +12,14 @@
 atribuye al año de `closedAt`; closedAt < openedAt se excluye de las medias; meses en UTC.
 Sin migración.
 
+**Feedback UX (misma tanda):** filas de la línea temporal con botón circular +/− (`aria-expanded`),
+fila clicable, duración antes del botón y cabeceras de columna. Verificado en navegador (ratón y teclado).
+
+**Pendientes fuera de esta tanda (acción tuya):**
+- Railway producción: añadir `PUBLIC_BASE_URL=https://humanx.es` (hoy falta; el feed ICS cae a `x-forwarded-host`).
+- Hotfix invitación Supabase (PR #14, solo docs): sin identificar el proyecto que envió la invitación a
+  Blanca García; se le da acceso desde la app (Usuarios), no con «Invite user» del panel.
+
 ---
 
 # Fase 6 — Reclutamiento (VITAE) como módulo interno · rama `fase-6-vitae`
