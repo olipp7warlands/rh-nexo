@@ -3,11 +3,12 @@ import { NavLink } from 'react-router-dom';
 const TABS = [
   { to: '/seleccion', label: 'Ofertas', end: true },
   { to: '/seleccion/historico', label: 'Histórico de candidatos', end: true },
+  { to: '/seleccion/analitica', label: 'Analítica', end: true },
 ] as const;
 
 /**
  * Subpestañas de Selección. La URL coincide con el nombre visible (/seleccion/historico ↔
- * "Histórico de candidatos"). Solo se pinta para ADMIN/RRHH (quien puede ver el histórico); un
+ * "Histórico de candidatos", /seleccion/analitica ↔ "Analítica"). Solo se pinta para ADMIN/RRHH (quien puede ver el histórico); un
  * MANAGER ve Selección sin pestañas, como hasta ahora.
  */
 export function SeleccionTabs() {
