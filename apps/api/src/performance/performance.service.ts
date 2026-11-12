@@ -70,11 +70,24 @@ export class PerformanceService {
     });
     if (!review) throw new NotFoundException('Evaluación no encontrada');
 
-    const isSelf = viewer.employeeId === review.employeeId;
-    const isManager = viewer.role === 'MANAGER' && review.employee.managerId === viewer.employeeId;
+    // `!!viewer.employeeId`: un usuario sin ficha (employeeId null) no es «el evaluado» ni «el
+    // manager» de nadie, aunque la review tenga esos campos a null (null === null).
+    const isSelf = !!viewer.employeeId && viewer.employeeId === review.employeeId;
+    const isManager = !!viewer.employeeId && viewer.role === 'MANAGER' && review.employee.managerId === viewer.employeeId;
     const privileged = viewer.role === 'ADMIN' || viewer.role === 'RRHH';
     if (!isSelf && !isManager && !privileged) {
       throw new ForbiddenException('No autorizado para esta evaluación.');
+    }
+
+    // Permiso por campo. La autoevaluación (selfDone) la marca el evaluado, o su manager/RRHH/ADMIN
+    // como corrección administrativa. La parte del evaluador (managerDone, o2oDone, rating) solo el
+    // manager directo o RRHH/ADMIN, y NUNCA sobre la evaluación propia: nadie se evalúa a sí mismo,
+    // tenga el rol que tenga.
+    const touchesEvaluatorFields = dto.managerDone !== undefined || dto.o2oDone !== undefined || dto.rating !== undefined;
+    if (touchesEvaluatorFields && (isSelf || !(isManager || privileged))) {
+      throw new ForbiddenException(
+        isSelf ? 'No puedes evaluar tu propia evaluación: solo marcar tu autoevaluación.' : 'No autorizado para evaluar a esta persona.',
+      );
     }
 
     const before = { selfDone: review.selfDone, managerDone: review.managerDone, o2oDone: review.o2oDone, rating: review.rating };

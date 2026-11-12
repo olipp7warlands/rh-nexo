@@ -22,6 +22,8 @@ function Check({ checked, disabled, onChange, label }: { checked: boolean; disab
 function ReviewRow({ review, cycleId, canManage, ownEmployeeId }: { review: Review; cycleId: string; canManage: boolean; ownEmployeeId?: string | null }) {
   const update = useUpdateReview(cycleId);
   const isOwn = review.employeeId === ownEmployeeId;
+  // La parte del evaluador nunca se edita sobre la evaluación propia (el servidor lo rechaza).
+  const canEvaluate = canManage && !isOwn;
   const set = (data: Partial<Pick<Review, 'selfDone' | 'managerDone' | 'o2oDone' | 'rating'>>) =>
     update.mutate({ id: review.id, data });
 
@@ -34,8 +36,8 @@ function ReviewRow({ review, cycleId, canManage, ownEmployeeId }: { review: Revi
       </div>
       <div className="flex items-center gap-4">
         <Check label="Auto" checked={review.selfDone} disabled={!(canManage || isOwn)} onChange={(v) => set({ selfDone: v })} />
-        <Check label="Manager" checked={review.managerDone} disabled={!canManage} onChange={(v) => set({ managerDone: v })} />
-        <Check label="1:1" checked={review.o2oDone} disabled={!canManage} onChange={(v) => set({ o2oDone: v })} />
+        <Check label="Manager" checked={review.managerDone} disabled={!canEvaluate} onChange={(v) => set({ managerDone: v })} />
+        <Check label="1:1" checked={review.o2oDone} disabled={!canEvaluate} onChange={(v) => set({ o2oDone: v })} />
       </div>
       <input
         type="number"
@@ -43,7 +45,7 @@ function ReviewRow({ review, cycleId, canManage, ownEmployeeId }: { review: Revi
         min={0}
         max={5}
         defaultValue={review.rating ?? ''}
-        disabled={!canManage}
+        disabled={!canEvaluate}
         placeholder="—"
         onBlur={(e) => {
           const v = e.target.value === '' ? undefined : Number(e.target.value);
