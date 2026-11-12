@@ -133,12 +133,16 @@ describe('Nómina (integración)', () => {
     const payload = '=HYPERLINK("http://evil.example","click")';
     await db.employee.update({ where: { id: EMP }, data: { iban: payload } });
 
-    const res = await request(http).get(`/api/payroll/runs/${runId}/export`).set('Authorization', `Bearer ${rrhhToken}`).expect(200);
-    // Igual que en absences.e2e-spec.ts: el payload sigue siendo subcadena del texto
-    // neutralizado (apóstrofo antepuesto), así que la comprobación real es esa, no su ausencia.
-    expect(res.text).toContain(`'${payload}`);
-
-    await db.employee.update({ where: { id: EMP }, data: { iban: original.iban } });
+    // El `finally` restaura el IBAN aunque falle la comprobación: sin él, un fallo aquí dejaba
+    // el payload en la BD de test y la siguiente ejecución lo tomaba por el valor original.
+    try {
+      const res = await request(http).get(`/api/payroll/runs/${runId}/export`).set('Authorization', `Bearer ${rrhhToken}`).expect(200);
+      // Igual que en absences.e2e-spec.ts: apóstrofo antepuesto y, por llevar comillas, campo
+      // entrecomillado con las comillas dobladas (RFC 4180).
+      expect(res.text).toContain(`"'${payload.replace(/"/g, '""')}"`);
+    } finally {
+      await db.employee.update({ where: { id: EMP }, data: { iban: original.iban } });
+    }
   });
 
   it('"mis nóminas" del empleado solo devuelve las suyas, incluida la nueva', async () => {
