@@ -1,3 +1,38 @@
+# Auditoría de seguridad v2 · correcciones por tandas (2026-11-12)
+
+> El informe (`tasks/AUDITORIA-SEGURIDAD-2.md`) está en la rama local `docs/auditoria-seguridad-2`,
+> **sin subir** mientras el repo sea público. Aquí solo va el seguimiento, sin detalle de los hallazgos.
+
+**Hecho y desplegado en producción el 2026-11-12** (despliegues comprobados en Railway):
+- [x] Hotfix A-01 · alcance por rol en filtros de ausencias (listado, calendario y export) · PR #16 · 20:09 UTC
+- [x] Tanda 1 · `body-parser` 2.3.0 → 2.4.0, override acotado a `^2.4.0` · PR #17 · 20:36 UTC · `pnpm audit --prod` 16 → 15
+- [x] Tanda 2 · A-02 · permiso por campo en evaluaciones de desempeño · PR #18 · 20:39 UTC
+- [x] Tanda 3 · M-04 + B-10 · `csvSafe` reforzado y aplicado al export de Informes · PR #19 · 21:15 UTC
+- [x] Suite de la API contra la BD de test tras la Tanda 3: 41 ficheros, 381 tests en verde. Sin migraciones.
+- [x] A-01: ventana valorada con lecturas de solo lectura en producción y logs HTTP de Railway; conclusión en el informe.
+
+**Decisión de producto (A-02):** el manager directo y RRHH/ADMIN pueden marcar la autoevaluación de
+otra persona (empleados sin cuenta, evaluaciones en papel); queda auditado. La parte del evaluador
+nunca se edita sobre la evaluación propia.
+
+**Pendiente (agrupado aprobado):**
+- [ ] Tanda 4 · M-05 · rama `fix/m05-rls-migracion` · migración idempotente: `ENABLE ROW LEVEL SECURITY`
+      en las 8 tablas que no lo tienen en ninguna migración + `REVOKE` a `anon`/`authenticated`
+      (+ `ALTER DEFAULT PRIVILEGES` si no la complica). Orden: ensayo en dev (migración + suite completa
+      + subida y descarga de un documento) → test + suite → parar. Producción con backup verificado y
+      nombrado, y el merge después (lecciones #23 y #25).
+- [ ] Tanda 5 · M-02 · feed ICS: cualquier evento de credenciales (reset, cambio propio, desactivación)
+      invalida el token; revocación por ADMIN; caducidad opcional por variable de entorno, por defecto sin caducidad.
+- [ ] Tanda 6 · resto de dependencias (`multer`, `zod`, `qs`, `react-router`, `@nestjs/core`).
+- [ ] Resto de hallazgos del informe: sin agrupar todavía.
+
+**Acción tuya, sin código:** A-03 del informe (rotación de credenciales y limpieza del fichero local);
+visibilidad del repo; `PUBLIC_BASE_URL` en Railway (ya anotado abajo).
+
+**Deuda de herramientas detectada:** `eslint` no está instalado en el workspace (`pnpm lint` falla en api y web).
+
+---
+
 # Tanda «Analítica de procesos» (bloque B de Selección II) · rama `feat/analitica-procesos`
 
 - [x] GET /reports/seleccion (year, sociedadId, proyectoId) · ADMIN/RRHH · solo agregados, sin nombres
