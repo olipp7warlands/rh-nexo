@@ -123,15 +123,74 @@ describe('Ausencias (integración)', () => {
     await db.absence.delete({ where: { id: created.body.id } }).catch(() => undefined);
   });
 
-  // Optimización de rendimiento: la ficha ahora filtra por employeeId en vez de traer toda la
-  // tabla. El filtro se aplica DENTRO del alcance por rol (AND), nunca lo sustituye.
-  it('employeeId filtra dentro del alcance del rol, nunca lo amplía', async () => {
-    const propias = await request(http).get(`/api/absences?employeeId=${EMP}`).set('Authorization', `Bearer ${empToken}`).expect(200);
-    expect(propias.body.every((a: { employeeId: string }) => a.employeeId === EMP)).toBe(true);
+  // Alcance por rol. El alcance se aplica SIEMPRE; los filtros del query (status, employeeId)
+  // solo restringen dentro de él. Cada caso compara contra lo que hay en la BD y exige que el
+  // dato «ajeno» exista de verdad: un test que pide las ausencias de alguien que no tiene
+  // ninguna pasa aunque el alcance esté roto.
+  describe('alcance por rol', () => {
+    type Row = { id: string; employeeId: string };
+    const TEAM = ['e3', 'e4', 'e5', 'e6']; // Carlos (e3) + sus reports directos
+    const EN_EQUIPO = 'e5'; // report de Carlos, compañera de Diego
+    const FUERA = 'e8'; // otro departamento, ajeno a Carlos y a Diego
 
-    // Diego (EMPLEADO) pidiendo el employeeId de otra persona (e1, ajena a su equipo): lista
-    // vacía, nunca los datos de e1.
-    const ajenas = await request(http).get('/api/absences?employeeId=e1').set('Authorization', `Bearer ${empToken}`).expect(200);
-    expect(ajenas.body).toEqual([]);
+    const list = (token: string, qs = '') =>
+      request(http).get(`/api/absences${qs}`).set('Authorization', `Bearer ${token}`).expect(200).then((r) => r.body as Row[]);
+    const exportLines = (token: string) =>
+      request(http).get('/api/absences/export').set('Authorization', `Bearer ${token}`).expect(200).then((r) => r.text.split('\n').slice(1));
+    const ids = (rows: Row[]) => rows.map((r) => r.id).sort();
+    const dbIds = (employeeIds?: string[]) =>
+      db.absence
+        .findMany({ where: employeeIds ? { employeeId: { in: employeeIds } } : undefined, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id).sort());
+
+    beforeAll(async () => {
+      // Precondición: hay ausencias propias, del equipo y de fuera. Sin ellas los casos de abajo
+      // serían vacuos.
+      for (const e of [EMP, EN_EQUIPO, FUERA]) expect(await db.absence.count({ where: { employeeId: e } })).toBeGreaterThan(0);
+    });
+
+    it('EMPLEADO: lista solo las suyas', async () => {
+      const rows = await list(empToken);
+      expect(ids(rows)).toEqual(await dbIds([EMP]));
+    });
+
+    it('EMPLEADO: exporta solo las suyas', async () => {
+      const lines = await exportLines(empToken);
+      expect(lines).toHaveLength(await db.absence.count({ where: { employeeId: EMP } }));
+      expect(lines.every((l) => l.startsWith('Diego Ortega'))).toBe(true);
+    });
+
+    it('EMPLEADO: el filtro status no amplía el alcance', async () => {
+      const rows = await list(empToken, '?status=APROBADA');
+      expect(rows.every((r) => r.employeeId === EMP)).toBe(true);
+    });
+
+    it('EMPLEADO: employeeId propio devuelve las suyas; el de otra persona, lista vacía', async () => {
+      expect(ids(await list(empToken, `?employeeId=${EMP}`))).toEqual(await dbIds([EMP]));
+      expect(await list(empToken, `?employeeId=${EN_EQUIPO}`)).toEqual([]);
+      expect(await list(empToken, `?employeeId=${FUERA}`)).toEqual([]);
+    });
+
+    it('MANAGER: lista y exporta las suyas y las de su equipo, nada más', async () => {
+      const esperado = await dbIds(TEAM);
+      expect(ids(await list(mgrToken))).toEqual(esperado);
+      expect(await exportLines(mgrToken)).toHaveLength(esperado.length);
+    });
+
+    it('MANAGER: employeeId de su equipo filtra; el de fuera de su equipo, lista vacía', async () => {
+      expect(ids(await list(mgrToken, `?employeeId=${EN_EQUIPO}`))).toEqual(await dbIds([EN_EQUIPO]));
+      expect(await list(mgrToken, `?employeeId=${FUERA}`)).toEqual([]);
+    });
+
+    it.each([
+      ['RRHH', 'blanca.ruiz@grupo.com'],
+      ['ADMIN', 'admin@grupo.com'],
+    ])('%s: lista y exporta todo, y employeeId filtra', async (_rol, email) => {
+      const token = await login(email);
+      const todas = await dbIds();
+      expect(ids(await list(token))).toEqual(todas);
+      expect(await exportLines(token)).toHaveLength(todas.length);
+      expect(ids(await list(token, `?employeeId=${FUERA}`))).toEqual(await dbIds([FUERA]));
+    });
   });
 });
