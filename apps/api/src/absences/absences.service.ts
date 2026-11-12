@@ -30,11 +30,21 @@ export class AbsencesService {
     },
   };
 
-  /** `employeeId` se aplica DENTRO del alcance por rol (AND, no lo sustituye): pedir el de
-   *  otra persona fuera del propio alcance da lista vacía, nunca datos ajenos. */
+  /**
+   * Alcance por rol + filtros del query. El alcance va SIEMPRE como término propio de un `AND`
+   * y los filtros en otro: así un filtro solo puede restringir dentro del alcance, nunca
+   * sustituirlo. No mezclar ambos en un mismo objeto (spread): si comparten clave —`employeeId`
+   * lo hace en el alcance de EMPLEADO— la del filtro pisa a la del alcance.
+   */
+  private scoped(viewer: AuthUser, filters: Prisma.AbsenceWhereInput): Prisma.AbsenceWhereInput {
+    return { AND: [this.scopeWhere(viewer), filters] };
+  }
+
+  /** `employeeId` filtra DENTRO del alcance por rol: pedir el de otra persona fuera del propio
+   *  alcance da lista vacía (no 403: ver el test de alcance), nunca datos ajenos. */
   findAll(viewer: AuthUser, status?: AbsenceStatus, employeeId?: string) {
     return this.db.absence.findMany({
-      where: { ...this.scopeWhere(viewer), status: status || undefined, employeeId: employeeId || undefined },
+      where: this.scoped(viewer, { status: status || undefined, employeeId: employeeId || undefined }),
       include: { employee: this.employeeSelect },
       relationLoadStrategy: 'join',
       orderBy: { startDate: 'desc' },
@@ -44,12 +54,11 @@ export class AbsencesService {
   /** Ausencias APROBADAS que solapan el rango (para el calendario de equipo). */
   calendar(viewer: AuthUser, from: string, to: string) {
     return this.db.absence.findMany({
-      where: {
-        ...this.scopeWhere(viewer),
+      where: this.scoped(viewer, {
         status: 'APROBADA',
         startDate: { lte: new Date(to) },
         endDate: { gte: new Date(from) },
-      },
+      }),
       include: { employee: { select: { id: true, fullName: true } } },
       relationLoadStrategy: 'join',
       orderBy: { startDate: 'asc' },
