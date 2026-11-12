@@ -138,4 +138,95 @@ describe('Talento — Procesos + Desempeño (integración)', () => {
     const detail = await request(http).get(`/api/performance/cycles/${cycleId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(detail.body.reviews.length).toBe(totalReviews);
   });
+
+  // Permiso por campo en evaluaciones. La autoevaluación (selfDone) es del evaluado; la parte del
+  // evaluador (managerDone, o2oDone, rating) es del manager directo o de RRHH/ADMIN, y nadie la
+  // toca sobre su propia evaluación, tenga el rol que tenga.
+  describe('desempeño: permiso por campo en evaluaciones', () => {
+    type Snapshot = { id: string; employeeId: string; selfDone: boolean; managerDone: boolean; o2oDone: boolean; rating: number | null };
+    const reviews: Record<string, Snapshot> = {};
+    const tokens: Record<string, string> = {};
+    let startedAt: Date;
+
+    const patch = (who: string, employeeId: string, data: object) =>
+      request(http).patch(`/api/performance/reviews/${reviews[employeeId]!.id}`).set('Authorization', `Bearer ${tokens[who]}`).send(data);
+    const reread = (employeeId: string) => db.review.findUnique({ where: { id: reviews[employeeId]!.id } });
+    const estado = (r: Snapshot | null) => ({ selfDone: r!.selfDone, managerDone: r!.managerDone, o2oDone: r!.o2oDone, rating: r!.rating });
+
+    beforeAll(async () => {
+      startedAt = new Date();
+      const cycle = await db.performanceCycle.findFirstOrThrow({ orderBy: { startDate: 'desc' } });
+      // e6 Diego (EMPLEADO, manager e3) · e3 Carlos (MANAGER) · e5 (equipo de Carlos) ·
+      // e8 (fuera del equipo de Carlos) · e2 Blanca (RRHH) · e1 (ficha del ADMIN del seed).
+      for (const r of await db.review.findMany({ where: { cycleId: cycle.id, employeeId: { in: ['e1', 'e2', 'e3', 'e5', 'e6', 'e8'] } } })) {
+        reviews[r.employeeId] = r;
+      }
+      expect(Object.keys(reviews).sort()).toEqual(['e1', 'e2', 'e3', 'e5', 'e6', 'e8']);
+      tokens.empleado = await login('diego.ortega@grupo.com');
+      tokens.manager = await login('carlos.soto@grupo.com');
+      tokens.rrhh = token;
+      tokens.admin = await login('admin@grupo.com');
+    });
+
+    afterAll(async () => {
+      for (const r of Object.values(reviews)) {
+        await db.review.update({ where: { id: r.id }, data: estado(r) });
+      }
+      await db.auditLog.deleteMany({
+        where: { entity: 'Review', entityId: { in: Object.values(reviews).map((r) => r.id) }, createdAt: { gte: startedAt } },
+      });
+    });
+
+    it('EMPLEADO: marca su autoevaluación y persiste', async () => {
+      await patch('empleado', 'e6', { selfDone: false }).expect(200);
+      expect((await reread('e6'))!.selfDone).toBe(false);
+      await patch('empleado', 'e6', { selfDone: true }).expect(200);
+      expect((await reread('e6'))!.selfDone).toBe(true);
+    });
+
+    it.each([[{ rating: 5 }], [{ managerDone: true }], [{ o2oDone: true }], [{ selfDone: true, rating: 5 }]])(
+      'EMPLEADO: no puede tocar la parte del evaluador en su evaluación (%j → 403, sin cambios)',
+      async (data) => {
+        const antes = estado(await reread('e6'));
+        await patch('empleado', 'e6', data).expect(403);
+        expect(estado(await reread('e6'))).toEqual(antes);
+      },
+    );
+
+    it('EMPLEADO: no puede tocar la evaluación de otra persona (403)', async () => {
+      await patch('empleado', 'e5', { selfDone: true }).expect(403);
+      await patch('empleado', 'e5', { rating: 1 }).expect(403);
+    });
+
+    it('MANAGER: evalúa a un report directo y persiste', async () => {
+      await patch('manager', 'e6', { managerDone: true, o2oDone: true, rating: 4.2 }).expect(200);
+      expect(estado(await reread('e6'))).toMatchObject({ managerDone: true, o2oDone: true, rating: 4.2 });
+    });
+
+    it('MANAGER: no puede puntuar su propia evaluación (403, sin cambios), pero sí marcar su autoevaluación', async () => {
+      const antes = estado(await reread('e3'));
+      await patch('manager', 'e3', { rating: 5 }).expect(403);
+      await patch('manager', 'e3', { managerDone: true }).expect(403);
+      await patch('manager', 'e3', { o2oDone: true }).expect(403);
+      expect(estado(await reread('e3'))).toEqual(antes);
+      await patch('manager', 'e3', { selfDone: true }).expect(200);
+    });
+
+    it('MANAGER: no puede evaluar a alguien de fuera de su equipo (403)', async () => {
+      await patch('manager', 'e8', { rating: 1 }).expect(403);
+      await patch('manager', 'e8', { selfDone: true }).expect(403);
+    });
+
+    it.each([
+      ['rrhh', 'e2'],
+      ['admin', 'e1'],
+    ])('%s: no puede puntuar su propia evaluación (403, sin cambios); sí la de otra persona', async (who, propia) => {
+      const antes = estado(await reread(propia));
+      await patch(who, propia, { rating: 5 }).expect(403);
+      await patch(who, propia, { managerDone: true }).expect(403);
+      expect(estado(await reread(propia))).toEqual(antes);
+      await patch(who, 'e8', { rating: 3.5 }).expect(200);
+      expect((await reread('e8'))!.rating).toBe(3.5);
+    });
+  });
 });
