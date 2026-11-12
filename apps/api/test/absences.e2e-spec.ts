@@ -113,11 +113,10 @@ describe('Ausencias (integración)', () => {
       .expect(201);
 
     const res = await request(http).get('/api/absences/export').set('Authorization', `Bearer ${mgrToken}`).expect(200);
-    // La neutralización antepone un apóstrofo (mitigación estándar: Excel/LibreOffice lo
-    // muestran como texto literal en vez de ejecutar la fórmula); el payload original sigue
-    // presente como SUBCADENA de ese texto neutralizado, así que no tiene sentido comprobar
-    // `not.toContain(payload)` — lo que importa es que llega precedido del apóstrofo, no crudo.
-    expect(res.text).toContain(`'${payload}`);
+    // La neutralización antepone un apóstrofo (Excel/LibreOffice lo muestran como texto literal
+    // en vez de ejecutar la fórmula) y, como el valor lleva comillas, el campo va entrecomillado
+    // con las comillas dobladas (RFC 4180). El detalle de casos está en csv-safe.spec.ts.
+    expect(res.text).toContain(`"'${payload.replace(/"/g, '""')}"`);
 
     // limpieza
     await db.absence.delete({ where: { id: created.body.id } }).catch(() => undefined);

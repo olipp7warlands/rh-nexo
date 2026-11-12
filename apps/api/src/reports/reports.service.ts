@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AbsenceType, EmployeeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { csvSafe } from '../lib/csv-safe';
 
 @Injectable()
 export class ReportsService {
@@ -106,7 +107,7 @@ export class ReportsService {
     const lines = [...names].map((name) => {
       const head = o.headcount.byDept.find((d) => d.name === name)?.count ?? 0;
       const cost = costMap.get(name)?.total ?? 0;
-      return [name, String(head), String(cost)].join(';');
+      return [csvSafe(name), String(head), String(cost)].join(';');
     });
     return [header.join(';'), ...lines].join('\n');
   }
